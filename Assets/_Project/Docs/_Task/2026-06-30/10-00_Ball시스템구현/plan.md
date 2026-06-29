@@ -24,6 +24,7 @@ Normal 볼의 발사·이동·반사·충돌·데미지·풀링 전체 흐름을
 | `BallData.cs` | `Assets/_Project/Scripts/Data/BallData.cs` |
 | `Ball.cs` | `Assets/_Project/Scripts/Ball/Ball.cs` |
 | `BallLauncher.cs` | `Assets/_Project/Scripts/Ball/BallLauncher.cs` |
+| `BallSetupEditor.cs` | `Assets/_Project/Scripts/Editor/BallSetupEditor.cs` |
 
 ---
 
@@ -195,36 +196,58 @@ public class BallLauncher : Singleton<BallLauncher>
 | 신규 생성 | `BallData.cs` | `Assets/_Project/Scripts/Data/` |
 | 신규 생성 | `Ball.cs` | `Assets/_Project/Scripts/Ball/` |
 | 신규 생성 | `BallLauncher.cs` | `Assets/_Project/Scripts/Ball/` |
+| 신규 생성 | `BallSetupEditor.cs` | `Assets/_Project/Scripts/Editor/` |
 
 기존 Core 파일은 수정하지 않습니다.
 
 ---
 
+### Step 4. BallSetupEditor (Editor 전용 자동화 스크립트)
+
+**파일:** `Assets/_Project/Scripts/Editor/BallSetupEditor.cs`
+
+**역할:** Ball 시스템 초기 세팅(태그 등록, PhysicsMaterial2D 생성, BallData 에셋 생성)을 Unity Editor 메뉴에서 한 번에 실행할 수 있도록 자동화하는 Editor 전용 스크립트.
+
+**MenuItem 경로:** `PurpleCow/Setup/Ball System Setup`
+
+**수행 작업:**
+
+1. **Tag 등록** (`"Monster"`, `"Wall"`, `"Ground"`)
+   - `UnityEditorInternal.InternalEditorUtility.tags`로 현재 태그 목록 확인
+   - 없는 태그만 `SerializedObject`(TagManager)를 통해 추가
+
+2. **PhysicsMaterial2D 생성**
+   - 경로: `Assets/_Project/Physics/BallBounce.physicsMaterial2D`
+   - `bounciness = 1f`, `friction = 0f`
+   - `AssetDatabase.CreateAsset`으로 생성 (이미 존재하면 스킵)
+
+3. **BallData ScriptableObject 에셋 생성**
+   - 경로: `Assets/_Project/Data/BallData.asset`
+   - 기본값: `damage=10`, `speed=10`, `criticalChance=0.1f`, `criticalMultiplier=2f`
+   - `ScriptableObject.CreateInstance<BallData>`로 생성 (이미 존재하면 스킵)
+
+**마무리:** `AssetDatabase.SaveAssets()`, `AssetDatabase.Refresh()` 호출 후 완료 로그 출력
+
+---
+
 ## 주의사항
 
-1. **PhysicsMaterial2D 설정 필요**
-   Wall 반사는 코드가 아닌 PhysicsMaterial2D (`bounciness=1, friction=0`)로 처리합니다.
-   Ball 프리팹 생성 시 Rigidbody2D에 `Collision Detection: Continuous`, `Gravity Scale: 0` 설정이 필요합니다.
-   이 설정은 Unity Editor에서 프리팹 직접 조작이 필요하므로 .cs 파일만으로 완결되지 않습니다.
+1. **BallSetupEditor 실행 필요**
+   구현 후 Unity Editor 메뉴 `PurpleCow > Setup > Ball System Setup` 실행으로 태그/PhysicsMaterial2D/BallData 에셋 자동 생성.
+   Ball 프리팹 생성 시 Rigidbody2D에 `Collision Detection: Continuous`, `Gravity Scale: 0` 설정은 여전히 프리팹에서 직접 지정해야 합니다.
 
-2. **Tag 정의 필요**
-   `"Monster"`, `"Wall"`, `"Ground"` 태그를 Unity Project Settings > Tags에 미리 추가해야 합니다.
-
-3. **OnHitMonster 이벤트는 현재 구독자 없음**
+2. **OnHitMonster 이벤트는 현재 구독자 없음**
    Monster 시스템이 미구현 상태이므로 `OnHitMonster`는 발행만 하고 구독자 없이 컴파일됩니다.
    Monster 시스템 구현 시 구독 로직 추가 예정입니다.
 
-4. **OnAllBallsReturned 이벤트는 현재 구독자 없음**
+3. **OnAllBallsReturned 이벤트는 현재 구독자 없음**
    WaveManager / TurnManager 미구현 상태이므로 마찬가지로 발행만 합니다.
 
-5. **BallData ScriptableObject 에셋 수동 생성 필요**
-   `BallData.cs` 구현 후 Unity Editor에서 `Assets > Create > PurpleCow > BallData`로 에셋을 생성하고 Ball 프리팹에 연결해야 합니다.
-
-6. **발사 방향 보정 미포함**
+4. **발사 방향 보정 미포함**
    이번 구현에서는 InputHandler가 제공하는 방향 벡터를 그대로 사용합니다.
    화면 좌표 → 월드 좌표 변환이 필요한 경우 BallLauncher.HandleDrag에서 Camera.main.ScreenToWorldPoint 처리를 추가해야 할 수 있습니다. (InputHandler 현 구현 확인 필요)
 
-7. **DevRules.md 네이밍 규칙 준수**
+5. **DevRules.md 네이밍 규칙 준수**
    - private 필드: `_camelCase`
    - SerializeField: Inspector 노출 필요한 값만 (밸런스 수치는 BallData SO로 분리)
    - 이벤트: C# event, static event 활용

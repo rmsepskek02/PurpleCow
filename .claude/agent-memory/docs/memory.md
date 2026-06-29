@@ -40,3 +40,21 @@
 - Wall 반사는 PhysicsMaterial2D(bounciness=1)로 처리, 코드 불필요
 - OnHitMonster / OnAllBallsReturned 이벤트는 발행만 하고 구독자는 후속 시스템에서 추가
 - Tag("Monster", "Wall", "Ground") 및 BallData SO 에셋은 Unity Editor에서 수동 생성 필요
+
+---
+
+### 작업 내용 (추가)
+- Ball 시스템 plan.md 수정: Editor 자동화 스크립트(BallSetupEditor) 추가
+- 수정 대상: Assets/_Project/Docs/_Task/2026-06-30/10-00_Ball시스템구현/plan.md
+
+### 결과
+- 생성 파일 목록에 BallSetupEditor.cs (Assets/_Project/Scripts/Editor/) 추가
+- 예상 변경/생성 파일 목록에도 동일하게 추가
+- Step 4. BallSetupEditor 새 섹션 추가 (MenuItem, 수행 작업 3가지, 마무리 처리 기술)
+- 주의사항 수정: "PhysicsMaterial2D 직접 조작", "Tag 수동 추가", "BallData SO 수동 생성" 항목 삭제
+- 새 주의사항 1번으로 "BallSetupEditor 실행 필요" 항목 추가
+- 번호 재정렬 완료 (총 5개 항목)
+
+### 주요 결정사항
+- Editor 자동화로 PhysicsMaterial2D 생성, Tag 등록, BallData SO 에셋 생성을 모두 커버
+- Ball 프리팹 Rigidbody2D 설정(Continuous, GravityScale=0)은 여전히 Editor 직접 조작 필요 (프리팹 생성 자체가 Editor 작업이므로)
