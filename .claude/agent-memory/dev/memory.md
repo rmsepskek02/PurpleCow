@@ -26,3 +26,32 @@
 - GameManager는 WaveManager/UIManager와 직접 연결 없음 (이후 단계에서 연결)
 - ObjectPool은 static이 아닌 인스턴스 기반으로 구현 (사용처에서 풀 인스턴스를 직접 관리)
 - namespace 없이 작성 (DevRules.md에 명시 없으므로 생략)
+
+---
+
+## 2026-06-29
+
+### 작업: Ball 시스템 구현 (BallData, Ball, BallLauncher, BallSetupEditor)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-06-30/10-00_Ball시스템구현/plan.md`
+- 4개 파일 신규 생성 (Data, Ball, Editor 폴더 신규 생성 포함)
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Data/BallData.cs` — ScriptableObject, damage/speed/criticalChance/criticalMultiplier 프로퍼티
+- `Assets/_Project/Scripts/Ball/Ball.cs` — IPoolable 구현, OnHitMonster static event, Tag 분기 충돌 처리, CalculateDamage 치명타 계산
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` — Singleton<BallLauncher> 상속, ObjectPool<Ball> 소유, InputHandler/GameManager 이벤트 구독, OnAllBallsReturned static event
+- `Assets/_Project/Scripts/Editor/BallSetupEditor.cs` — #if UNITY_EDITOR 가드, MenuItem("PurpleCow/Setup/Ball System Setup"), 태그 등록/PhysicsMaterial2D 생성/BallData 에셋 생성 자동화
+
+**Git:**
+- 브랜치: `claude/recent-plan-review-xq2hsm`
+- 커밋: `feat: implement Ball system (BallData, Ball, BallLauncher, BallSetupEditor)`
+- push 완료 (기존 브랜치에 추가)
+
+**주요 결정사항:**
+- InputHandler.OnDrag/OnRelease, GameManager.OnGameStateChanged는 instance event이므로 OnEnable/OnDisable에서 Instance 통해 구독 (plan.md 표기는 축약이었음)
+- FixedUpdate에서 velocity.normalized * speed로 속력 유지 (bounciness=1이어도 프레임 간 미세 감쇠 방지)
+- BallSetupEditor는 #if UNITY_EDITOR 가드 사용 (Editor 폴더에 위치하므로 이중 보호)
+- BallData 기본값은 SerializedObject를 통해 설정 (직접 필드 접근 불가 - private 필드이므로)
+- OnEnable에서 Instance 접근 — Singleton Awake보다 OnEnable이 나중이므로 안전
+- _activeBallCount 언더플로 방지는 미구현 (plan.md 범위 외)
