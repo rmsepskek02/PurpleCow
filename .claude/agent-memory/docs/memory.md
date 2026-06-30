@@ -204,3 +204,20 @@
 - SkillSelectionPanel OnEnable ShowRandomSkills() 호출이 CanvasGroup 방식 전환 시 타이밍 버그 유발 → STEP 12에서 제거
 - CheckGameOver의 직접 EndGame 호출 제거 → CharacterManager가 HP 0 시 EndGame 담당 (STEP 8, 9 동시 구현 필요)
 - MonsterBase에 Data 프로퍼티(public MonsterData Data) 추가 필요 (STEP 6에서 외과적 추가)
+
+---
+
+### 작업 내용 (추가)
+- QA 수정 task research.md 생성
+- 경로: Assets/_Project/Docs/_Task/2026-06-30/HH-MM_QA수정/research.md
+
+### 결과
+- research.md 생성 완료: CRITICAL 5건, WARNING 6건, INFO 3건 총 14개 항목을 현재 상태 / 관련 파일 의존성 / 문제점 분석 / 결론 구조로 작성
+
+### 주요 결정사항
+- CRITICAL 1(스킬 Lv3 도달 불가): LevelUp() 조건 off-by-one 수정 필요, SkillSelectionPanel 동일 조건 함께 수정
+- CRITICAL 2(WaveData MonsterData 미반영): SpawnWave()에서 entry.Data를 MonsterBase에 주입하는 코드 추가 필요
+- CRITICAL 3(Time.timeScale 미처리): OpenPanel/OnSkillSelectionComplete에 timeScale 0/1 설정 추가 필요
+- CRITICAL 4(재시작 초기화 미구현): 씬 재로드 vs 개별 Reset 방식 결정이 plan.md 단계에서 필요
+- CRITICAL 5(스킬 인스턴스 공유): 레벨업 후 각 Ball에 새 인스턴스 재적용 구조 필요
+- WARNING 2(패시브 이중 구독): CRITICAL에 준하는 우선순위로 처리 권장
