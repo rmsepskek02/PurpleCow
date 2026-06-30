@@ -98,3 +98,23 @@
 - BallLauncher.cs에 LaunchSubBalls() 추가 (Cluster/KillShot 연동)
 - WaveManager.cs에 GetWeakestMonster() 추가 (LastHitPassive 연동)
 - PDF 스킬 수치는 확인 후 SkillData SO 에셋에 반영 필요 (plan.md에 주의사항 명시)
+
+---
+
+### 작업 내용 (추가)
+- UI 시스템 구현 task 문서 생성: research.md, plan.md
+- 경로: Assets/_Project/Docs/_Task/2026-06-30/20-00_UI시스템구현/
+
+### 결과
+- research.md: UI 폴더 현황(스크립트 없음), 기존 시스템 이벤트 목록 분석, GameState 상태 머신, WaveManager 흐름, SkillManager 구조, 구현 대상 5종 파악 완료
+- plan.md: UIManager(Singleton), HUDPanel, ResultPanel, SkillSelectionPanel, SkillCardUI, SkillFactory 6종 상세 구현 계획 + WaveManager/GameManager/BallSkillBase 외과적 수정 포함, 총 6개 신규 파일 + 5개 기존 파일 수정 계획 작성 완료
+- AGENTS.md Task 문서 섹션에 2026-06-30 날짜별 task 목록 테이블 추가
+
+### 주요 결정사항
+- UI 스크립트 디렉터리(Assets/_Project/Scripts/UI/) 신규 생성 필요
+- BallSkillBase를 MonoBehaviour에서 순수 C# 클래스로 변환(옵션 A 채택) → SkillFactory 정적 팩토리 패턴으로 스킬 인스턴스 생성
+- 점수는 ScoreManager 분리 없이 UIManager 내부에서 MonsterBase.OnMonsterDied 구독으로 단순 관리
+- 스킬 선택 중 발사 차단: BallLauncher에 SetLaunchEnabled(bool) 추가 방식 권장
+- WaveManager: OnWaveCleared 이벤트 추가, AdvanceToNextWave() public 전환, TotalWaves 프로퍼티 추가
+- GameManager: IsLastGameSuccess 프로퍼티 추가, EndGame()에서 저장
+- PDF 파일 열람 불가(poppler-utils 미설치)로 PDF 요구사항 직접 반영 불가 — 코드베이스 분석으로 대체

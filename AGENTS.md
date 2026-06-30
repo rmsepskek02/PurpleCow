@@ -41,3 +41,13 @@
 
 task 문서는 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH:MM_작업요약/` 경로에 생성됩니다.
 자세한 규칙은 [TaskRules.md](Assets/_Project/Docs/TaskRules.md)를 참고하세요.
+
+### 2026-06-30
+
+| 폴더 | research | plan | 설명 |
+|------|----------|------|------|
+| `02-30_Core시스템구현` | O | O | Singleton, ObjectPool, GameManager, InputHandler 구현 |
+| `10-00_Ball시스템구현` | O | O | BallLauncher, Ball, BallData, ObjectPool 연동 구현 |
+| `14-00_Monster시스템구현` | O | O | MonsterBase, MonsterData, WaveManager 구현 |
+| `18-00_Skill시스템구현` | O | O | SkillManager, BallSkillBase, PassiveSkillBase, 스킬 5종+7종 구현 |
+| `20-00_UI시스템구현` | O | O | UIManager, HUDPanel, ResultPanel, SkillSelectionPanel, SkillCardUI, SkillFactory 구현 계획 |
