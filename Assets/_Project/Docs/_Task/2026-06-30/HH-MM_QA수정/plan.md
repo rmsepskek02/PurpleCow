@@ -265,3 +265,5 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 - ~~**CRITICAL 5:** 스킬 레벨업 시 Ball 인스턴스 공유 문제~~ → STEP 10으로 확정
 - **INFO 1:** BallData 기본값 → PDF스펙정합 STEP 2에서 이미 처리됨, 중복
 - **WARNING 5:** ClusterBall 서브볼 발사 방향 → 몬스터가 위쪽에 위치하는 게임 구조상 의도된 구현, 수정 불필요
+- **CRITICAL 1:** 스킬 Lv3 도달 불가 → 정상 동작 확인. `_currentLevel < MaxLevel - 1`은 3개 배열 기준 index 0→1→2(Lv3) 모두 도달 가능. QA 오판정.
+- **WARNING 1:** XP 중복 지급 위험 → 정상 동작 확인. 몬스터 바닥 도달 시 `_monsterPool.Return()` → `OnDespawn()` 호출이며 `Die()`가 호출되지 않아 `OnMonsterDied` 미발행. 중복 경로 자체가 존재하지 않음. QA 오판정.
