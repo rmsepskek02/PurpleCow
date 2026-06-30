@@ -134,3 +134,43 @@
 - GhostBallSkill의 OnTriggerEnter2D는 `_skill is GhostBallSkill` 조건으로 Ghost 모드 한정 처리
 - SkillSetupEditor에서 `_skillType.enumValueIndex = (int)skillType` 방식으로 enum 값 설정
 - PassiveSkillBase는 MonoBehaviour가 아닌 순수 C# 클래스 — OnEnable/OnDisable 없이 Apply/Remove 쌍으로 이벤트 관리
+
+---
+
+## 2026-06-30
+
+### 작업: UI 시스템 구현 (UIManager, HUDPanel, ResultPanel, SkillSelectionPanel, SkillCardUI, SkillFactory)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-06-30/20-00_UI시스템구현/plan.md`
+- 기존 파일 9개 수정 + 신규 파일 6개 생성
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/GameManager.cs` — `IsLastGameSuccess { get; private set; }` 프로퍼티 추가, `EndGame(bool)` 내부에서 `IsLastGameSuccess = isSuccess` 저장
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — `OnWaveCleared` static event 추가, `TotalWaves` 읽기 전용 프로퍼티 추가, `CheckWaveCleared()` 분기 수정(마지막 웨이브면 OnAllWavesCleared, 아니면 OnWaveCleared), `AdvanceToNextWave()` private → public 전환
+- `Assets/_Project/Scripts/Skill/Base/BallSkillBase.cs` — MonoBehaviour 상속 제거, 순수 C# 클래스로 전환, `_skillData` 생성자 주입 방식으로 변경, `Initialize(Ball ball)` 메서드 추가
+- `Assets/_Project/Scripts/Ball/Ball.cs` — `SetSkill()` 내부에서 `_skill?.Initialize(this)` 호출 추가
+- `Assets/_Project/Scripts/Skill/Active/FireBallSkill.cs` — MonoBehaviour 상속 제거, 생성자 `(SkillData skillData)` 추가
+- `Assets/_Project/Scripts/Skill/Active/IceBallSkill.cs` — 동일
+- `Assets/_Project/Scripts/Skill/Active/GhostBallSkill.cs` — 동일
+- `Assets/_Project/Scripts/Skill/Active/LaserBallSkill.cs` — 동일
+- `Assets/_Project/Scripts/Skill/Active/ClusterBallSkill.cs` — 동일
+
+**생성 파일:**
+- `Assets/_Project/Scripts/UI/UIManager.cs` — Singleton<UIManager>, HUD/Result/SkillSelection 패널 전환, 점수 관리, OnScoreChanged static event
+- `Assets/_Project/Scripts/UI/HUDPanel.cs` — WaveManager.OnWaveStarted/BallLauncher.OnAllBallsReturned/UIManager.OnScoreChanged 구독, TMP_Text 사용
+- `Assets/_Project/Scripts/UI/ResultPanel.cs` — GameManager.OnGameStateChanged 구독, IsLastGameSuccess로 성공/실패 표시, RestartGame 연결
+- `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` — OnEnable에서 중복 없는 무작위 3장 제시, SkillFactory로 스킬 생성, UIManager.OnSkillSelectionComplete 호출
+- `Assets/_Project/Scripts/UI/SkillCardUI.cs` — Setup(SkillData, Action<SkillData>), _currentData 캐싱, TMP_Text/Image/Button 사용
+- `Assets/_Project/Scripts/Skill/SkillFactory.cs` — 정적 클래스, CreateActiveSkill/CreatePassiveSkill, SkillId switch 패턴으로 인스턴스 생성
+
+**Git:**
+- 브랜치: `claude/recent-plan-review-xq2hsm`
+- 커밋: `feat: implement UI system (UIManager, HUDPanel, ResultPanel, SkillSelectionPanel, SkillCardUI, SkillFactory)`
+- push 완료 (15 files changed, 338 insertions)
+
+**주요 결정사항:**
+- BallSkillBase를 순수 C# 클래스로 전환(옵션 A 채택) — SkillFactory에서 new로 직접 생성 가능
+- Ball 참조는 생성자가 아닌 `Initialize(Ball)` 메서드로 주입 — 스킬 인스턴스 재사용 시 유연성 확보
+- WaveManager.CheckWaveCleared: 마지막 웨이브 여부를 `_currentWaveIndex + 1 >= _waveDatas.Length`로 판단, AdvanceToNextWave는 UIManager가 스킬 선택 완료 후 호출
+- UIManager의 _score는 Ready 상태 전환 시 0으로 초기화 (RestartGame 흐름 대응)
