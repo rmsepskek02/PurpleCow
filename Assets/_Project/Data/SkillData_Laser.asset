@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d170c4df573e6e48afcb5d7ef08578a, type: 3}
+  m_Name: SkillData_Laser
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  _skillId: 1004
+  _skillName: Laser Ball
+  _icon: {fileID: 6460537984911393379, guid: 34a7f58c5d4863f4bb455a1067ecec0a, type: 3}
+  _description: "\uCDA9\uB3CC\uD55C \uBAAC\uC2A4\uD130\uC640 \uAC19\uC740 \uD589\uC758
+    \uB2E4\uB978 \uBAAC\uC2A4\uD130\uC5D0\uAC8C \uCD94\uAC00 \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
+  _skillType: 0
+  _levels:
+  - BallDamage: 11
+    Value1: 7
+    Value2: 0
+    Value3: 0
+  - BallDamage: 15
+    Value1: 11
+    Value2: 0
+    Value3: 0
+  - BallDamage: 19
+    Value1: 15
+    Value2: 0
+    Value3: 0
+  _currentLevel: 0

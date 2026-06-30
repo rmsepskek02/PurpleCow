@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d170c4df573e6e48afcb5d7ef08578a, type: 3}
+  m_Name: SkillData_Passive_LastMatch
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  _skillId: 3005
+  _skillName: Last Match
+  _icon: {fileID: 0}
+  _description: "\uBAAC\uC2A4\uD130 \uCC98\uCE58 \uC2DC \uC8FC\uBCC0 \uC801\uB4E4\uC5D0\uAC8C
+    \uCD94\uAC00 \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
+  _skillType: 1
+  _levels:
+  - BallDamage: 0
+    Value1: 10
+    Value2: 1.5
+    Value3: 0
+  - BallDamage: 0
+    Value1: 20
+    Value2: 1.5
+    Value3: 0
+  - BallDamage: 0
+    Value1: 30
+    Value2: 1.5
+    Value3: 0
+  _currentLevel: 0

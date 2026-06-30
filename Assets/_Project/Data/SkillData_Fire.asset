@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d170c4df573e6e48afcb5d7ef08578a, type: 3}
+  m_Name: SkillData_Fire
+  m_EditorClassIdentifier: Assembly-CSharp::SkillData
+  _skillId: 1001
+  _skillName: Fire Ball
+  _icon: {fileID: 6749790375628077161, guid: 0963d3d83ee3404489e86aefb842d808, type: 3}
+  _description: "\uCDA9\uB3CC\uD55C \uBAAC\uC2A4\uD130\uC5D0\uAC8C \uC9C0\uC18D \uD654\uC0C1
+    \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
+  _skillType: 0
+  _levels:
+  - BallDamage: 21
+    Value1: 4
+    Value2: 3
+    Value3: 8
+  - BallDamage: 24
+    Value1: 4.5
+    Value2: 4
+    Value3: 10
+  - BallDamage: 27
+    Value1: 5
+    Value2: 5
+    Value3: 12
+  _currentLevel: 0
