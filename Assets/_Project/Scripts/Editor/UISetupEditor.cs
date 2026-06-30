@@ -354,7 +354,7 @@ public static class UISetupEditor
     {
         Transform existing = parent.Find(name);
         if (existing != null) return existing.gameObject;
-        GameObject go = new GameObject(name);
+        GameObject go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         return go;
     }
