@@ -17,6 +17,8 @@ public static class SceneSetupEditor
         Step5_PlaceWallsAndGround();
         Step6_PlaceManagers();
         Step7_ConnectBallLauncherRefs(ballPrefab);
+        Step8_ConnectBallPrefabRefs();
+        Step9_ConnectWaveManagerRefs();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -73,7 +75,6 @@ public static class SceneSetupEditor
 
         // CircleCollider2D
         go.AddComponent<CircleCollider2D>();
-        Debug.LogWarning("[SceneSetupEditor] Ball.prefab: CircleCollider2D의 PhysicsMaterial2D는 수동으로 연결하세요.");
 
         // Ball 스크립트
         go.AddComponent<Ball>();
@@ -191,6 +192,111 @@ public static class SceneSetupEditor
         }
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+    }
+
+    // ──────────────────────────────────────────
+    //  Step 8. Ball.prefab 참조 연결
+    // ──────────────────────────────────────────
+
+    [MenuItem("PurpleCow/Setup/Connect Ball Prefab Refs")]
+    private static void Step8_ConnectBallPrefabRefs()
+    {
+        const string prefabPath  = "Assets/_Project/Prefabs/Ball/Ball.prefab";
+        const string ballDataPath = "Assets/_Project/Data/BallData.asset";
+        const string matPath      = "Assets/_Project/Physics/BallBounce.physicsMaterial2D";
+
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) == null)
+        {
+            Debug.LogWarning("[SceneSetupEditor] Ball.prefab 없음. Scene Setup을 먼저 실행하세요.");
+            return;
+        }
+
+        using (var scope = new PrefabUtility.EditPrefabContentsScope(prefabPath))
+        {
+            GameObject root = scope.prefabContentsRoot;
+
+            Ball ball = root.GetComponent<Ball>();
+            if (ball == null) { Debug.LogWarning("[SceneSetupEditor] Ball 컴포넌트 없음."); return; }
+
+            BallData ballData = AssetDatabase.LoadAssetAtPath<BallData>(ballDataPath);
+            SerializedObject ballSo = new SerializedObject(ball);
+            if (ballData != null)
+                ballSo.FindProperty("_ballData").objectReferenceValue = ballData;
+            else
+                Debug.LogWarning("[SceneSetupEditor] BallData.asset 없음. Ball System Setup을 먼저 실행하세요.");
+            ballSo.ApplyModifiedPropertiesWithoutUndo();
+
+            PhysicsMaterial2D mat = AssetDatabase.LoadAssetAtPath<PhysicsMaterial2D>(matPath);
+            CircleCollider2D col = root.GetComponent<CircleCollider2D>();
+            if (mat != null && col != null)
+            {
+                SerializedObject colSo = new SerializedObject(col);
+                colSo.FindProperty("m_Material").objectReferenceValue = mat;
+                colSo.ApplyModifiedPropertiesWithoutUndo();
+            }
+            else if (mat == null)
+                Debug.LogWarning("[SceneSetupEditor] BallBounce.physicsMaterial2D 없음. Ball System Setup을 먼저 실행하세요.");
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("[SceneSetupEditor] Ball.prefab 참조 연결 완료.");
+    }
+
+    // ──────────────────────────────────────────
+    //  Step 9. WaveManager 참조 연결
+    // ──────────────────────────────────────────
+
+    private static void Step9_ConnectWaveManagerRefs()
+    {
+        GameObject waveManagerObj = GameObject.Find("WaveManager");
+        if (waveManagerObj == null)
+        {
+            Debug.LogWarning("[SceneSetupEditor] WaveManager 씬 오브젝트 없음.");
+            return;
+        }
+
+        WaveManager waveManager = waveManagerObj.GetComponent<WaveManager>();
+        if (waveManager == null)
+        {
+            Debug.LogWarning("[SceneSetupEditor] WaveManager 컴포넌트 없음.");
+            return;
+        }
+
+        SerializedObject so = new SerializedObject(waveManager);
+
+        // _waveDatas 배열 연결
+        SerializedProperty waveDatasProp = so.FindProperty("_waveDatas");
+        waveDatasProp.arraySize = 20;
+        for (int i = 0; i < 20; i++)
+        {
+            string path = $"Assets/_Project/Data/WaveData_Wave{i + 1}.asset";
+            WaveData waveData = AssetDatabase.LoadAssetAtPath<WaveData>(path);
+            if (waveData != null)
+                waveDatasProp.GetArrayElementAtIndex(i).objectReferenceValue = waveData;
+            else
+                Debug.LogWarning($"[SceneSetupEditor] {path} 없음. Monster System Setup을 먼저 실행하세요.");
+        }
+
+        // _monsterPrefab → Fluffy
+        MonsterBase fluffyPrefab = AssetDatabase.LoadAssetAtPath<MonsterBase>(
+            "Assets/_Project/Prefabs/Monster/Fluffy.prefab");
+        if (fluffyPrefab != null)
+            so.FindProperty("_monsterPrefab").objectReferenceValue = fluffyPrefab;
+        else
+            Debug.LogWarning("[SceneSetupEditor] Fluffy.prefab 없음. Scene Setup을 먼저 실행하세요.");
+
+        // _poolParent, _spawnRoot → PoolRoot
+        GameObject poolRoot = GameObject.Find("PoolRoot");
+        if (poolRoot != null)
+        {
+            so.FindProperty("_poolParent").objectReferenceValue = poolRoot.transform;
+            so.FindProperty("_spawnRoot").objectReferenceValue  = poolRoot.transform;
+        }
+        else
+            Debug.LogWarning("[SceneSetupEditor] PoolRoot 없음.");
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[SceneSetupEditor] WaveManager 참조 연결 완료.");
     }
 
     // ──────────────────────────────────────────

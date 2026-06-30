@@ -327,3 +327,21 @@
 ### 주요 결정사항
 - 코드 수정 2건(BallSetupEditor _maxBounces 누락, SceneSetupEditor DamageTextManager 중복 생성)은 에디터 재실행 전 선행 수정 필요
 - Inspector 연결 4건(Ball.prefab, Monster 프리팹 4종, 씬 WaveManager, 씬 DamageTextManager)은 씬/프리팹 저장 후 Push로 완료
+
+---
+
+### 작업 내용 (추가)
+- Inspector 연결 및 에디터 수정 task plan.md 전면 수정
+- 경로: Assets/_Project/Docs/_Task/2026-06-30/15-50_Inspector연결및에디터수정/plan.md
+- STEP 3~6을 수동 드래그&드롭 방식에서 에디터 스크립트 자동화 방식으로 전환
+
+### 결과
+- plan.md 수정 완료: 서문, 구현 목표, STEP 3~6 내용, 예상 변경 파일 목록, 주의사항 전면 교체
+- STEP 1~2는 완료 상태로 명시, STEP 3~6은 에디터 스크립트 코드 추가 방식으로 재작성
+
+### 주요 결정사항
+- STEP 3(SceneSetupEditor Step8_ConnectBallPrefabRefs): PrefabUtility.EditPrefabContentsScope로 Ball.prefab 열고 _ballData/PhysicsMaterial2D 자동 연결
+- STEP 4(MonsterSetupEditor ConnectMonsterDataToPrefabs): 프리팹 4종 열고 _monsterData 자동 연결
+- STEP 5(SceneSetupEditor Step9_ConnectWaveManagerRefs): 씬 WaveManager _waveDatas 20개 + _monsterPrefab + _poolParent + _spawnRoot 자동 연결
+- STEP 6(UISetupEditor Step7_CreateDamageTextFxPrefab + Step8_ConnectDamageTextManagerRefs): DamageTextFx 프리팹 자동 생성 + DamageTextManager 참조 자동 연결
+- 에디터 실행 순서: Ball System Setup → Monster System Setup → Scene Setup → UI Setup

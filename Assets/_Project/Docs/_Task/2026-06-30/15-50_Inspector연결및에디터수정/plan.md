@@ -111,14 +111,26 @@ Monster 프리팹 4종의 `_monsterData`가 null이라 SpawnWave()에서 ApplyDa
 
 ---
 
-### STEP 6 — 씬 DamageTextManager Inspector 연결
+### STEP 6 — UISetupEditor.cs DamageTextFx 프리팹 생성 + DamageTextManager 참조 자동 연결
 
-**대상: Hierarchy의 `DamageTextManager` 오브젝트**
+**배경**
 
-- `_prefab` → `DamageTextFx` 프리팹 연결
-  - 프리팹이 없을 경우 `DamageTextFx.cs` 기반으로 프리팹을 수동 생성 필요
-- `_poolParent` → `DamageTextManager` 하위의 `DamageTextPool` 오브젝트 연결
-- 씬 저장: Ctrl+S
+DamageTextFx 프리팹이 존재하지 않아 DamageTextManager._prefab이 null이고, _poolParent(DamageTextPool)도 연결되지 않아 런타임 NullReferenceException이 발생한다.
+
+**수정 파일: `Assets/_Project/Scripts/Editor/UISetupEditor.cs`**
+
+1. `SetupUI()` 호출 흐름에 `Step7_CreateDamageTextFxPrefab()` 추가:
+   - `Assets/_Project/Prefabs/UI/DamageTextFx.prefab` 생성
+   - 자식에 "DamageText" GameObject + TextMeshPro 컴포넌트 추가 (World Space 3D 텍스트)
+   - DamageTextFx 컴포넌트의 `_text` → 생성한 TextMeshPro 연결
+
+2. `SetupUI()` 호출 흐름에 `Step8_ConnectDamageTextManagerRefs()` 추가:
+   - 씬 DamageTextManager의 `_prefab` → DamageTextFx.prefab 연결
+   - 씬 DamageTextManager의 `_poolParent` → DamageTextManager 하위 DamageTextPool Transform 연결
+
+3. `Step4_SetupManagers()`에서 DamageTextManager 신규 생성 시 `_poolParent` 즉시 연결
+
+**실행 순서**: UISetupEditor 실행(DamageTextFx 프리팹 생성 + DamageTextManager 참조 연결)
 
 ---
 
@@ -126,21 +138,18 @@ Monster 프리팹 4종의 `_monsterData`가 null이라 SpawnWave()에서 ApplyDa
 
 | 구분 | 파일 | 변경 내용 |
 |------|------|-----------|
-| 수정 | `Assets/_Project/Scripts/Editor/BallSetupEditor.cs` | `CreateBallDataAsset()`에 `_maxBounces` 초기값 10 설정 코드 추가 |
-| 수정 | `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` | `Step6_PlaceManagers()`에서 `PlaceManager<DamageTextManager>()` 호출 제거 |
-| 수정 | `Assets/_Project/Prefabs/Ball/Ball.prefab` | `_ballData`, `_maxBounces`, `Circle Collider 2D Material` 연결 |
-| 수정 | `Assets/_Project/Prefabs/Monster/Fluffy.prefab` | `_monsterData` → `MonsterData_Fluffy.asset` 연결 |
-| 수정 | `Assets/_Project/Prefabs/Monster/Spider.prefab` | `_monsterData` → `MonsterData_Spider.asset` 연결 |
-| 수정 | `Assets/_Project/Prefabs/Monster/StoneBug.prefab` | `_monsterData` → `MonsterData_StoneBug.asset` 연결 |
-| 수정 | `Assets/_Project/Prefabs/Monster/ForestDeer.prefab` | `_monsterData` → `MonsterData_ForestDeer.asset` 연결 |
-| 수정 | 씬 내 `WaveManager` | `_waveDatas`, `_monsterPrefab`, `_poolParent`, `_spawnRoot` 연결 |
-| 수정 | 씬 내 `DamageTextManager` | `_prefab`, `_poolParent` 연결 |
+| 수정(완료) | `Assets/_Project/Scripts/Editor/BallSetupEditor.cs` | `CreateBallDataAsset()`에 `_maxBounces` 초기값 10 설정 코드 추가 |
+| 수정(완료) | `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` | `Step6_PlaceManagers()`에서 `PlaceManager<DamageTextManager>()` 호출 제거 |
+| 수정 | `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` | `Step8_ConnectBallPrefabRefs()`, `Step9_ConnectWaveManagerRefs()` 추가 |
+| 수정 | `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs` | `ConnectMonsterDataToPrefabs()` 추가 |
+| 수정 | `Assets/_Project/Scripts/Editor/UISetupEditor.cs` | `Step7_CreateDamageTextFxPrefab()`, `Step8_ConnectDamageTextManagerRefs()` 추가, `Step4_SetupManagers()` _poolParent 즉시 연결 |
+| 생성 | `Assets/_Project/Prefabs/UI/DamageTextFx.prefab` | UISetupEditor가 자동 생성 |
 
 ---
 
 ## 주의사항
 
-- STEP 1 코드 수정 후 BallData.asset을 재생성하면 STEP 3의 `_maxBounces` 직접 수정이 불필요하다. 반대로 재생성하지 않는다면 Inspector에서 직접 10을 입력해야 한다.
-- STEP 2 수정 후 씬에 이미 SceneSetupEditor로 생성된 DamageTextManager가 존재한다면, UISetupEditor Step4를 다시 실행하거나 `DamageTextPool` 오브젝트를 수동으로 DamageTextManager 하위에 생성해야 한다.
-- STEP 5에서 `_waveDatas` 배열에 WaveData 에셋이 하나라도 누락되면 해당 웨이브 진입 시 NullReferenceException이 발생한다. 0~19 전 인덱스를 반드시 채운다.
-- Inspector 연결 작업(STEP 3~6)은 코드 수정(STEP 1~2) 이후에 진행하는 것을 권장한다.
+- 에디터 스크립트 실행 순서: Ball System Setup → Monster System Setup → Scene Setup → UI Setup
+- MonsterSetupEditor는 MonsterData/WaveData 에셋 생성과 프리팹 연결을 모두 담당하므로 SceneSetupEditor보다 먼저 실행해야 한다
+- SceneSetupEditor의 Step8(Ball 참조 연결)은 BallSetupEditor가 생성한 BallData.asset과 BallBounce.physicsMaterial2D가 없으면 경고를 출력하고 스킵된다
+- UISetupEditor Step7이 DamageTextFx 프리팹을 생성하고, Step8이 씬 DamageTextManager에 연결한다. UISetupEditor는 반드시 SceneSetupEditor 이후에 실행해야 DamageTextManager 씬 오브젝트를 찾을 수 있다
