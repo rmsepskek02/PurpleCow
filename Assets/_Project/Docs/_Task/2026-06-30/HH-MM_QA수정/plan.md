@@ -74,6 +74,7 @@ RestartGame() 호출 시 MonoBehaviour 기반 시스템(WaveManager, CharacterMa
 **수정 파일 2: `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs`**
 
 - `GameManager.OnGameStateChanged`를 구독하여 `GameState.Ready` 상태 수신 시 `_allSkillDatas` 배열을 순회하며 `data.ResetLevel()`을 호출한다. (STEP 7에서 static으로 전환되므로 Instance 접근 없이 직접 참조)
+- **주의**: 이 구독은 `OnEnable()`에서 추가된다. SkillSelectionPanel이 항상 active 상태여야 구독이 유지되므로, UI재작업(SetActive → CanvasGroup 전환)이 선행되어야 한다.
 
 **수정 파일 3: `Assets/_Project/Scripts/Core/GameManager.cs`**
 
