@@ -315,3 +315,16 @@
 - STEP 4: Monster 프리팹 4종(Fluffy/Spider/StoneBug/ForestDeer)에 각 MonsterData 에셋 연결
 - STEP 5: 씬 WaveManager에 _waveDatas 20개, _monsterPrefab, _poolParent, _spawnRoot 연결
 - STEP 6: 씬 DamageTextManager에 _prefab(DamageTextFx), _poolParent(DamageTextPool) 연결
+
+---
+
+### 작업 내용 (추가)
+- Inspector 연결 및 에디터 수정 task research.md 생성
+- 경로: Assets/_Project/Docs/_Task/2026-06-30/15-50_Inspector연결및에디터수정/research.md
+
+### 결과
+- research.md 생성 완료: 코드 문제 2건 + Inspector 미연결 4건 현재 상태, 의존성 테이블, 문제점 분석, 결론 작성
+
+### 주요 결정사항
+- 코드 수정 2건(BallSetupEditor _maxBounces 누락, SceneSetupEditor DamageTextManager 중복 생성)은 에디터 재실행 전 선행 수정 필요
+- Inspector 연결 4건(Ball.prefab, Monster 프리팹 4종, 씬 WaveManager, 씬 DamageTextManager)은 씬/프리팹 저장 후 Push로 완료
