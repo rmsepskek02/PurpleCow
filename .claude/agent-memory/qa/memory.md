@@ -69,3 +69,32 @@ STEP 1~10 전 항목 정상 구현 확인. 누락 없음.
 ### 주요 결정사항
 - 코드 수정 없이 검토 결과만 보고
 - STEP 1~10 모두 plan.md 명세와 일치하여 추가 수정 불필요 판정
+
+## 2026-06-30 — 에디터 스크립트 실행 후 에셋/씬 구조 전체 점검
+
+### 작업 내용
+에디터 스크립트(BallSetupEditor, MonsterSetupEditor, SkillSetupEditor, SceneSetupEditor, UISetupEditor) 코드 분석 및 실제 생성 결과 대조 검증.
+
+### 결과 요약
+- CRITICAL: 3건 (에셋/씬 미생성 — 에디터 스크립트가 실행되지 않음)
+- WARNING: 6건 (스크립트 내 논리 오류 및 연결 누락)
+
+### 주요 발견사항
+
+#### CRITICAL — 에셋/씬 오브젝트 미생성 (에디터 스크립트 미실행)
+1. Assets/_Project/Data/ 폴더 자체가 존재하지 않음 → BallData, MonsterData(4종), WaveData(Wave1~20), SkillData(액티브5+패시브5) 에셋 전부 미생성
+2. Assets/_Project/Prefabs/ 하위 .prefab 파일이 없음 (Ball.prefab, Fluffy/Spider/StoneBug/ForestDeer.prefab, Block_1x1~2x2.prefab, SkillCard.prefab 모두 없음)
+3. SampleScene.unity에는 Main Camera와 Global Light 2D만 존재 — GameManager, WaveManager, UIManager, BallLauncher, SkillManager, CharacterManager, DamageTextManager, InputHandler, Background, Wall_Left, Wall_Right, Ground, PoolRoot, Canvas_HUD/Panel/Popup, HUDPanel, ResultPanel, SkillSelectionPanel, CharacterHP/XP 전부 없음
+
+#### WARNING — 에디터 스크립트 논리 오류
+4. BallSetupEditor:100-103 — BallData의 _maxBounces 필드가 설정되지 않음. BallData.cs에는 _maxBounces가 있으나 에디터에서 설정 코드 없음. 기본값 0이면 Ball.OnSpawn()에서 _remainingBounces=0이 되어 첫 벽 충돌 시 즉시 소멸
+5. SkillSetupEditor — 패시브 스킬 5종(WarmTinHeart/MagicMirror/AmethystDagger/EmeraldDagger/LastMatch)의 iconPath가 빈 문자열("")로 설정됨. Sprites/Passive/ 폴더에 아이콘 이미지가 존재함에도 연결하지 않음
+6. MonsterSetupEditor:65-69 — 4종 MonsterData 모두 동일한 기본값(hp=30, moveSpeed=1, damage=1, reward=10)으로 설정. 종류별 차별화 없음
+7. MonsterSetupEditor:93-98 — WaveData Wave1~Wave20 생성 시 _waveNumber만 설정, _spawnEntries(List<MonsterSpawnEntry>)는 빈 상태. 실행 시 SpawnWave()에서 foreach가 빈 리스트를 순회하여 적이 하나도 스폰되지 않음
+8. SceneSetupEditor:Step3 — Block 프리팹 4종(Block_1x1~2x2)이 Monster 폴더에 생성되고 MonsterBase 컴포넌트가 붙음. Block은 몬스터가 아님에도 동일 태그("Monster")와 컴포넌트를 사용
+9. SceneSetupEditor:Step6과 UISetupEditor:Step4 중복 — DamageTextManager와 CharacterManager가 SceneSetupEditor.Step6과 UISetupEditor.Step4에서 각각 생성 시도됨. 두 에디터를 모두 실행하면 Singleton 중복 생성 방지가 작동하지만, Step4의 DamageTextManager는 자식 DamageTextPool을 추가하는 반면 Step6은 단순 AddComponent만 수행 — 실행 순서에 따라 DamageTextPool 유무가 달라짐
+
+### 주요 결정사항
+- 에디터 스크립트 자체는 컴파일 에러 없이 올바르게 작성됨
+- 미생성 문제는 Unity Editor에서 메뉴 실행이 안 된 것이 원인 (CLI 환경에서는 실행 불가)
+- 스크립트 논리 오류(maxBounces 미설정, spawnEntries 빈 상태, 패시브 아이콘 미연결)는 실행 후에도 수동 수정이 필요한 항목
