@@ -23,12 +23,12 @@ public class ResultPanel : MonoBehaviour
 
     private void OnEnable()
     {
-        GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
+        GameManager.OnGameStateChanged += HandleGameStateChanged;
     }
 
     private void OnDisable()
     {
-        GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
+        GameManager.OnGameStateChanged -= HandleGameStateChanged;
     }
 
     private void OnDestroy()

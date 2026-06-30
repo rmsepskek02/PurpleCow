@@ -23,16 +23,16 @@ public class BallLauncher : Singleton<BallLauncher>
 
     private void OnEnable()
     {
-        InputHandler.Instance.OnDrag += HandleDrag;
-        InputHandler.Instance.OnRelease += HandleRelease;
-        GameManager.Instance.OnGameStateChanged += HandleGameState;
+        InputHandler.OnDrag             += HandleDrag;
+        InputHandler.OnRelease          += HandleRelease;
+        GameManager.OnGameStateChanged  += HandleGameState;
     }
 
     private void OnDisable()
     {
-        InputHandler.Instance.OnDrag -= HandleDrag;
-        InputHandler.Instance.OnRelease -= HandleRelease;
-        GameManager.Instance.OnGameStateChanged -= HandleGameState;
+        InputHandler.OnDrag             -= HandleDrag;
+        InputHandler.OnRelease          -= HandleRelease;
+        GameManager.OnGameStateChanged  -= HandleGameState;
     }
 
     private void HandleDrag(Vector2 direction)

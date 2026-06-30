@@ -3,8 +3,8 @@ using UnityEngine;
 
 public class InputHandler : Singleton<InputHandler>
 {
-    public event Action<Vector2> OnDrag;
-    public event Action OnRelease;
+    public static event Action<Vector2> OnDrag;
+    public static event Action OnRelease;
 
     private Vector2 _dragStartPosition;
 

@@ -9,7 +9,7 @@ public static class MonsterSetupEditor
     {
         EnsureMonsterTag();
         CreateMonsterDataAssets();
-        CreateWaveDataAsset();
+        CreateWaveDataAssets();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -73,21 +73,29 @@ public static class MonsterSetupEditor
         }
     }
 
-    private static void CreateWaveDataAsset()
+    private static void CreateWaveDataAssets()
     {
         EnsureDataFolder();
 
-        const string path = "Assets/_Project/Data/WaveData_Wave1.asset";
-
-        if (AssetDatabase.LoadAssetAtPath<WaveData>(path) != null)
+        for (int n = 1; n <= 20; n++)
         {
-            Debug.Log("[MonsterSetupEditor] WaveData_Wave1 이미 존재, 스킵.");
-            return;
-        }
+            string path = $"Assets/_Project/Data/WaveData_Wave{n}.asset";
 
-        WaveData waveData = ScriptableObject.CreateInstance<WaveData>();
-        AssetDatabase.CreateAsset(waveData, path);
-        Debug.Log($"[MonsterSetupEditor] WaveData 생성: {path}");
+            if (AssetDatabase.LoadAssetAtPath<WaveData>(path) != null)
+            {
+                Debug.Log($"[MonsterSetupEditor] WaveData_Wave{n} 이미 존재, 스킵.");
+                continue;
+            }
+
+            WaveData waveData = ScriptableObject.CreateInstance<WaveData>();
+
+            SerializedObject so = new SerializedObject(waveData);
+            so.FindProperty("_waveNumber").intValue = n;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            AssetDatabase.CreateAsset(waveData, path);
+            Debug.Log($"[MonsterSetupEditor] WaveData 생성: {path}");
+        }
     }
 
     private static void EnsureDataFolder()

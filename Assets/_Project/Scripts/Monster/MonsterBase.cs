@@ -21,16 +21,6 @@ public class MonsterBase : MonoBehaviour, IPoolable
     public static event Action<MonsterBase> OnMonsterDied;
     public event Action<float, float> OnHpChanged;
 
-    private void OnEnable()
-    {
-        Ball.OnHitMonster += HandleHitMonster;
-    }
-
-    private void OnDisable()
-    {
-        Ball.OnHitMonster -= HandleHitMonster;
-    }
-
     public void OnSpawn()
     {
         _currentHp             = _monsterData.Hp;
@@ -39,6 +29,13 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _slowTurnsRemaining    = 0;
         _slowPercent           = 0f;
         _bonusCritChance       = 0f;
+        OnHpChanged?.Invoke(_currentHp, _monsterData.Hp);
+    }
+
+    public void ApplyData(MonsterData data)
+    {
+        _monsterData = data;
+        _currentHp   = _monsterData.Hp;
         OnHpChanged?.Invoke(_currentHp, _monsterData.Hp);
     }
 
@@ -129,8 +126,5 @@ public class MonsterBase : MonoBehaviour, IPoolable
         transform.position += (Vector3)(Vector2.down * distance);
     }
 
-    private void HandleHitMonster(float damage, bool isCritical)
-    {
-        // Ball.OnHitMonster 구독 핸들러 — 데미지는 Ball.CalculateDamage에서 직접 처리
-    }
+
 }

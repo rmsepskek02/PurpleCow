@@ -22,16 +22,16 @@ public class UIManager : Singleton<UIManager>
 
     private void OnEnable()
     {
-        GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
-        WaveManager.OnAllWavesCleared           += HandleAllWavesCleared;
-        MonsterBase.OnMonsterDied               += HandleMonsterDied;
+        GameManager.OnGameStateChanged  += HandleGameStateChanged;
+        WaveManager.OnAllWavesCleared   += HandleAllWavesCleared;
+        MonsterBase.OnMonsterDied       += HandleMonsterDied;
     }
 
     private void OnDisable()
     {
-        GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
-        WaveManager.OnAllWavesCleared           -= HandleAllWavesCleared;
-        MonsterBase.OnMonsterDied               -= HandleMonsterDied;
+        GameManager.OnGameStateChanged  -= HandleGameStateChanged;
+        WaveManager.OnAllWavesCleared   -= HandleAllWavesCleared;
+        MonsterBase.OnMonsterDied       -= HandleMonsterDied;
     }
 
     private void HandleGameStateChanged(GameManager.GameState state)
@@ -70,6 +70,7 @@ public class UIManager : Singleton<UIManager>
 
     public void OnSkillSelectionComplete()
     {
+        Time.timeScale = 1f;
         ShowSkillSelection(false);
         WaveManager.Instance.AdvanceToNextWave();
     }

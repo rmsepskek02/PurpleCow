@@ -1,11 +1,12 @@
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : Singleton<GameManager>
 {
     public enum GameState { Ready, Playing, Result }
 
-    public event Action<GameState> OnGameStateChanged;
+    public static event Action<GameState> OnGameStateChanged;
 
     public GameState CurrentState { get; private set; }
     public bool IsLastGameSuccess { get; private set; }
@@ -27,5 +28,6 @@ public class GameManager : Singleton<GameManager>
     {
         CurrentState = GameState.Ready;
         OnGameStateChanged?.Invoke(CurrentState);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

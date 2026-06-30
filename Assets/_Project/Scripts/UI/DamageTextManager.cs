@@ -14,6 +14,21 @@ public class DamageTextManager : Singleton<DamageTextManager>
         _pool = new ObjectPool<DamageTextFx>(_prefab, _poolParent, _initialPoolSize);
     }
 
+    private void OnEnable()
+    {
+        Ball.OnHitMonster += HandleHitMonster;
+    }
+
+    private void OnDisable()
+    {
+        Ball.OnHitMonster -= HandleHitMonster;
+    }
+
+    private void HandleHitMonster(MonsterBase monster, float damage, bool isCritical)
+    {
+        ShowDamage(monster.transform.position, damage, isCritical);
+    }
+
     public void ShowDamage(Vector3 worldPos, float damage, bool isCritical)
     {
         DamageTextFx fx = _pool.Get();

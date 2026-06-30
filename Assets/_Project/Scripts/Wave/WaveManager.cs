@@ -60,6 +60,8 @@ public class WaveManager : Singleton<WaveManager>
         foreach (MonsterSpawnEntry entry in waveData.SpawnEntries)
         {
             MonsterBase monster = _monsterPool.Get();
+            if (entry.Data != null)
+                monster.ApplyData(entry.Data);
             Vector3 worldPosition = _spawnRoot.position + new Vector3(
                 entry.GridPosition.x * _gridCellSize,
                 entry.GridPosition.y * _gridCellSize,

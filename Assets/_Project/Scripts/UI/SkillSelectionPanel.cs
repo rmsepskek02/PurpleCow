@@ -21,16 +21,28 @@ public class SkillSelectionPanel : MonoBehaviour
 
     private void OnEnable()
     {
-        WaveManager.OnKillCountReached += OpenPanel;
+        WaveManager.OnKillCountReached  += OpenPanel;
+        GameManager.OnGameStateChanged  += HandleGameStateChanged;
     }
 
     private void OnDisable()
     {
-        WaveManager.OnKillCountReached -= OpenPanel;
+        WaveManager.OnKillCountReached  -= OpenPanel;
+        GameManager.OnGameStateChanged  -= HandleGameStateChanged;
+    }
+
+    private void HandleGameStateChanged(GameManager.GameState state)
+    {
+        if (state != GameManager.GameState.Ready)
+            return;
+
+        foreach (var data in _allSkillDatas)
+            data.ResetLevel();
     }
 
     private void OpenPanel()
     {
+        Time.timeScale = 0f;
         ShowRandomSkills();
         Show();
     }
@@ -88,7 +100,6 @@ public class SkillSelectionPanel : MonoBehaviour
     {
         ApplySkill(selectedData);
         UIManager.Instance.OnSkillSelectionComplete();
-        Hide();
     }
 
     private void ApplySkill(SkillData data)
@@ -113,7 +124,7 @@ public class SkillSelectionPanel : MonoBehaviour
         transform.localPosition     = _originalPos + Vector3.down * _slideDist;
         _canvasGroup.alpha          = 0f;
 
-        Sequence seq = DOTween.Sequence();
+        Sequence seq = DOTween.Sequence().SetUpdate(true);
         seq.Append(transform.DOLocalMoveY(_originalPos.y, _animDuration).SetEase(_ease));
         seq.Join(_canvasGroup.DOFade(1f, _animDuration));
         seq.OnComplete(() => { _canvasGroup.blocksRaycasts = true; _canvasGroup.interactable = true; });
@@ -124,7 +135,7 @@ public class SkillSelectionPanel : MonoBehaviour
         _canvasGroup.blocksRaycasts = false;
         _canvasGroup.interactable   = false;
 
-        Sequence seq = DOTween.Sequence();
+        Sequence seq = DOTween.Sequence().SetUpdate(true);
         seq.Append(transform.DOLocalMoveY(_originalPos.y - _slideDist, _animDuration).SetEase(_ease));
         seq.Join(_canvasGroup.DOFade(0f, _animDuration));
         seq.OnComplete(() => { transform.localPosition = _originalPos; gameObject.SetActive(false); });

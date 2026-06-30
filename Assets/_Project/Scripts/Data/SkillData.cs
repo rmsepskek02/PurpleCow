@@ -65,4 +65,9 @@ public class SkillData : ScriptableObject
     {
         if (_currentLevel < MaxLevel - 1) _currentLevel++;
     }
+
+    public void ResetLevel()
+    {
+        _currentLevel = 0;
+    }
 }

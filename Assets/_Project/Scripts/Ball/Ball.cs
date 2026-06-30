@@ -16,7 +16,7 @@ public class Ball : MonoBehaviour, IPoolable
     public Vector2 LaunchDirection { get; private set; }
     public float   LastDamage      { get; private set; }
 
-    public static event Action<float, bool>       OnHitMonster;
+    public static event Action<MonsterBase, float, bool> OnHitMonster;
     public static event Action                    OnWallHit;
     public static event Action<MonsterBase>       OnHitMonsterFront;
     public static event Action<MonsterBase>       OnHitMonsterBack;
@@ -132,7 +132,7 @@ public class Ball : MonoBehaviour, IPoolable
 
         LastDamage = damage;
         target.TakeDamage(damage);
-        OnHitMonster?.Invoke(damage, isCritical);
+        OnHitMonster?.Invoke(target, damage, isCritical);
     }
 
     public void AddSkill(BallSkillBase skill)

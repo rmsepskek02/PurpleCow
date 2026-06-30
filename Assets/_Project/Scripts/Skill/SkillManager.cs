@@ -36,7 +36,7 @@ public class SkillManager : Singleton<SkillManager>
     public void AddPassiveSkill(PassiveSkillBase skill)
     {
         var existing = _passiveSkills.Find(s => s.SkillData.SkillId == skill.SkillData.SkillId);
-        if (existing != null) { existing.SkillData.LevelUp(); existing.Apply(); return; }
+        if (existing != null) { existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return; }
         if (_passiveSkills.Count >= 2) return;
         _passiveSkills.Add(skill);
         skill.Apply();
@@ -55,7 +55,7 @@ public class SkillManager : Singleton<SkillManager>
     public void ApplySkillToBall(Ball ball)
     {
         foreach (var skill in _activeSkills)
-            ball.AddSkill(skill);
+            ball.AddSkill(SkillFactory.CreateActiveSkill(skill.SkillData));
     }
 
     public void AddDamageMultiplier(float value)    => _damageMultiplierBonus += value;
