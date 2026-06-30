@@ -186,3 +186,21 @@
 - CharacterManager가 HP, XP, 레벨 모두 담당 (Singleton)
 - WaveManager에 OnMonsterReachedBottom static event 추가 필요 (CharacterManager 연동)
 - XP 획득 조건: 몬스터 처치 및 통과 모두 reward만큼 획득
+
+---
+
+### 작업 내용 (추가)
+- UI 전체 재작업 task 문서 생성: research.md, plan.md
+- 경로: Assets/_Project/Docs/_Task/2026-06-30/HH-MM_UI재작업/
+- AGENTS.md Task 문서 섹션에 HH-MM_UI재작업 항목 추가
+
+### 결과
+- research.md: UI 스크립트 5종 문제점 분석, 미구현 항목 8종 목록, 의존성 누락(OnHpChanged/OnMonsterReachedBottom 이벤트, DOTween 패키지) 기록 완료
+- plan.md: STEP 0~12 상세 구현 계획 작성 완료 (신규 8종, 수정 7종, DOTween 선행 설치 안내 포함)
+
+### 주요 결정사항
+- DOTween 패키지 미설치 확인 → STEP 0으로 선행 설치 명시
+- UIManager OnWaveCleared 구독이 이중 트리거 버그 유발 → STEP 3에서 제거
+- SkillSelectionPanel OnEnable ShowRandomSkills() 호출이 CanvasGroup 방식 전환 시 타이밍 버그 유발 → STEP 12에서 제거
+- CheckGameOver의 직접 EndGame 호출 제거 → CharacterManager가 HP 0 시 EndGame 담당 (STEP 8, 9 동시 구현 필요)
+- MonsterBase에 Data 프로퍼티(public MonsterData Data) 추가 필요 (STEP 6에서 외과적 추가)
