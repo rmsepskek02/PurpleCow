@@ -98,3 +98,30 @@ STEP 1~10 전 항목 정상 구현 확인. 누락 없음.
 - 에디터 스크립트 자체는 컴파일 에러 없이 올바르게 작성됨
 - 미생성 문제는 Unity Editor에서 메뉴 실행이 안 된 것이 원인 (CLI 환경에서는 실행 불가)
 - 스크립트 논리 오류(maxBounces 미설정, spawnEntries 빈 상태, 패시브 아이콘 미연결)는 실행 후에도 수동 수정이 필요한 항목
+
+## 2026-06-30 — 에디터 스크립트 재실행 후 에셋/씬 전체 재점검 (2차)
+
+### 작업 내용
+에디터 스크립트 실행 후 실제 생성된 에셋과 씬 파일을 직접 읽어 전항목 대조 검증.
+
+### 결과 요약
+- CRITICAL: 4건
+- WARNING: 5건
+
+### 주요 발견사항 상세
+
+#### CRITICAL
+1. BallData.asset: `_maxBounces: 0` — BallSetupEditor에서 이 필드 설정 코드 누락. 기본값 0이므로 첫 벽 충돌 즉시 소멸
+2. WaveData_Wave1.asset: `_spawnEntries: []` — spawnEntries가 빈 배열. 웨이브 시작해도 적이 0마리 스폰됨
+3. SampleScene.unity: 352줄, Main Camera + Global Light 2D만 존재 — GameManager, WaveManager, UIManager, BallLauncher, SkillManager, CharacterManager, DamageTextManager, InputHandler, Background, Wall_Left, Wall_Right, Ground, PoolRoot, Canvas_HUD/Panel/Popup 전부 미존재
+4. Ball.prefab: `_ballData: {fileID: 0}` — BallData 에셋 연결 없음. Ball 스크립트의 _ballData 참조가 null이어서 런타임 NullReferenceException 발생
+
+#### WARNING
+5. MonsterData_Fluffy.asset과 MonsterData_Spider.asset 모두 hp=30, moveSpeed=1, damage=1, reward=10으로 동일값. 몬스터 종별 차별화 없음
+6. SkillData_Passive_WarmTinHeart.asset: `_icon: {fileID: 0}` — 아이콘 미연결
+7. Fluffy.prefab / Spider.prefab: MonsterBase 컴포넌트의 `_monsterData: {fileID: 0}` — MonsterData 에셋 연결 없음. 런타임 NullReferenceException 발생 가능
+8. Ball.prefab: CircleCollider2D의 m_Material(PhysicsMaterial2D)이 {fileID: 0} — 에디터 스크립트에서 수동 연결 요구 LogWarning 출력했으나 실제 연결 안 됨. 벽/지면 반사 물리가 정상 동작 안 할 수 있음
+9. SkillSetupEditor/BallSetupEditor 이중 실행 시 DamageTextManager 중복: SceneSetupEditor.Step6에서 DamageTextManager 단순 생성, UISetupEditor.Step4에서 DamageTextManager + 자식 DamageTextPool 생성 — 에디터 스크립트가 둘 다 실행된 경우 실행 순서에 따라 DamageTextPool 유무가 다름
+
+### 주요 결정사항
+- 코드 수정 없이 검토 결과만 보고
