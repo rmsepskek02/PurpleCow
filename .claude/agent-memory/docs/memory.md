@@ -25,7 +25,6 @@
 ---
 
 ### 작업 내용 (추가)
-<<<<<<< HEAD
 - Ball 시스템 구현 task 문서 생성: research.md, plan.md
 - 경로: Assets/_Project/Docs/_Task/2026-06-30/10-00_Ball시스템구현/
 
