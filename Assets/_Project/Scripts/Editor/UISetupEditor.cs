@@ -78,7 +78,7 @@ public static class UISetupEditor
 
         // SafeAreaPanel
         GameObject safeAreaPanel = EnsureChildObject(hudRoot, "SafeAreaPanel");
-        StretchFill(safeAreaPanel.GetComponent<RectTransform>() ?? safeAreaPanel.AddComponent<RectTransform>());
+        StretchFill(EnsureRectTransform(safeAreaPanel));
         if (safeAreaPanel.GetComponent<SafeAreaFitter>() == null)
             safeAreaPanel.AddComponent<SafeAreaFitter>();
 
@@ -353,7 +353,13 @@ public static class UISetupEditor
     private static GameObject EnsureChildObject(Transform parent, string name)
     {
         Transform existing = parent.Find(name);
-        if (existing != null) return existing.gameObject;
+        if (existing != null)
+        {
+            if (existing.GetComponent<RectTransform>() != null)
+                return existing.gameObject;
+            // 이전 실행에서 plain Transform으로 생성된 경우 제거 후 재생성
+            Object.DestroyImmediate(existing.gameObject);
+        }
         GameObject go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         return go;
