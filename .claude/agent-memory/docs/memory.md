@@ -236,3 +236,19 @@
 - ApplyData(MonsterData data) 메서드: _monsterData 교체 → _currentHp 재초기화 → OnHpChanged 이벤트 발행 순서
 - WaveManager.SpawnWave()에서 entry.Data != null 조건부로 ApplyData() 호출 (프리팹 기본값 보호)
 - 나머지 항목은 논의 완료 후 STEP으로 순차 추가 예정
+
+---
+
+### 작업 내용 (추가)
+- QA 수정 task plan.md에 STEP 2(CRITICAL 3 — 스킬 선택 중 게임 일시정지 처리) 추가
+- "논의 예정 항목"에서 CRITICAL 3 항목 제거
+- 서문 설명 업데이트 (CRITICAL 2 + CRITICAL 3 두 건 확정 명시)
+
+### 결과
+- plan.md 수정 완료: STEP 2 신규 추가, 파일 목록에 SkillSelectionPanel.cs / UIManager.cs 추가, 논의 예정 항목에서 CRITICAL 3 제거
+
+### 주요 결정사항
+- SkillSelectionPanel.OpenPanel()에 Time.timeScale = 0f 추가
+- UIManager.OnSkillSelectionComplete()에 Time.timeScale = 1f 추가
+- SkillSelectionPanel.Show()/Hide() DOTween Sequence에 .SetUpdate(true) 추가 (timeScale=0 시 unscaled time 애니메이션 재생)
+- ResultPanel/HUDPanel은 게임이 이미 멈춘 상태에서 열리므로 SetUpdate 불필요 — SkillSelectionPanel만 해당

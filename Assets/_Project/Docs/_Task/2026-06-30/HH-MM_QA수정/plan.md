@@ -64,6 +64,8 @@ SkillSelectionPanel은 인게임 도중 열리기 때문에 패널이 열려 있
 |------|------|-----------|
 | 수정 | `Assets/_Project/Scripts/Monster/MonsterBase.cs` | `ApplyData(MonsterData data)` 메서드 추가 |
 | 수정 | `Assets/_Project/Scripts/Wave/WaveManager.cs` | `SpawnWave()` 내 `ApplyData()` 호출 추가 |
+| 수정 | `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` | `OpenPanel()`에 `Time.timeScale = 0f` 추가, `Show()`/`Hide()` Sequence에 `.SetUpdate(true)` 추가 |
+| 수정 | `Assets/_Project/Scripts/UI/UIManager.cs` | `OnSkillSelectionComplete()`에 `Time.timeScale = 1f` 추가 |
 
 ---
 
@@ -79,7 +81,6 @@ SkillSelectionPanel은 인게임 도중 열리기 때문에 패널이 열려 있
 
 아래 항목들은 수정 방향이 아직 확정되지 않았습니다. 논의 완료 후 각 항목이 STEP으로 이 plan.md에 추가될 예정입니다.
 
-- **CRITICAL 3:** 스킬 선택 중 게임 진행 (Time.timeScale 미처리)
 - **CRITICAL 4:** 재시작 초기화 미구현 (RestartGame)
 - **WARNING 2:** 패시브 스킬 레벨업 시 이벤트 이중 구독
 - **WARNING 3:** MonsterBase 빈 이벤트 핸들러 불필요 구독
