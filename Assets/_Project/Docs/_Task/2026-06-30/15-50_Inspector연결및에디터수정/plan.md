@@ -1,20 +1,20 @@
 # Plan — Inspector 연결 및 에디터 수정
 
 이 문서는 모든 task의 코드 구현이 완료된 상태에서 남아 있는 후처리 작업 계획을 기술합니다.
-에디터 스크립트 코드 수정 2건(STEP 1~2)과 Unity Inspector에서 수동으로 처리해야 하는 참조 연결 4건(STEP 3~6)으로 구성됩니다.
+에디터 스크립트 코드 수정 2건(STEP 1~2)과 Inspector 참조 연결 자동화 4건(STEP 3~6)으로 구성됩니다.
 
 ---
 
 ## 구현 목표
 
-에디터 스크립트의 버그 2건을 수정하고, 에디터 스크립트 실행 후 자동으로 연결되지 않는 Inspector 참조 4건을 수동으로 연결한다.
+에디터 스크립트의 버그 2건을 수정하고(STEP 1~2, 완료), 기존 에디터 스크립트에 Inspector 참조 자동 연결 로직을 추가한다(STEP 3~6).
 
-- **STEP 1**: `BallSetupEditor.cs`의 `_maxBounces` 누락 수정
-- **STEP 2**: `SceneSetupEditor.cs`의 DamageTextManager 중복 생성 제거
-- **STEP 3**: `Ball.prefab` Inspector 연결
-- **STEP 4**: Monster 프리팹 4종 Inspector 연결
-- **STEP 5**: 씬 WaveManager Inspector 연결
-- **STEP 6**: 씬 DamageTextManager Inspector 연결
+- **STEP 1**: `BallSetupEditor.cs`의 `_maxBounces` 누락 수정 (완료)
+- **STEP 2**: `SceneSetupEditor.cs`의 DamageTextManager 중복 생성 제거 (완료)
+- **STEP 3**: `SceneSetupEditor.cs` — Ball.prefab 참조 자동 연결 추가
+- **STEP 4**: `MonsterSetupEditor.cs` — Monster 프리팹 MonsterData 자동 연결 추가
+- **STEP 5**: `SceneSetupEditor.cs` — 씬 WaveManager 참조 자동 연결 추가
+- **STEP 6**: `UISetupEditor.cs` — DamageTextFx 프리팹 생성 + DamageTextManager 참조 자동 연결 추가
 
 ---
 
@@ -58,42 +58,56 @@ DamageTextManager 생성은 UISetupEditor가 전담한다.
 
 ---
 
-### STEP 3 — Ball.prefab Inspector 연결
+### STEP 3 — SceneSetupEditor.cs Ball.prefab 참조 자동 연결
 
-**대상 파일: `Assets/_Project/Prefabs/Ball/Ball.prefab`**
+**배경**
 
-- `Ball (Script)` 컴포넌트의 `_ballData` 필드 → `Assets/_Project/Data/BallData.asset` 드래그 연결
-- `Ball (Script)` 컴포넌트의 `_maxBounces` 필드 → **10** 입력
-  - STEP 1 코드 수정 후 에셋을 재생성하면 자동 반영. 재생성하지 않을 경우 직접 수정 필요
-- `Circle Collider 2D`의 `Material` 필드 → `Assets/_Project/Physics/BallBounce.physicsMaterial2D` 드래그 연결
-- 프리팹 저장: 우클릭 → Apply All 또는 Ctrl+S
+Ball.prefab의 `_ballData`(BallData.asset)와 CircleCollider2D의 PhysicsMaterial2D가 연결되지 않아 볼이 데이터를 참조하지 못하고 물리 반사가 동작하지 않는다.
 
----
+**수정 파일: `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`**
 
-### STEP 4 — Monster 프리팹 4종 Inspector 연결
+`SetupScene()` 호출 흐름에 `Step8_ConnectBallPrefabRefs()` 추가:
+- `PrefabUtility.EditPrefabContentsScope`로 Ball.prefab 열기
+- Ball 컴포넌트의 `_ballData` → `Assets/_Project/Data/BallData.asset` 연결
+- CircleCollider2D의 `m_Material` 프로퍼티 → `Assets/_Project/Physics/BallBounce.physicsMaterial2D` 연결
+- `[MenuItem("PurpleCow/Setup/Connect Ball Prefab Refs")]` 단독 실행 메뉴도 추가
 
-**대상 프리팹 및 연결 내용**
-
-| 프리팹 | 필드 | 연결 에셋 |
-|--------|------|-----------|
-| `Assets/_Project/Prefabs/Monster/Fluffy.prefab` | `Monster Base (Script)`의 `_monsterData` | `MonsterData_Fluffy.asset` |
-| `Assets/_Project/Prefabs/Monster/Spider.prefab` | `Monster Base (Script)`의 `_monsterData` | `MonsterData_Spider.asset` |
-| `Assets/_Project/Prefabs/Monster/StoneBug.prefab` | `Monster Base (Script)`의 `_monsterData` | `MonsterData_StoneBug.asset` |
-| `Assets/_Project/Prefabs/Monster/ForestDeer.prefab` | `Monster Base (Script)`의 `_monsterData` | `MonsterData_ForestDeer.asset` |
-
-- 각 프리팹 연결 후 저장: Apply All
+**실행 순서**: BallSetupEditor 실행(BallData.asset + BallBounce.physicsMaterial2D 생성) → SceneSetupEditor 실행(Ball.prefab 생성 + 참조 연결)
 
 ---
 
-### STEP 5 — 씬 WaveManager Inspector 연결
+### STEP 4 — MonsterSetupEditor.cs Monster 프리팹 MonsterData 자동 연결
 
-**대상: Hierarchy의 `WaveManager` 오브젝트**
+**배경**
 
-- `_waveDatas` 배열 크기를 20으로 설정한 후 Element 0~19에 `WaveData_Wave1.asset` ~ `WaveData_Wave20.asset`을 순서대로 연결
-- `_monsterPrefab` → 사용할 기본 Monster 프리팹 연결 (예: `Fluffy.prefab`)
-- `_poolParent` → Hierarchy의 `PoolRoot` 오브젝트 연결
-- `_spawnRoot` → Hierarchy의 `PoolRoot` 또는 별도 스폰 루트 오브젝트 연결
-- 씬 저장: Ctrl+S
+Monster 프리팹 4종의 `_monsterData`가 null이라 SpawnWave()에서 ApplyData() 호출 시 데이터가 없어 몬스터가 기본값으로 동작한다.
+
+**수정 파일: `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs`**
+
+`SetupMonsterSystem()` 호출 흐름에 `ConnectMonsterDataToPrefabs()` 추가:
+- `PrefabUtility.EditPrefabContentsScope`로 각 프리팹 열기
+- MonsterBase 컴포넌트의 `_monsterData` → `Assets/_Project/Data/MonsterData_{이름}.asset` 연결
+- 대상: Fluffy, Spider, StoneBug, ForestDeer 4종
+
+**실행 순서**: MonsterSetupEditor 실행(MonsterData 에셋 생성 + 프리팹 연결)
+
+---
+
+### STEP 5 — SceneSetupEditor.cs 씬 WaveManager 참조 자동 연결
+
+**배경**
+
+씬 WaveManager의 `_waveDatas`, `_monsterPrefab`, `_poolParent`, `_spawnRoot`가 모두 null이라 게임 시작 시 NullReferenceException이 발생한다.
+
+**수정 파일: `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`**
+
+`SetupScene()` 호출 흐름에 `Step9_ConnectWaveManagerRefs()` 추가:
+- `_waveDatas` 배열 크기 20으로 설정 → WaveData_Wave1 ~ WaveData_Wave20 순서대로 연결
+- `_monsterPrefab` → `Assets/_Project/Prefabs/Monster/Fluffy.prefab`
+- `_poolParent` → 씬의 PoolRoot Transform
+- `_spawnRoot` → 씬의 PoolRoot Transform (같은 오브젝트 사용)
+
+**실행 순서**: MonsterSetupEditor 실행(WaveData 에셋 생성) → SceneSetupEditor 실행(WaveManager 참조 연결)
 
 ---
 
