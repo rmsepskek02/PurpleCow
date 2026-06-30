@@ -37,3 +37,35 @@
 ### 주요 결정사항
 - 코드 수정 없이 검토 결과만 보고
 - 모든 파일 직접 읽어 스펙과 대조 완료
+
+## 2026-06-30 — plan.md STEP 1~10 구현 검증
+
+### 작업 내용
+`/home/user/PurpleCow/Assets/_Project/Docs/_Task/2026-06-30/HH-MM_QA수정/plan.md` 기준으로
+STEP 1~10 구현 완료 여부를 13개 파일 대상으로 검토.
+
+### 결과 요약
+STEP 1~10 전 항목 정상 구현 확인. 누락 없음.
+
+### 검토 파일 목록
+- MonsterBase.cs — ApplyData() 추가, 빈 HandleHitMonster 및 OnEnable/OnDisable 제거 완료
+- WaveManager.cs — SpawnWave() 내 ApplyData() 조건부 호출 완료
+- SkillSelectionPanel.cs — timeScale=0, SetUpdate(true), ResetLevel 구독, Hide() 중복 제거 완료
+- UIManager.cs — timeScale=1, static 이벤트 참조 완료
+- SkillData.cs — ResetLevel() 추가 완료
+- GameManager.cs — OnGameStateChanged static, SceneManager.LoadScene() 추가 완료
+- InputHandler.cs — OnDrag/OnRelease static 전환 완료
+- BallLauncher.cs — static 이벤트 직접 참조 완료
+- ResultPanel.cs — static 이벤트 직접 참조 완료
+- SkillManager.cs — Remove() 추가, SkillFactory.CreateActiveSkill() 사용 완료
+- Ball.cs — OnHitMonster 시그니처 Action<MonsterBase, float, bool>으로 변경 완료
+- DamageTextManager.cs — OnEnable/OnDisable 구독 및 HandleHitMonster 추가 완료
+- MonsterSetupEditor.cs — CreateWaveDataAssets()로 교체, Wave1~Wave20 루프 생성 완료
+
+### 주요 발견사항
+- OnHitMonster 시그니처 변경의 파급 범위 확인: DamageTextManager만 구독하며 패시브 스킬은 별도 이벤트(OnHitMonsterFront/Back) 사용으로 영향 없음
+- 지적 수준 낮은 사항 1건: OnSpawn()과 ApplyData() 모두 OnHpChanged 발행하여 Get() 시 두 번 발행됨. 기능 오류 아니나 향후 HP UI 애니메이션 시 깜빡임 가능성 있음
+
+### 주요 결정사항
+- 코드 수정 없이 검토 결과만 보고
+- STEP 1~10 모두 plan.md 명세와 일치하여 추가 수정 불필요 판정

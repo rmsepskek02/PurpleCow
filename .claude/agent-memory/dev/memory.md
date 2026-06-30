@@ -296,6 +296,38 @@
 
 ## 2026-06-30
 
+### 작업: QA 수정 10건 구현 (CRITICAL 2·3·4·5, WARNING 2·3·4·6, INFO 2·3)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-06-30/HH-MM_QA수정/plan.md`
+- 기존 파일 11개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Monster/MonsterBase.cs` — `ApplyData(MonsterData data)` 메서드 추가 (STEP1), `OnEnable`/`OnDisable`의 `Ball.OnHitMonster` 구독/해제 라인 제거, 빈 `HandleHitMonster()` 메서드 제거 (STEP5)
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — `SpawnWave()` 내 `_monsterPool.Get()` 직후에 `entry.Data != null` 조건부 `monster.ApplyData(entry.Data)` 호출 추가 (STEP1)
+- `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` — `OnEnable`에 `GameManager.OnGameStateChanged += HandleGameStateChanged` 추가, `HandleGameStateChanged`에서 Ready 시 `_allSkillDatas` 전체 `ResetLevel()` (STEP3/STEP7), `OpenPanel()`에 `Time.timeScale = 0f` 추가 (STEP2), Show()/Hide() Sequence에 `.SetUpdate(true)` 추가 (STEP2), `OnSkillSelected()`에서 직접 `Hide()` 호출 제거 (STEP6)
+- `Assets/_Project/Scripts/UI/UIManager.cs` — `OnEnable`/`OnDisable`에서 `GameManager.Instance.OnGameStateChanged` → `GameManager.OnGameStateChanged` static 이벤트 직접 참조로 교체 (STEP7), `OnSkillSelectionComplete()`에 `Time.timeScale = 1f` 추가 (STEP2)
+- `Assets/_Project/Scripts/Data/SkillData.cs` — `ResetLevel()` 메서드 추가 (STEP3)
+- `Assets/_Project/Scripts/Core/GameManager.cs` — `using UnityEngine.SceneManagement` 추가, `OnGameStateChanged`를 `public static event`로 변경 (STEP7), `RestartGame()`에 `SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex)` 추가 (STEP3)
+- `Assets/_Project/Scripts/Skill/SkillManager.cs` — `AddPassiveSkill()` 레벨업 분기에 `existing.Remove()` 추가 (STEP4), `ApplySkillToBall()`에서 기존 인스턴스 재사용 → `SkillFactory.CreateActiveSkill(skill.SkillData)` 새 인스턴스 생성으로 변경 (STEP10)
+- `Assets/_Project/Scripts/Core/InputHandler.cs` — `OnDrag`, `OnRelease`를 `public static event`로 변경 (STEP7)
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` — `OnEnable`/`OnDisable`에서 `InputHandler.Instance.OnDrag` → `InputHandler.OnDrag`, `GameManager.Instance.OnGameStateChanged` → `GameManager.OnGameStateChanged` 교체 (STEP7)
+- `Assets/_Project/Scripts/UI/ResultPanel.cs` — `OnEnable`/`OnDisable`에서 `GameManager.Instance.OnGameStateChanged` → `GameManager.OnGameStateChanged` 교체 (STEP7)
+- `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs` — `CreateWaveDataAsset()` → `CreateWaveDataAssets()`로 교체, Wave1~Wave20 에셋 생성 루프, `_waveNumber` SerializedObject로 설정 (STEP8)
+- `Assets/_Project/Scripts/Ball/Ball.cs` — `OnHitMonster` 시그니처 `Action<float, bool>` → `Action<MonsterBase, float, bool>` 변경, `Invoke`에 `target` 추가 (STEP9)
+- `Assets/_Project/Scripts/UI/DamageTextManager.cs` — `OnEnable`/`OnDisable` 추가, `HandleHitMonster(MonsterBase, float, bool)` 메서드 추가로 `ShowDamage(monster.transform.position, ...)` 호출 (STEP9)
+
+**주요 결정사항:**
+- `GameManager.OnGameStateChanged` / `InputHandler.OnDrag` / `InputHandler.OnRelease` 모두 static event로 전환 — Instance 접근 없이 직접 참조 가능해져 OnEnable NullReferenceException 근본 해결
+- `SkillSelectionPanel.OnEnable()` 내에서 static 이벤트 구독 — SkillSelectionPanel이 항상 active 상태이므로 구독 유지됨 (UI재작업에서 CanvasGroup 방식으로 전환 완료)
+- `ApplyData()` 호출 순서: `OnSpawn()` 이후 → `OnSpawn()`의 기본 MonsterData 초기화를 덮어쓰는 방식
+- `ApplySkillToBall()`에서 각 Ball마다 새 인스턴스 생성 — GhostBallSkill 등 `_ball` 참조 충돌 완전 해소
+- `CreateWaveDataAssets()`에서 이미 존재하는 에셋은 스킵 — 멱등성 보장
+
+---
+
+## 2026-06-30
+
 ### 작업: UI/Scene 에디터 자동화 (UISetupEditor 신규 생성, SceneSetupEditor 수정)
 
 **작업 내용:**
