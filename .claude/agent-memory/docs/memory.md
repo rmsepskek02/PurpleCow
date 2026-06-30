@@ -51,3 +51,19 @@
 - PlayerActiveSkillController는 MonoBehaviour로 구현 후 Core 완료 시 Singleton 상속으로 교체 예정
 - 씬 내 오브젝트 수집 로직을 별도 private 메서드로 분리하여 추후 정적 리스트 방식으로 교체 용이하게 설계
 - 시각 이펙트는 이번 구현 제외, 이펙트 훅만 남기는 것으로 확정
+
+---
+
+### 작업 내용 (추가)
+- Assets/_Project/Docs/_Task/2026-06-30/09-12_플레이어액티브스킬시스템/ 폴더의 task 문서 2종 삭제 요청 → docs 에이전트에 Bash 도구 없어 직접 삭제 불가, 사용자에게 안내
+- PlayerActiveSkill기획.md 신규 생성 (Assets/_Project/Docs/PlayerActiveSkill기획.md)
+- AGENTS.md Docs 문서 인덱스에 PlayerActiveSkill기획.md 등록
+
+### 결과
+- PlayerActiveSkill기획.md 생성 완료: 개요, 스킬 4종 목록, 공통 규칙, 스킬 상세, UI 명세, 미정 사항 6개 섹션 포함
+- AGENTS.md 인덱스 업데이트 완료
+- task 문서 삭제는 dev 에이전트(Bash 도구 보유)에게 위임 필요
+
+### 주요 결정사항
+- task 문서 형식이 아닌 컨텐츠 기획 문서 형태로 작성
+- 미정 사항(이펙트)은 별도 섹션으로 분리하여 추후 에셋 작업 시 참조 용이하게 구성
