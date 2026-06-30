@@ -1,7 +1,7 @@
 # Plan — QA 수정
 
 이 문서는 QA 검토 결과 중 논의가 완료된 항목에 대한 구현 계획을 기술합니다.
-현재는 CRITICAL 2(WaveData MonsterData 미반영) 한 건의 수정 계획이 확정되었으며, 나머지 항목은 논의 완료 후 순차적으로 STEP으로 추가될 예정입니다.
+현재는 CRITICAL 2(WaveData MonsterData 미반영), CRITICAL 3(스킬 선택 중 게임 일시정지 처리) 두 건의 수정 계획이 확정되었으며, 나머지 항목은 논의 완료 후 순차적으로 STEP으로 추가될 예정입니다.
 
 ---
 
@@ -37,6 +37,24 @@ if (entry.Data != null)
 ```
 
 - 기존 Get() 이후 코드 흐름은 변경하지 않는다.
+
+---
+
+### STEP 2 — CRITICAL 3: 스킬 선택 중 게임 일시정지 처리
+
+**배경**
+
+SkillSelectionPanel은 인게임 도중 열리기 때문에 패널이 열려 있는 동안 게임 로직(몬스터 이동, 공격 등)이 계속 진행되는 문제가 있다. ResultPanel과 HUDPanel은 게임이 이미 멈춘 상태(Result/Ready)에서 열리므로 해당 처리가 불필요하지만, SkillSelectionPanel만 이 처리가 필요하다.
+
+**수정 파일 1: `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs`**
+
+- `OpenPanel()` 메서드에 `Time.timeScale = 0f` 를 추가하여 패널 열림과 동시에 게임을 일시정지한다.
+- `Show()` 및 `Hide()` 메서드의 DOTween Sequence에 `.SetUpdate(true)` 를 추가한다.
+  - `Time.timeScale = 0`일 때 DOTween 기본 설정은 scaled time을 따르므로 애니메이션이 멈춘다. `.SetUpdate(true)`를 적용하면 unscaled time 기준으로 재생되어 timeScale에 무관하게 UI 애니메이션이 정상 동작한다.
+
+**수정 파일 2: `Assets/_Project/Scripts/UI/UIManager.cs`**
+
+- `OnSkillSelectionComplete()` 메서드에 `Time.timeScale = 1f` 를 추가하여 스킬 선택 완료 시 게임을 재개한다.
 
 ---
 
