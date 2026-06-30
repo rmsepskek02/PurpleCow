@@ -4,6 +4,8 @@ public class ClusterBallSkill : BallSkillBase
 {
     private bool _hasExploded;   // 1회만 폭발하도록 제어
 
+    public ClusterBallSkill(SkillData skillData) : base(skillData) { }
+
     public override void OnActivate()
     {
         _hasExploded = false;

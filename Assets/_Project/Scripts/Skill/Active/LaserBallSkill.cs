@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class LaserBallSkill : BallSkillBase
 {
+    public LaserBallSkill(SkillData skillData) : base(skillData) { }
+
     public override void OnActivate()
     {
         // 발사 시점에 Raycast로 직선 관통 데미지 적용 후 볼 즉시 반납

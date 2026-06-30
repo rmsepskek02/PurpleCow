@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class FireBallSkill : BallSkillBase
 {
+    public FireBallSkill(SkillData skillData) : base(skillData) { }
+
     public override void OnBallHit(MonsterBase target, float baseDamage)
     {
         float radius   = _skillData.Value1;

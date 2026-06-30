@@ -1,15 +1,16 @@
-using UnityEngine;
-
-public abstract class BallSkillBase : MonoBehaviour
+public abstract class BallSkillBase
 {
-    [SerializeField] protected SkillData _skillData;
-
-    // Ball 컴포넌트 참조 (Awake에서 캐싱)
+    protected SkillData _skillData;
     protected Ball _ball;
 
-    protected virtual void Awake()
+    protected BallSkillBase(SkillData skillData)
     {
-        _ball = GetComponent<Ball>();
+        _skillData = skillData;
+    }
+
+    public void Initialize(Ball ball)
+    {
+        _ball = ball;
     }
 
     // Ball.OnCollisionEnter2D에서 Monster 충돌 시 호출

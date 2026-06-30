@@ -8,6 +8,7 @@ public class GameManager : Singleton<GameManager>
     public event Action<GameState> OnGameStateChanged;
 
     public GameState CurrentState { get; private set; }
+    public bool IsLastGameSuccess { get; private set; }
 
     public void StartGame()
     {
@@ -17,6 +18,7 @@ public class GameManager : Singleton<GameManager>
 
     public void EndGame(bool isSuccess)
     {
+        IsLastGameSuccess = isSuccess;
         CurrentState = GameState.Result;
         OnGameStateChanged?.Invoke(CurrentState);
     }

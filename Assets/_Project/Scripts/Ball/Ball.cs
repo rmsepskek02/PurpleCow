@@ -111,6 +111,7 @@ public class Ball : MonoBehaviour, IPoolable
     public void SetSkill(BallSkillBase skill)
     {
         _skill = skill;
+        _skill?.Initialize(this);
     }
 
     public void SetGhostMode(bool isGhost)

@@ -18,7 +18,10 @@ public class WaveManager : Singleton<WaveManager>
     private int _currentWaveIndex;
 
     public static event Action<int> OnWaveStarted;
+    public static event Action OnWaveCleared;
     public static event Action OnAllWavesCleared;
+
+    public int TotalWaves => _waveDatas.Length;
 
     protected override void Awake()
     {
@@ -102,11 +105,20 @@ public class WaveManager : Singleton<WaveManager>
     {
         if (_activeMonsters.Count == 0)
         {
-            AdvanceToNextWave();
+            // 마지막 웨이브인 경우 스킬 선택 없이 바로 종료
+            if (_currentWaveIndex + 1 >= _waveDatas.Length)
+            {
+                OnAllWavesCleared?.Invoke();
+            }
+            else
+            {
+                OnWaveCleared?.Invoke();   // UIManager → SkillSelectionPanel 열기
+                // AdvanceToNextWave()는 SkillSelectionPanel.OnSkillSelected 콜백 이후 UIManager가 호출
+            }
         }
     }
 
-    private void AdvanceToNextWave()
+    public void AdvanceToNextWave()
     {
         _currentWaveIndex++;
 
