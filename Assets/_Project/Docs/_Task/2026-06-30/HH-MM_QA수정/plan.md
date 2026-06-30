@@ -7,7 +7,10 @@ CRITICAL 2·3·4·5, WARNING 2·3·4·6, INFO 2·3 총 10건의 수정 계획이
 
 ## 구현 목표
 
-WaveManager.SpawnWave()에서 몬스터 스폰 직후 WaveData에 설정된 MonsterData를 실제로 주입하여, 20웨이브에 걸쳐 다양한 몬스터 스탯과 보상이 정상 반영되도록 한다.
+QA 검토에서 확인된 버그·누락 기능 10건을 수정한다.
+- **CRITICAL 2·3·4·5**: 몬스터 데이터 미주입, 스킬 선택 중 게임 진행, 재시작 미초기화, Ball 스킬 인스턴스 공유
+- **WARNING 2·3·4·6**: 패시브 이벤트 이중 구독, 빈 핸들러 잔재, Hide() 이중 호출, OnEnable Instance 접근
+- **INFO 2·3**: WaveData 20개 미생성, DamageTextManager 미연결
 
 ---
 
@@ -162,20 +165,6 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 
 ---
 
-### STEP 10 — CRITICAL 5: 스킬 레벨업 시 Ball 인스턴스 공유 문제 수정
-
-**배경**
-
-`BallSkillBase`는 `protected Ball _ball` 필드를 가지며 `Initialize(Ball ball)`에서 설정된다. `SkillManager.ApplySkillToBall()`이 같은 `BallSkillBase` 인스턴스를 여러 Ball에 전달하므로, Ball마다 `Initialize(this)`가 호출될 때마다 `_ball` 참조가 마지막 Ball로 덮어씌워진다. GhostBallSkill처럼 `_ball`을 직접 조작하는 스킬의 경우 한 Ball의 OnActivate/OnDeactivate가 다른 Ball의 상태에 영향을 준다.
-
-**수정 파일: `Assets/_Project/Scripts/Skill/SkillManager.cs`**
-
-- `ApplySkillToBall()` 내부에서 `ball.AddSkill(skill)` 대신 `ball.AddSkill(SkillFactory.CreateActiveSkill(skill.SkillData))`를 호출하도록 변경한다.
-- 각 Ball이 독립된 인스턴스를 가지므로 `_ball` 참조 충돌이 없어진다.
-- `SkillData`는 공유 참조이므로 레벨업 후 생성된 인스턴스도 자동으로 새 레벨 데이터를 반영한다.
-
----
-
 ### STEP 8 — INFO 2: WaveData 20개 생성
 
 **배경**
@@ -214,6 +203,20 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 - `OnEnable()`을 추가하여 `Ball.OnHitMonster += HandleHitMonster`를 구독한다.
 - `OnDisable()`을 추가하여 `Ball.OnHitMonster -= HandleHitMonster`를 해제한다.
 - `HandleHitMonster(MonsterBase monster, float damage, bool isCritical)` 메서드를 추가하여 `ShowDamage(monster.transform.position, damage, isCritical)`를 호출한다.
+
+---
+
+### STEP 10 — CRITICAL 5: 스킬 레벨업 시 Ball 인스턴스 공유 문제 수정
+
+**배경**
+
+`BallSkillBase`는 `protected Ball _ball` 필드를 가지며 `Initialize(Ball ball)`에서 설정된다. `SkillManager.ApplySkillToBall()`이 같은 `BallSkillBase` 인스턴스를 여러 Ball에 전달하므로, Ball마다 `Initialize(this)`가 호출될 때마다 `_ball` 참조가 마지막 Ball로 덮어씌워진다. GhostBallSkill처럼 `_ball`을 직접 조작하는 스킬의 경우 한 Ball의 OnActivate/OnDeactivate가 다른 Ball의 상태에 영향을 준다.
+
+**수정 파일: `Assets/_Project/Scripts/Skill/SkillManager.cs`**
+
+- `ApplySkillToBall()` 내부에서 `ball.AddSkill(skill)` 대신 `ball.AddSkill(SkillFactory.CreateActiveSkill(skill.SkillData))`를 호출하도록 변경한다.
+- 각 Ball이 독립된 인스턴스를 가지므로 `_ball` 참조 충돌이 없어진다.
+- `SkillData`는 공유 참조이므로 레벨업 후 생성된 인스턴스도 자동으로 새 레벨 데이터를 반영한다.
 
 ---
 
