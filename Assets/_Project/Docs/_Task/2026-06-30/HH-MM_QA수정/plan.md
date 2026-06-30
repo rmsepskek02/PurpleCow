@@ -1,7 +1,7 @@
 # Plan — QA 수정
 
 이 문서는 QA 검토 결과 중 논의가 완료된 항목에 대한 구현 계획을 기술합니다.
-현재는 CRITICAL 2(WaveData MonsterData 미반영), CRITICAL 3(스킬 선택 중 게임 일시정지 처리), CRITICAL 4(재시작 초기화 미구현), WARNING 2(패시브 스킬 레벨업 시 이벤트 이중 구독), WARNING 3(MonsterBase 빈 이벤트 핸들러 제거), WARNING 4(SkillSelectionPanel Hide() 이중 호출 수정), WARNING 6(OnEnable Singleton Instance 접근 → static 이벤트 전환) 일곱 건의 수정 계획이 확정되었으며, 나머지 항목은 논의 완료 후 순차적으로 STEP으로 추가될 예정입니다.
+현재는 CRITICAL 2·3·4·5, WARNING 2·3·4·6, INFO 2·3 총 10건의 수정 계획이 STEP 1~10으로 확정되었으며, 나머지 항목(WARNING 5, INFO 1)은 논의 완료 후 순차적으로 추가될 예정입니다.
 
 ---
 
@@ -162,6 +162,20 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 
 ---
 
+### STEP 10 — CRITICAL 5: 스킬 레벨업 시 Ball 인스턴스 공유 문제 수정
+
+**배경**
+
+`BallSkillBase`는 `protected Ball _ball` 필드를 가지며 `Initialize(Ball ball)`에서 설정된다. `SkillManager.ApplySkillToBall()`이 같은 `BallSkillBase` 인스턴스를 여러 Ball에 전달하므로, Ball마다 `Initialize(this)`가 호출될 때마다 `_ball` 참조가 마지막 Ball로 덮어씌워진다. GhostBallSkill처럼 `_ball`을 직접 조작하는 스킬의 경우 한 Ball의 OnActivate/OnDeactivate가 다른 Ball의 상태에 영향을 준다.
+
+**수정 파일: `Assets/_Project/Scripts/Skill/SkillManager.cs`**
+
+- `ApplySkillToBall()` 내부에서 `ball.AddSkill(skill)` 대신 `ball.AddSkill(SkillFactory.CreateActiveSkill(skill.SkillData))`를 호출하도록 변경한다.
+- 각 Ball이 독립된 인스턴스를 가지므로 `_ball` 참조 충돌이 없어진다.
+- `SkillData`는 공유 참조이므로 레벨업 후 생성된 인스턴스도 자동으로 새 레벨 데이터를 반영한다.
+
+---
+
 ### STEP 8 — INFO 2: WaveData 20개 생성
 
 **배경**
@@ -225,6 +239,7 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 | 수정 | `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs` | `CreateWaveDataAsset()` → `CreateWaveDataAssets()`로 교체, Wave1~Wave20 에셋 생성 |
 | 수정 | `Assets/_Project/Scripts/Ball/Ball.cs` | `OnHitMonster` 시그니처 `Action<float, bool>` → `Action<MonsterBase, float, bool>` 변경, `Invoke` 호출에 `target` 추가 |
 | 수정 | `Assets/_Project/Scripts/UI/DamageTextManager.cs` | `OnEnable`/`OnDisable` 추가, `HandleHitMonster` 메서드 추가 |
+| 수정 | `Assets/_Project/Scripts/Skill/SkillManager.cs` | `ApplySkillToBall()`에서 기존 인스턴스 재사용 → `SkillFactory.CreateActiveSkill()` 새 인스턴스 생성으로 변경 |
 
 ---
 
@@ -243,3 +258,4 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 - ~~**WARNING 6:** OnEnable에서 Singleton Instance 직접 접근~~ → STEP 7로 확정
 - ~~**INFO 2:** WaveData 20개 미생성~~ → STEP 8로 확정
 - ~~**INFO 3:** DamageTextManager Ball.OnHitMonster 미연결~~ → STEP 9로 확정
+- ~~**CRITICAL 5:** 스킬 레벨업 시 Ball 인스턴스 공유 문제~~ → STEP 10으로 확정
