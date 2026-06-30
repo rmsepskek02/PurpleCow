@@ -267,3 +267,18 @@
 - SceneManager.LoadScene으로 MonoBehaviour 기반 시스템 전체 초기화
 - SkillData는 ScriptableObject 에셋이라 씬 재로드로 리셋 안 됨 → SkillSelectionPanel이 GameState.Ready 수신 시 명시적으로 ResetLevel() 호출
 - GameManager.RestartGame()에 using UnityEngine.SceneManagement + SceneManager.LoadScene(buildIndex) 추가
+
+---
+
+### 작업 내용 (추가)
+- QA 수정 task plan.md에 STEP 4(WARNING 2 — 패시브 스킬 레벨업 시 이벤트 이중 구독 수정) 추가
+- "논의 예정 항목"에서 WARNING 2 항목 제거
+- 서문 설명 업데이트 (CRITICAL 2/3/4 + WARNING 2 네 건 확정 명시)
+
+### 결과
+- plan.md 수정 완료: STEP 4 신규 추가, 파일 목록에 SkillManager.cs 추가, 논의 예정 항목에서 WARNING 2 제거
+
+### 주요 결정사항
+- AddPassiveSkill() 레벨업 분기: existing.Remove() → existing.SkillData.LevelUp() → existing.Apply() 순서로 수정
+- 이벤트 구독 방식 패시브(MagicMirror, AmethystDagger, EmeraldDagger, LastMatch)는 Apply() 중복 호출 시 핸들러 누적 → Remove() 선행 필수
+- WarmTinHeart는 AddDamageMultiplier() 배율 누적 방지를 위해 Remove() 선행 필수

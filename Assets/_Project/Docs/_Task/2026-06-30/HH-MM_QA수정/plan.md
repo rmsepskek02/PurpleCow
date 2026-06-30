@@ -1,7 +1,7 @@
 # Plan — QA 수정
 
 이 문서는 QA 검토 결과 중 논의가 완료된 항목에 대한 구현 계획을 기술합니다.
-현재는 CRITICAL 2(WaveData MonsterData 미반영), CRITICAL 3(스킬 선택 중 게임 일시정지 처리), CRITICAL 4(재시작 초기화 미구현) 세 건의 수정 계획이 확정되었으며, 나머지 항목은 논의 완료 후 순차적으로 STEP으로 추가될 예정입니다.
+현재는 CRITICAL 2(WaveData MonsterData 미반영), CRITICAL 3(스킬 선택 중 게임 일시정지 처리), CRITICAL 4(재시작 초기화 미구현), WARNING 2(패시브 스킬 레벨업 시 이벤트 이중 구독) 네 건의 수정 계획이 확정되었으며, 나머지 항목은 논의 완료 후 순차적으로 STEP으로 추가될 예정입니다.
 
 ---
 
@@ -79,6 +79,28 @@ RestartGame() 호출 시 MonoBehaviour 기반 시스템(WaveManager, CharacterMa
 
 ---
 
+### STEP 4 — WARNING 2: 패시브 스킬 레벨업 시 이벤트 이중 구독 수정
+
+**배경**
+
+`AddPassiveSkill()`의 레벨업 분기에서 `existing.Apply()`를 그대로 호출하면, 이벤트 구독 방식 패시브(MagicMirror, AmethystDagger, EmeraldDagger, LastMatch)는 같은 핸들러가 이벤트에 누적 등록되어 효과가 배수로 적용된다. WarmTinHeart는 `AddDamageMultiplier()`로 배율을 직접 더하는 방식이므로, `Remove()`로 기존 배율을 먼저 제거하지 않으면 레벨업할수록 배율이 누적된다. `Remove()` → `LevelUp()` → `Apply()` 순서로 처리해야 레벨 기준이 올바른 상태에서 새로 등록된다.
+
+**수정 파일: `Assets/_Project/Scripts/Skill/SkillManager.cs`**
+
+- `AddPassiveSkill()`의 레벨업 분기에서 `existing.Apply()` 호출 전에 `existing.Remove()`를 먼저 호출한다.
+
+현재:
+```
+existing.SkillData.LevelUp(); existing.Apply(); return;
+```
+
+수정 후:
+```
+existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
+```
+
+---
+
 ## 예상 변경/생성 파일 목록
 
 | 구분 | 파일 | 변경 내용 |
@@ -90,6 +112,7 @@ RestartGame() 호출 시 MonoBehaviour 기반 시스템(WaveManager, CharacterMa
 | 수정 | `Assets/_Project/Scripts/Data/SkillData.cs` | `ResetLevel()` 메서드 추가 |
 | 수정 | `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` | GameState.Ready 수신 시 전체 스킬 레벨 리셋 로직 추가 |
 | 수정 | `Assets/_Project/Scripts/Core/GameManager.cs` | `RestartGame()`에 `SceneManager.LoadScene()` 추가, `using UnityEngine.SceneManagement` 추가 |
+| 수정 | `Assets/_Project/Scripts/Skill/SkillManager.cs` | `AddPassiveSkill()` 레벨업 분기에 `existing.Remove()` 호출 추가 |
 
 ---
 
@@ -105,7 +128,6 @@ RestartGame() 호출 시 MonoBehaviour 기반 시스템(WaveManager, CharacterMa
 
 아래 항목들은 수정 방향이 아직 확정되지 않았습니다. 논의 완료 후 각 항목이 STEP으로 이 plan.md에 추가될 예정입니다.
 
-- **WARNING 2:** 패시브 스킬 레벨업 시 이벤트 이중 구독
 - **WARNING 3:** MonsterBase 빈 이벤트 핸들러 불필요 구독
 - **WARNING 4:** SkillSelectionPanel Hide() 이중 호출
 - **WARNING 6:** OnEnable에서 Singleton Instance 직접 접근
