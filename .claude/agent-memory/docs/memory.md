@@ -135,3 +135,22 @@
 - MonsterData/BallData SO는 자동 연결 제외 (DataSetupEditor 또는 수동 처리)
 - PhysicsMaterial2D(BallBounce) 경로 미정 → 자동 연결 보류, 경고 로그로 안내
 - UIManager 스크립트 미존재 가능성 → try-catch 예외 처리 후 계속 진행
+
+---
+
+### 작업 내용 (추가)
+- PDF 스펙 정합 task 문서 생성: research.md, plan.md
+- 경로: Assets/_Project/Docs/_Task/2026-06-30/HH-MM_PDF스펙정합/
+
+### 결과
+- research.md: 7개 항목(BallData 기본값, 레벨 시스템, 액티브 5종 로직, 패시브 7→5 교체, 장착 제한, 선택 로직, MonsterData 이름) 현재 상태와 문제점 분석 완료
+- plan.md: STEP 1~12 상세 구현 계획 작성 완료 (수정 16개, 삭제 7개, 생성 5개 파일)
+
+### 주요 결정사항
+- SkillData 레벨 구조: SkillLevelData 구조체 + _levels[3] 배열 방식 채택 (기존 _value1~3 제거)
+- PassiveSkillId 열거형: 기존 7개 전부 제거, WarmTinHeart/MagicMirror/AmethystDagger/EmeraldDagger/LastMatch 5개로 재정의
+- 스킬 선택 트리거: OnWaveCleared → OnKillCountReached (WaveManager에 처치 수 카운터 추가)
+- 볼 데미지 오버라이드: 스킬 활성화 시 BallData.Damage 대신 SkillData.BallDamage 사용 구조 도입 필요
+- 전면/후면 판정: 볼 이동 방향 vs 몬스터 정면 방향 내적으로 판정 (몬스터는 항상 아래를 향한다고 가정)
+- LaserBallSkill: 직선 전체 Raycast → 같은 행(Y좌표 동일) 몬스터 추가 피해로 변경
+- SlowDuration: Time.deltaTime 아닌 턴 기반(MoveDown 호출 시 차감) 방식 채택
