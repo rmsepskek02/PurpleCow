@@ -252,3 +252,18 @@
 - UIManager.OnSkillSelectionComplete()에 Time.timeScale = 1f 추가
 - SkillSelectionPanel.Show()/Hide() DOTween Sequence에 .SetUpdate(true) 추가 (timeScale=0 시 unscaled time 애니메이션 재생)
 - ResultPanel/HUDPanel은 게임이 이미 멈춘 상태에서 열리므로 SetUpdate 불필요 — SkillSelectionPanel만 해당
+
+---
+
+### 작업 내용 (추가)
+- QA 수정 task plan.md에 STEP 3(CRITICAL 4 — 재시작 초기화 구현) 추가
+- "논의 예정 항목"에서 CRITICAL 4 항목 제거
+- 서문 설명 업데이트 (CRITICAL 2 + CRITICAL 3 + CRITICAL 4 세 건 확정 명시)
+
+### 결과
+- plan.md 수정 완료: STEP 3 신규 추가, 파일 목록에 SkillData.cs / SkillSelectionPanel.cs(추가 로직) / GameManager.cs 추가, 논의 예정 항목에서 CRITICAL 4 제거
+
+### 주요 결정사항
+- SceneManager.LoadScene으로 MonoBehaviour 기반 시스템 전체 초기화
+- SkillData는 ScriptableObject 에셋이라 씬 재로드로 리셋 안 됨 → SkillSelectionPanel이 GameState.Ready 수신 시 명시적으로 ResetLevel() 호출
+- GameManager.RestartGame()에 using UnityEngine.SceneManagement + SceneManager.LoadScene(buildIndex) 추가
