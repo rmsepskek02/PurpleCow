@@ -1,22 +1,13 @@
-using UnityEngine;
-
 public class ClusterBallSkill : BallSkillBase
 {
-    private bool _hasExploded;   // 1회만 폭발하도록 제어
-
     public ClusterBallSkill(SkillData skillData) : base(skillData) { }
 
-    public override void OnActivate()
+    public override void OnBallHit(MonsterBase target)
     {
-        _hasExploded = false;
-    }
-
-    public override void OnBallHit(MonsterBase target, float baseDamage)
-    {
-        if (_hasExploded) return;
-        _hasExploded = true;
-
-        int subBallCount = Mathf.RoundToInt(_skillData.Value1);
-        BallLauncher.Instance.LaunchSubBalls(_ball.transform.position, subBallCount);
+        // Value1=확률, Value2=서브볼피해
+        if (UnityEngine.Random.value < LevelData.Value1)
+        {
+            BallLauncher.Instance.LaunchSubBalls(_ball.transform.position, 1, LevelData.Value2);
+        }
     }
 }

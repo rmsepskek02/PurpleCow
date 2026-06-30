@@ -14,4 +14,6 @@ public abstract class PassiveSkillBase
     public abstract void Remove();
 
     public SkillData SkillData => _skillData;
+
+    protected SkillLevelData LevelData => _skillData.CurrentLevelData;
 }

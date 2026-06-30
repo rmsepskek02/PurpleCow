@@ -57,7 +57,7 @@ public class BallLauncher : Singleton<BallLauncher>
         _activeBallCount++;
     }
 
-    public void LaunchSubBalls(Vector2 origin, int count)
+    public void LaunchSubBalls(Vector2 origin, int count, float damage = 0f)
     {
         for (int i = 0; i < count; i++)
         {
@@ -67,6 +67,7 @@ public class BallLauncher : Singleton<BallLauncher>
             // 아래 방향 제외 (y > 0 보정)
             if (randomDir.y < 0) randomDir.y = -randomDir.y;
             ball.Launch(randomDir);
+            if (damage > 0f) ball.SetSubBallDamage(damage);
             _activeBallCount++;
         }
     }

@@ -19,14 +19,12 @@ public static class SkillFactory
     {
         return (PassiveSkillId)data.SkillId switch
         {
-            PassiveSkillId.DamageUp     => new DamageUpPassive(data),
-            PassiveSkillId.CritChanceUp => new CritChanceUpPassive(data),
-            PassiveSkillId.CritDamageUp => new CritDamageUpPassive(data),
-            PassiveSkillId.SpeedUp      => new SpeedUpPassive(data),
-            PassiveSkillId.BounceUp     => new BounceUpPassive(data),
-            PassiveSkillId.KillShot     => new KillShotPassive(data),
-            PassiveSkillId.LastHit      => new LastHitPassive(data),
-            _                           => throw new ArgumentOutOfRangeException(nameof(data.SkillId), data.SkillId, "Unknown passive skill id")
+            PassiveSkillId.WarmTinHeart   => new WarmTinHeartPassive(data),
+            PassiveSkillId.MagicMirror    => new MagicMirrorPassive(data),
+            PassiveSkillId.AmethystDagger => new AmethystDaggerPassive(data),
+            PassiveSkillId.EmeraldDagger  => new EmeraldDaggerPassive(data),
+            PassiveSkillId.LastMatch      => new LastMatchPassive(data),
+            _                             => throw new ArgumentOutOfRangeException(nameof(data.SkillId), data.SkillId, "Unknown passive skill id")
         };
     }
 }

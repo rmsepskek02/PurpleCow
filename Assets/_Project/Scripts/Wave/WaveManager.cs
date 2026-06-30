@@ -12,14 +12,17 @@ public class WaveManager : Singleton<WaveManager>
     [SerializeField] private float _gridCellSize = 1.0f;
     [SerializeField] private float _monsterMoveDistance;
     [SerializeField] private float _bottomBoundaryY;
+    [SerializeField] private int _killCountForSkill = 5;
 
     private ObjectPool<MonsterBase> _monsterPool;
     private List<MonsterBase> _activeMonsters = new List<MonsterBase>();
     private int _currentWaveIndex;
+    private int _totalKillCount;
 
     public static event Action<int> OnWaveStarted;
     public static event Action OnWaveCleared;
     public static event Action OnAllWavesCleared;
+    public static event Action OnKillCountReached;
 
     public int TotalWaves => _waveDatas.Length;
 
@@ -98,7 +101,17 @@ public class WaveManager : Singleton<WaveManager>
     {
         _activeMonsters.Remove(monster);
         _monsterPool.Return(monster);
+
+        _totalKillCount++;
+        CheckSkillUnlock();
+
         CheckWaveCleared();
+    }
+
+    private void CheckSkillUnlock()
+    {
+        if (_killCountForSkill > 0 && _totalKillCount % _killCountForSkill == 0)
+            OnKillCountReached?.Invoke();
     }
 
     private void CheckWaveCleared()
@@ -143,5 +156,17 @@ public class WaveManager : Singleton<WaveManager>
                 weakest = monster;
         }
         return weakest;
+    }
+
+    public List<MonsterBase> GetMonstersInRow(MonsterBase reference)
+    {
+        float targetY = reference.transform.position.y;
+        var result = new List<MonsterBase>();
+        foreach (var m in _activeMonsters)
+        {
+            if (m != null && Mathf.Abs(m.transform.position.y - targetY) < 0.1f)
+                result.Add(m);
+        }
+        return result;
     }
 }

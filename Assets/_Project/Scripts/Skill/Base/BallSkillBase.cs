@@ -14,7 +14,7 @@ public abstract class BallSkillBase
     }
 
     // Ball.OnCollisionEnter2D에서 Monster 충돌 시 호출
-    public abstract void OnBallHit(MonsterBase target, float baseDamage);
+    public abstract void OnBallHit(MonsterBase target);
 
     // Ball이 풀에서 꺼내질 때 (OnSpawn 시) 호출 — 상태 초기화
     public virtual void OnActivate() { }
@@ -23,4 +23,6 @@ public abstract class BallSkillBase
     public virtual void OnDeactivate() { }
 
     public SkillData SkillData => _skillData;
+
+    protected SkillLevelData LevelData => _skillData.CurrentLevelData;
 }

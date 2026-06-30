@@ -15,7 +15,7 @@ public class GhostBallSkill : BallSkillBase
         _ball.SetGhostMode(false);
     }
 
-    public override void OnBallHit(MonsterBase target, float baseDamage)
+    public override void OnBallHit(MonsterBase target)
     {
         // 관통 — 추가 처리 없음, 볼은 계속 이동
     }

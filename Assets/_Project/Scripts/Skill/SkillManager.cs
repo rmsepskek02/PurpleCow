@@ -3,43 +3,47 @@ using System.Collections.Generic;
 
 public class SkillManager : Singleton<SkillManager>
 {
-    private BallSkillBase          _equippedActiveSkill;
-    private List<PassiveSkillBase> _passiveSkills;
+    private List<BallSkillBase>    _activeSkills  = new List<BallSkillBase>();
+    private List<PassiveSkillBase> _passiveSkills = new List<PassiveSkillBase>();
 
     // Passive 누적 보너스
     private float _damageMultiplierBonus;
-    private float _critChanceBonus;
-    private float _critDamageBonus;
-    private float _speedBonus;
-    private int   _bounceBonus;
+    private float _nextShotDamageBonus;
 
     public float DamageMultiplierBonus => _damageMultiplierBonus;
-    public float CritChanceBonus       => _critChanceBonus;
-    public float CritDamageBonus       => _critDamageBonus;
-    public float SpeedBonus            => _speedBonus;
-    public int   BounceBonus           => _bounceBonus;
 
-    public static event Action<BallSkillBase>          OnActiveSkillChanged;
+    public static event Action<List<BallSkillBase>>    OnActiveSkillsChanged;
     public static event Action<List<PassiveSkillBase>> OnPassiveSkillsChanged;
 
     protected override void Awake()
     {
         base.Awake();
+        _activeSkills  = new List<BallSkillBase>();
         _passiveSkills = new List<PassiveSkillBase>();
     }
 
     public void EquipActiveSkill(BallSkillBase skill)
     {
-        _equippedActiveSkill = skill;
-        OnActiveSkillChanged?.Invoke(_equippedActiveSkill);
+        var existing = _activeSkills.Find(s => s.SkillData.SkillId == skill.SkillData.SkillId);
+        if (existing != null) { existing.SkillData.LevelUp(); return; }
+        if (_activeSkills.Count >= 4) return;
+        _activeSkills.Add(skill);
+        OnActiveSkillsChanged?.Invoke(_activeSkills);
     }
+
+    public bool CanEquipActive => _activeSkills.Count < 4;
 
     public void AddPassiveSkill(PassiveSkillBase skill)
     {
+        var existing = _passiveSkills.Find(s => s.SkillData.SkillId == skill.SkillData.SkillId);
+        if (existing != null) { existing.SkillData.LevelUp(); existing.Apply(); return; }
+        if (_passiveSkills.Count >= 2) return;
         _passiveSkills.Add(skill);
         skill.Apply();
         OnPassiveSkillsChanged?.Invoke(_passiveSkills);
     }
+
+    public bool CanEquipPassive => _passiveSkills.Count < 2;
 
     public void RemovePassiveSkill(PassiveSkillBase skill)
     {
@@ -50,24 +54,16 @@ public class SkillManager : Singleton<SkillManager>
 
     public void ApplySkillToBall(Ball ball)
     {
-        if (_equippedActiveSkill != null)
-        {
-            ball.SetSkill(_equippedActiveSkill);
-        }
+        foreach (var skill in _activeSkills)
+            ball.AddSkill(skill);
     }
 
     public void AddDamageMultiplier(float value)    => _damageMultiplierBonus += value;
     public void RemoveDamageMultiplier(float value) => _damageMultiplierBonus -= value;
 
-    public void AddCritChanceBonus(float value)    => _critChanceBonus += value;
-    public void RemoveCritChanceBonus(float value) => _critChanceBonus -= value;
+    public void AddNextShotDamageBonus(float bonus) { _nextShotDamageBonus += bonus; }
+    public float ConsumeNextShotDamageBonus() { float v = _nextShotDamageBonus; _nextShotDamageBonus = 0f; return v; }
 
-    public void AddCritDamageBonus(float value)    => _critDamageBonus += value;
-    public void RemoveCritDamageBonus(float value) => _critDamageBonus -= value;
-
-    public void AddSpeedBonus(float value)    => _speedBonus += value;
-    public void RemoveSpeedBonus(float value) => _speedBonus -= value;
-
-    public void AddBounceBonus(int value)    => _bounceBonus += value;
-    public void RemoveBounceBonus(int value) => _bounceBonus -= value;
+    public IReadOnlyList<int> ActiveSkillIds  => _activeSkills.ConvertAll(s => s.SkillData.SkillId);
+    public IReadOnlyList<int> PassiveSkillIds => _passiveSkills.ConvertAll(s => s.SkillData.SkillId);
 }

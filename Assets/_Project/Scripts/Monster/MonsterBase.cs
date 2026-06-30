@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 public class MonsterBase : MonoBehaviour, IPoolable
@@ -8,6 +9,9 @@ public class MonsterBase : MonoBehaviour, IPoolable
     private float _currentHp;
     private bool  _isDead;
     private int   _frozenTurnsRemaining;
+    private int   _slowTurnsRemaining;
+    private float _slowPercent;
+    private float _bonusCritChance;
 
     public float CurrentHp => _currentHp;
     public bool  IsAlive   => !_isDead;
@@ -30,6 +34,9 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _currentHp             = _monsterData.Hp;
         _isDead                = false;
         _frozenTurnsRemaining  = 0;
+        _slowTurnsRemaining    = 0;
+        _slowPercent           = 0f;
+        _bonusCritChance       = 0f;
     }
 
     public void OnDespawn()
@@ -61,6 +68,46 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _frozenTurnsRemaining = Mathf.Max(_frozenTurnsRemaining, turns);
     }
 
+    public void ApplyFreeze(float seconds)
+    {
+        // 초 기반은 turns 기반으로 근사 변환 (1턴=1초 가정)
+        ApplyFreeze(Mathf.RoundToInt(seconds));
+    }
+
+    public void ApplySlow(int turns, float percent)
+    {
+        _slowTurnsRemaining = turns;
+        _slowPercent = percent;
+    }
+
+    public void ApplyBonusCritChance(float bonus)
+    {
+        _bonusCritChance += bonus;
+    }
+
+    public float ConsumeBonusCritChance()
+    {
+        float val = _bonusCritChance;
+        _bonusCritChance = 0f;
+        return val;
+    }
+
+    public void ApplyDot(float damagePerSec, float duration, int maxStacks)
+    {
+        StartCoroutine(CoDotTick(damagePerSec, duration, maxStacks));
+    }
+
+    private IEnumerator CoDotTick(float dps, float duration, int stacks)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            yield return new WaitForSeconds(1f);
+            elapsed += 1f;
+            TakeDamage(dps * stacks);
+        }
+    }
+
     public void MoveDown(float distance)
     {
         if (IsFrozen)
@@ -69,20 +116,17 @@ public class MonsterBase : MonoBehaviour, IPoolable
             return;
         }
 
-        transform.position += (Vector3)(Vector2.down * distance);
-    }
-
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (collision.gameObject.CompareTag("Ball"))
+        if (_slowTurnsRemaining > 0)
         {
-            TakeDamage(collision.gameObject.GetComponent<Ball>().LastDamage);
+            distance *= (1f - _slowPercent);
+            _slowTurnsRemaining--;
         }
+
+        transform.position += (Vector3)(Vector2.down * distance);
     }
 
     private void HandleHitMonster(float damage, bool isCritical)
     {
-        // Ball.OnHitMonster 구독 핸들러
-        // 실제 데미지 처리는 OnCollisionEnter2D에서 LastDamage를 통해 수행
+        // Ball.OnHitMonster 구독 핸들러 — 데미지는 Ball.CalculateDamage에서 직접 처리
     }
 }

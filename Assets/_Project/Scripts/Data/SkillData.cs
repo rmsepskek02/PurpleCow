@@ -1,5 +1,14 @@
 using UnityEngine;
 
+[System.Serializable]
+public struct SkillLevelData
+{
+    public float BallDamage;
+    public float Value1;
+    public float Value2;
+    public float Value3;
+}
+
 public enum SkillType
 {
     Active,
@@ -17,13 +26,11 @@ public enum ActiveSkillId
 
 public enum PassiveSkillId
 {
-    DamageUp     = 3000,
-    CritChanceUp = 3002,
-    CritDamageUp = 3003,
-    SpeedUp      = 3006,
-    BounceUp     = 3007,
-    KillShot     = 3013,
-    LastHit      = 3014
+    WarmTinHeart   = 3001,
+    MagicMirror    = 3002,
+    AmethystDagger = 3003,
+    EmeraldDagger  = 3004,
+    LastMatch      = 3005
 }
 
 [CreateAssetMenu(fileName = "SkillData", menuName = "PurpleCow/SkillData")]
@@ -35,17 +42,27 @@ public class SkillData : ScriptableObject
     [SerializeField] private string    _description;
     [SerializeField] private SkillType _skillType;
 
-    // 수치 — 패시브/액티브 공통. 필요한 항목만 설정, 나머지 0으로 유지
-    [SerializeField] private float _value1;   // 예: 데미지 증가량, 폭발 반경, 서브볼 개수
-    [SerializeField] private float _value2;   // 예: 크리티컬 배율, 둔화 지속 시간
-    [SerializeField] private float _value3;   // 예: 추가 데미지 배율
+    [SerializeField] private SkillLevelData[] _levels = new SkillLevelData[3];
+    [SerializeField] private int _currentLevel;
 
     public int       SkillId     => _skillId;
     public string    SkillName   => _skillName;
     public Sprite    Icon        => _icon;
     public string    Description => _description;
     public SkillType SkillType   => _skillType;
-    public float     Value1      => _value1;
-    public float     Value2      => _value2;
-    public float     Value3      => _value3;
+
+    public int CurrentLevel => _currentLevel;
+    public int MaxLevel => _levels.Length;
+    public SkillLevelData CurrentLevelData => GetLevelData(_currentLevel);
+
+    public SkillLevelData GetLevelData(int level)
+    {
+        level = Mathf.Clamp(level, 0, _levels.Length - 1);
+        return _levels[level];
+    }
+
+    public void LevelUp()
+    {
+        if (_currentLevel < MaxLevel - 1) _currentLevel++;
+    }
 }

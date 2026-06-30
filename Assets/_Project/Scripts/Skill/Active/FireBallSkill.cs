@@ -1,21 +1,10 @@
-using UnityEngine;
-
 public class FireBallSkill : BallSkillBase
 {
     public FireBallSkill(SkillData skillData) : base(skillData) { }
 
-    public override void OnBallHit(MonsterBase target, float baseDamage)
+    public override void OnBallHit(MonsterBase target)
     {
-        float radius   = _skillData.Value1;
-        float bonusDmg = _skillData.Value2;
-
-        Collider2D[] hits = Physics2D.OverlapCircleAll(target.transform.position, radius);
-        foreach (Collider2D hit in hits)
-        {
-            if (hit.TryGetComponent<MonsterBase>(out MonsterBase monster))
-            {
-                monster.TakeDamage(bonusDmg);
-            }
-        }
+        // Value1=지속시간, Value2=최대중첩, Value3=초당피해
+        target.ApplyDot(LevelData.Value3, LevelData.Value1, (int)LevelData.Value2);
     }
 }

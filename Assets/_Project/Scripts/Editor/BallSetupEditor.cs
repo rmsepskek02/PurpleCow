@@ -97,10 +97,10 @@ public static class BallSetupEditor
 
         // SerializedObject를 통해 기본값 설정
         SerializedObject so = new SerializedObject(ballData);
-        so.FindProperty("_damage").floatValue = 10f;
+        so.FindProperty("_damage").floatValue = 8f;
         so.FindProperty("_speed").floatValue = 10f;
-        so.FindProperty("_criticalChance").floatValue = 0.1f;
-        so.FindProperty("_criticalMultiplier").floatValue = 2f;
+        so.FindProperty("_criticalChance").floatValue = 0f;
+        so.FindProperty("_criticalMultiplier").floatValue = 1.5f;
         so.ApplyModifiedPropertiesWithoutUndo();
 
         AssetDatabase.CreateAsset(ballData, path);

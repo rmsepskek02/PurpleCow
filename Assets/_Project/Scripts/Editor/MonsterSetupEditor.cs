@@ -47,7 +47,7 @@ public static class MonsterSetupEditor
     {
         EnsureDataFolder();
 
-        string[] names = { "Fluffy", "Spike", "Blaze", "Stone" };
+        string[] names = { "Fluffy", "Spider", "StoneBug", "ForestDeer" };
 
         foreach (string name in names)
         {

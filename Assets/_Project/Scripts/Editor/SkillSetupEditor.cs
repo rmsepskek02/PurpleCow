@@ -32,154 +32,160 @@ public static class SkillSetupEditor
     private static void CreateActiveSkillDataAssets()
     {
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Fire.asset",
-            skillId:    (int)ActiveSkillId.Fire,
-            skillName:  "Fire Ball",
-            skillType:  SkillType.Active,
-            desc:       "충돌 지점 주변 범위 내 모든 몬스터에게 폭발 데미지를 줍니다.",
-            value1:     1.5f,   // 폭발 반경
-            value2:     5f,     // 폭발 추가 데미지
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Fire_ball.png"
+            path:      "Assets/_Project/Data/SkillData_Fire.asset",
+            skillId:   (int)ActiveSkillId.Fire,
+            skillName: "Fire Ball",
+            skillType: SkillType.Active,
+            desc:      "충돌한 몬스터에게 지속 화상 피해를 줍니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 21f, Value1 = 4f,   Value2 = 3f, Value3 = 8f  },
+                new SkillLevelData { BallDamage = 24f, Value1 = 4.5f, Value2 = 4f, Value3 = 10f },
+                new SkillLevelData { BallDamage = 27f, Value1 = 5f,   Value2 = 5f, Value3 = 12f },
+            },
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Fire_ball.png"
         );
 
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Ice.asset",
-            skillId:    (int)ActiveSkillId.Ice,
-            skillName:  "Ice Ball",
-            skillType:  SkillType.Active,
-            desc:       "충돌한 몬스터를 일정 턴 동안 이동 정지시킵니다.",
-            value1:     1f,     // 이동 정지 턴 수
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Ice_Ball.png"
+            path:      "Assets/_Project/Data/SkillData_Ice.asset",
+            skillId:   (int)ActiveSkillId.Ice,
+            skillName: "Ice Ball",
+            skillType: SkillType.Active,
+            desc:      "확률적으로 충돌한 몬스터를 빙결/둔화시킵니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 25f, Value1 = 0.3f,  Value2 = 5f, Value3 = 0.1f  },
+                new SkillLevelData { BallDamage = 37f, Value1 = 0.35f, Value2 = 6f, Value3 = 0.15f },
+                new SkillLevelData { BallDamage = 50f, Value1 = 0.4f,  Value2 = 7f, Value3 = 0.2f  },
+            },
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Ice_Ball.png"
         );
 
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Ghost.asset",
-            skillId:    (int)ActiveSkillId.Ghost,
-            skillName:  "Ghost Ball",
-            skillType:  SkillType.Active,
-            desc:       "볼이 몬스터를 관통하여 계속 이동합니다.",
-            value1:     0f,
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Ghost_Ball.png"
+            path:      "Assets/_Project/Data/SkillData_Laser.asset",
+            skillId:   (int)ActiveSkillId.Laser,
+            skillName: "Laser Ball",
+            skillType: SkillType.Active,
+            desc:      "충돌한 몬스터와 같은 행의 다른 몬스터에게 추가 피해를 줍니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 11f, Value1 = 7f,  Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 15f, Value1 = 11f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 19f, Value1 = 15f, Value2 = 0f, Value3 = 0f },
+            },
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Laser_Ball.png"
         );
 
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Laser.asset",
-            skillId:    (int)ActiveSkillId.Laser,
-            skillName:  "Laser Ball",
-            skillType:  SkillType.Active,
-            desc:       "발사 즉시 직선상의 모든 몬스터에게 데미지를 줍니다.",
-            value1:     20f,    // 레이저 데미지
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Laser_Ball.png"
+            path:      "Assets/_Project/Data/SkillData_Ghost.asset",
+            skillId:   (int)ActiveSkillId.Ghost,
+            skillName: "Ghost Ball",
+            skillType: SkillType.Active,
+            desc:      "볼이 몬스터를 관통하여 계속 이동합니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 14f, Value1 = 0f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 21f, Value1 = 0f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 28f, Value1 = 0f, Value2 = 0f, Value3 = 0f },
+            },
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Ghost_Ball.png"
         );
 
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Cluster.asset",
-            skillId:    (int)ActiveSkillId.Cluster,
-            skillName:  "Cluster Ball",
-            skillType:  SkillType.Active,
-            desc:       "몬스터 충돌 시 서브볼을 추가 발사합니다.",
-            value1:     3f,     // 서브볼 개수
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Cluster_Ball.png"
+            path:      "Assets/_Project/Data/SkillData_Cluster.asset",
+            skillId:   (int)ActiveSkillId.Cluster,
+            skillName: "Cluster Ball",
+            skillType: SkillType.Active,
+            desc:      "확률적으로 몬스터 충돌 시 서브볼을 추가 발사합니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 27f, Value1 = 0.4f, Value2 = 10f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 30f, Value1 = 0.5f, Value2 = 15f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 33f, Value1 = 0.6f, Value2 = 20f, Value3 = 0f },
+            },
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Cluster_Ball.png"
         );
     }
 
     // ──────────────────────────────────────────
-    //  Passive SkillData (7종)
+    //  Passive SkillData (5종)
     // ──────────────────────────────────────────
 
     private static void CreatePassiveSkillDataAssets()
     {
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Passive_3000.asset",
-            skillId:    (int)PassiveSkillId.DamageUp,
-            skillName:  "Damage Up",
-            skillType:  SkillType.Passive,
-            desc:       "볼의 기본 데미지를 증가시킵니다.",
-            value1:     0.1f,   // 데미지 증가 배율 (10%)
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/Passive/icon_passive_3000.png"
+            path:      "Assets/_Project/Data/SkillData_Passive_WarmTinHeart.asset",
+            skillId:   (int)PassiveSkillId.WarmTinHeart,
+            skillName: "Warm Tin Heart",
+            skillType: SkillType.Passive,
+            desc:      "볼의 기본 데미지 배율을 증가시킵니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.2f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.3f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.4f, Value2 = 0f, Value3 = 0f },
+            },
+            iconPath: ""
         );
 
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Passive_3002.asset",
-            skillId:    (int)PassiveSkillId.CritChanceUp,
-            skillName:  "Crit Chance Up",
-            skillType:  SkillType.Passive,
-            desc:       "크리티컬 발생 확률을 증가시킵니다.",
-            value1:     0.05f,  // 크리티컬 확률 증가 (+5%)
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/Passive/icon_passive_3002.png"
+            path:      "Assets/_Project/Data/SkillData_Passive_MagicMirror.asset",
+            skillId:   (int)PassiveSkillId.MagicMirror,
+            skillName: "Magic Mirror",
+            skillType: SkillType.Passive,
+            desc:      "볼이 벽에 반사될 때마다 다음 공격 데미지를 증가시킵니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.2f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.4f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.6f, Value2 = 0f, Value3 = 0f },
+            },
+            iconPath: ""
         );
 
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Passive_3003.asset",
-            skillId:    (int)PassiveSkillId.CritDamageUp,
-            skillName:  "Crit Damage Up",
-            skillType:  SkillType.Passive,
-            desc:       "크리티컬 데미지 배율을 증가시킵니다.",
-            value1:     0.5f,   // 크리티컬 배율 증가 (+0.5)
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/Passive/icon_passive_3003.png"
+            path:      "Assets/_Project/Data/SkillData_Passive_AmethystDagger.asset",
+            skillId:   (int)PassiveSkillId.AmethystDagger,
+            skillName: "Amethyst Dagger",
+            skillType: SkillType.Passive,
+            desc:      "몬스터 정면 타격 시 보너스 크리티컬 확률을 부여합니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.1f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.2f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.3f, Value2 = 0f, Value3 = 0f },
+            },
+            iconPath: ""
         );
 
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Passive_3006.asset",
-            skillId:    (int)PassiveSkillId.SpeedUp,
-            skillName:  "Speed Up",
-            skillType:  SkillType.Passive,
-            desc:       "볼 이동 속도를 증가시킵니다.",
-            value1:     2f,     // 속도 증가량
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/Passive/icon_passive_3006.png"
+            path:      "Assets/_Project/Data/SkillData_Passive_EmeraldDagger.asset",
+            skillId:   (int)PassiveSkillId.EmeraldDagger,
+            skillName: "Emerald Dagger",
+            skillType: SkillType.Passive,
+            desc:      "몬스터 후면 타격 시 보너스 크리티컬 확률을 부여합니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.2f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.3f, Value2 = 0f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 0.4f, Value2 = 0f, Value3 = 0f },
+            },
+            iconPath: ""
         );
 
         CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Passive_3007.asset",
-            skillId:    (int)PassiveSkillId.BounceUp,
-            skillName:  "Bounce Up",
-            skillType:  SkillType.Passive,
-            desc:       "볼의 최대 반사 횟수를 증가시킵니다.",
-            value1:     2f,     // 추가 반사 횟수
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/Passive/icon_passive_3007.png"
-        );
-
-        CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Passive_3013.asset",
-            skillId:    (int)PassiveSkillId.KillShot,
-            skillName:  "Kill Shot",
-            skillType:  SkillType.Passive,
-            desc:       "몬스터 처치 시 처치 위치에서 추가 볼 1개를 발사합니다.",
-            value1:     0f,
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/Passive/icon_passive_3013.png"
-        );
-
-        CreateSkillData(
-            path:       "Assets/_Project/Data/SkillData_Passive_3014.asset",
-            skillId:    (int)PassiveSkillId.LastHit,
-            skillName:  "Last Hit",
-            skillType:  SkillType.Passive,
-            desc:       "볼이 반납되기 직전 HP가 가장 낮은 몬스터에게 추가 타격을 가합니다.",
-            value1:     5f,     // 추가 데미지
-            value2:     0f,
-            value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/Passive/icon_passive_3014.png"
+            path:      "Assets/_Project/Data/SkillData_Passive_LastMatch.asset",
+            skillId:   (int)PassiveSkillId.LastMatch,
+            skillName: "Last Match",
+            skillType: SkillType.Passive,
+            desc:      "몬스터 처치 시 주변 적들에게 추가 피해를 줍니다.",
+            levels: new SkillLevelData[]
+            {
+                new SkillLevelData { BallDamage = 0f, Value1 = 10f, Value2 = 1.5f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 20f, Value2 = 1.5f, Value3 = 0f },
+                new SkillLevelData { BallDamage = 0f, Value1 = 30f, Value2 = 1.5f, Value3 = 0f },
+            },
+            iconPath: ""
         );
     }
 
@@ -188,15 +194,13 @@ public static class SkillSetupEditor
     // ──────────────────────────────────────────
 
     private static void CreateSkillData(
-        string    path,
-        int       skillId,
-        string    skillName,
-        SkillType skillType,
-        string    desc,
-        float     value1,
-        float     value2,
-        float     value3,
-        string    iconPath)
+        string         path,
+        int            skillId,
+        string         skillName,
+        SkillType      skillType,
+        string         desc,
+        SkillLevelData[] levels,
+        string         iconPath)
     {
         if (AssetDatabase.LoadAssetAtPath<SkillData>(path) != null)
         {
@@ -207,23 +211,30 @@ public static class SkillSetupEditor
         SkillData data = ScriptableObject.CreateInstance<SkillData>();
 
         SerializedObject so = new SerializedObject(data);
-        so.FindProperty("_skillId").intValue       = skillId;
-        so.FindProperty("_skillName").stringValue  = skillName;
+        so.FindProperty("_skillId").intValue        = skillId;
+        so.FindProperty("_skillName").stringValue   = skillName;
         so.FindProperty("_description").stringValue = desc;
         so.FindProperty("_skillType").enumValueIndex = (int)skillType;
-        so.FindProperty("_value1").floatValue      = value1;
-        so.FindProperty("_value2").floatValue      = value2;
-        so.FindProperty("_value3").floatValue      = value3;
+
+        SerializedProperty levelsProp = so.FindProperty("_levels");
+        levelsProp.arraySize = levels.Length;
+        for (int i = 0; i < levels.Length; i++)
+        {
+            SerializedProperty elem = levelsProp.GetArrayElementAtIndex(i);
+            elem.FindPropertyRelative("BallDamage").floatValue = levels[i].BallDamage;
+            elem.FindPropertyRelative("Value1").floatValue     = levels[i].Value1;
+            elem.FindPropertyRelative("Value2").floatValue     = levels[i].Value2;
+            elem.FindPropertyRelative("Value3").floatValue     = levels[i].Value3;
+        }
 
         // 아이콘 자동 연결
-        Sprite icon = AssetDatabase.LoadAssetAtPath<Sprite>(iconPath);
-        if (icon != null)
+        if (!string.IsNullOrEmpty(iconPath))
         {
-            so.FindProperty("_icon").objectReferenceValue = icon;
-        }
-        else
-        {
-            Debug.LogWarning($"[SkillSetupEditor] 아이콘 없음, 스킵: {iconPath}");
+            Sprite icon = AssetDatabase.LoadAssetAtPath<Sprite>(iconPath);
+            if (icon != null)
+                so.FindProperty("_icon").objectReferenceValue = icon;
+            else
+                Debug.LogWarning($"[SkillSetupEditor] 아이콘 없음, 스킵: {iconPath}");
         }
 
         so.ApplyModifiedPropertiesWithoutUndo();
