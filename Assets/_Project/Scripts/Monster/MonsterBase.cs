@@ -13,11 +13,13 @@ public class MonsterBase : MonoBehaviour, IPoolable
     private float _slowPercent;
     private float _bonusCritChance;
 
-    public float CurrentHp => _currentHp;
-    public bool  IsAlive   => !_isDead;
-    public bool  IsFrozen  => _frozenTurnsRemaining > 0;
+    public float CurrentHp    => _currentHp;
+    public bool  IsAlive      => !_isDead;
+    public bool  IsFrozen     => _frozenTurnsRemaining > 0;
+    public MonsterData Data   => _monsterData;
 
     public static event Action<MonsterBase> OnMonsterDied;
+    public event Action<float, float> OnHpChanged;
 
     private void OnEnable()
     {
@@ -37,6 +39,7 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _slowTurnsRemaining    = 0;
         _slowPercent           = 0f;
         _bonusCritChance       = 0f;
+        OnHpChanged?.Invoke(_currentHp, _monsterData.Hp);
     }
 
     public void OnDespawn()
@@ -50,6 +53,7 @@ public class MonsterBase : MonoBehaviour, IPoolable
             return;
 
         _currentHp -= damage;
+        OnHpChanged?.Invoke(Mathf.Max(_currentHp, 0f), _monsterData.Hp);
 
         if (_currentHp <= 0f)
         {

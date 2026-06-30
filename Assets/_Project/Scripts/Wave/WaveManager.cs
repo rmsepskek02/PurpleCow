@@ -19,10 +19,11 @@ public class WaveManager : Singleton<WaveManager>
     private int _currentWaveIndex;
     private int _totalKillCount;
 
-    public static event Action<int> OnWaveStarted;
-    public static event Action OnWaveCleared;
-    public static event Action OnAllWavesCleared;
-    public static event Action OnKillCountReached;
+    public static event Action<int>         OnWaveStarted;
+    public static event Action              OnWaveCleared;
+    public static event Action              OnAllWavesCleared;
+    public static event Action              OnKillCountReached;
+    public static event Action<MonsterBase> OnMonsterReachedBottom;
 
     public int TotalWaves => _waveDatas.Length;
 
@@ -87,12 +88,14 @@ public class WaveManager : Singleton<WaveManager>
 
     private void CheckGameOver()
     {
-        foreach (MonsterBase monster in _activeMonsters)
+        for (int i = _activeMonsters.Count - 1; i >= 0; i--)
         {
+            MonsterBase monster = _activeMonsters[i];
             if (monster.transform.position.y <= _bottomBoundaryY)
             {
-                GameManager.Instance.EndGame(false);
-                return;
+                _activeMonsters.RemoveAt(i);
+                _monsterPool.Return(monster);
+                OnMonsterReachedBottom?.Invoke(monster);
             }
         }
     }

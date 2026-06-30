@@ -15,15 +15,14 @@ public class UIManager : Singleton<UIManager>
     protected override void Awake()
     {
         base.Awake();
-        _hudPanel.gameObject.SetActive(false);
-        _resultPanel.gameObject.SetActive(false);
-        _skillSelectionPanel.gameObject.SetActive(false);
+        _hudPanel.Hide();
+        _resultPanel.Hide();
+        _skillSelectionPanel.Hide();
     }
 
     private void OnEnable()
     {
         GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
-        WaveManager.OnWaveCleared               += HandleWaveCleared;
         WaveManager.OnAllWavesCleared           += HandleAllWavesCleared;
         MonsterBase.OnMonsterDied               += HandleMonsterDied;
     }
@@ -31,7 +30,6 @@ public class UIManager : Singleton<UIManager>
     private void OnDisable()
     {
         GameManager.Instance.OnGameStateChanged -= HandleGameStateChanged;
-        WaveManager.OnWaveCleared               -= HandleWaveCleared;
         WaveManager.OnAllWavesCleared           -= HandleAllWavesCleared;
         MonsterBase.OnMonsterDied               -= HandleMonsterDied;
     }
@@ -59,11 +57,6 @@ public class UIManager : Singleton<UIManager>
         }
     }
 
-    private void HandleWaveCleared()
-    {
-        ShowSkillSelection(true);
-    }
-
     private void HandleAllWavesCleared()
     {
         GameManager.Instance.EndGame(true);
@@ -81,7 +74,7 @@ public class UIManager : Singleton<UIManager>
         WaveManager.Instance.AdvanceToNextWave();
     }
 
-    private void ShowHUD(bool show)            => _hudPanel.gameObject.SetActive(show);
-    private void ShowResult(bool show)         => _resultPanel.gameObject.SetActive(show);
-    private void ShowSkillSelection(bool show) => _skillSelectionPanel.gameObject.SetActive(show);
+    private void ShowHUD(bool show)            { if (show) _hudPanel.Show(); else _hudPanel.Hide(); }
+    private void ShowResult(bool show)         { if (show) _resultPanel.Show(); else _resultPanel.Hide(); }
+    private void ShowSkillSelection(bool show) { if (show) _skillSelectionPanel.Show(); else _skillSelectionPanel.Hide(); }
 }

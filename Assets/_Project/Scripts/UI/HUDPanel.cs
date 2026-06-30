@@ -1,13 +1,26 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 
 public class HUDPanel : MonoBehaviour
 {
-    [SerializeField] private TMP_Text  _waveText;
-    [SerializeField] private TMP_Text  _scoreText;
-    [SerializeField] private GameObject _launchReadyIndicator;
+    [SerializeField] private TMP_Text    _waveText;
+    [SerializeField] private TMP_Text    _scoreText;
+    [SerializeField] private GameObject  _launchReadyIndicator;
+    [SerializeField] private CanvasGroup _launchReadyCanvasGroup;
+
+    [SerializeField] private CanvasGroup _canvasGroup;
+    [SerializeField] private float _slideDist    = 50f;
+    [SerializeField] private float _animDuration = 0.3f;
+    [SerializeField] private Ease  _ease         = Ease.OutCubic;
+    private Vector3 _originalPos;
 
     private int _totalWaves;
+
+    private void Awake()
+    {
+        _originalPos = transform.localPosition;
+    }
 
     private void OnEnable()
     {
@@ -27,18 +40,18 @@ public class HUDPanel : MonoBehaviour
     {
         _totalWaves = WaveManager.Instance.TotalWaves;
         UpdateScore(0);
-        _launchReadyIndicator.SetActive(false);
+        SetLaunchIndicatorVisible(false);
     }
 
     private void HandleWaveStarted(int waveNumber)
     {
         _waveText.text = $"WAVE {waveNumber} / {_totalWaves}";
-        _launchReadyIndicator.SetActive(true);
+        SetLaunchIndicatorVisible(true);
     }
 
     private void HandleAllBallsReturned()
     {
-        _launchReadyIndicator.SetActive(false);
+        SetLaunchIndicatorVisible(false);
     }
 
     private void HandleScoreChanged(int score)
@@ -49,5 +62,38 @@ public class HUDPanel : MonoBehaviour
     private void UpdateScore(int score)
     {
         _scoreText.text = $"처치: {score}";
+    }
+
+    private void SetLaunchIndicatorVisible(bool visible)
+    {
+        if (_launchReadyCanvasGroup != null)
+            _launchReadyCanvasGroup.alpha = visible ? 1f : 0f;
+        else
+            _launchReadyIndicator.SetActive(visible);
+    }
+
+    public void Show()
+    {
+        gameObject.SetActive(true);
+        _canvasGroup.blocksRaycasts = false;
+        _canvasGroup.interactable   = false;
+        transform.localPosition     = _originalPos + Vector3.down * _slideDist;
+        _canvasGroup.alpha          = 0f;
+
+        Sequence seq = DOTween.Sequence();
+        seq.Append(transform.DOLocalMoveY(_originalPos.y, _animDuration).SetEase(_ease));
+        seq.Join(_canvasGroup.DOFade(1f, _animDuration));
+        seq.OnComplete(() => { _canvasGroup.blocksRaycasts = true; _canvasGroup.interactable = true; });
+    }
+
+    public void Hide()
+    {
+        _canvasGroup.blocksRaycasts = false;
+        _canvasGroup.interactable   = false;
+
+        Sequence seq = DOTween.Sequence();
+        seq.Append(transform.DOLocalMoveY(_originalPos.y - _slideDist, _animDuration).SetEase(_ease));
+        seq.Join(_canvasGroup.DOFade(0f, _animDuration));
+        seq.OnComplete(() => { transform.localPosition = _originalPos; gameObject.SetActive(false); });
     }
 }

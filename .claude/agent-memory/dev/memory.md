@@ -256,3 +256,38 @@
 - BallLauncher.LaunchSubBalls에 `damage` 기본값 파라미터 추가 — 기존 KillShotPassive 방식 호출도 `damage=0f` 기본값으로 하위 호환
 - Ball.OnSpawn에서 `_skills.Clear()` 처리 — 풀 재사용 시 이전 스킬 목록 초기화
 - SkillSelectionPanel에서 `_cards` → `_skillCards` 필드명 변경 (plan.md 스펙 기준)
+
+---
+
+## 2026-06-30
+
+### 작업: UI 전체 재작업 (CanvasGroup, DOTween, CharacterManager, DamageText, MonsterHpBar)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-06-30/HH-MM_UI재작업/plan.md`
+- 기존 파일 6개 수정 + 신규 파일 9개 생성
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Monster/MonsterBase.cs` — `Data => _monsterData` 프로퍼티 추가, `OnHpChanged` 인스턴스 이벤트 추가, `OnSpawn()`/`TakeDamage()`에 `OnHpChanged?.Invoke()` 발행
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — `OnMonsterReachedBottom` static 이벤트 추가, `CheckGameOver()` 재작성 (역방향 순회, 몬스터 풀 반납 후 이벤트 발행, GameManager.EndGame 직접 호출 제거)
+- `Assets/_Project/Scripts/UI/UIManager.cs` — Awake의 SetActive(false) 3개 → Hide() 호출로 교체, `WaveManager.OnWaveCleared` 구독/해제 및 `HandleWaveCleared()` 제거, ShowHUD/Result/SkillSelection을 Show()/Hide() 방식으로 교체
+- `Assets/_Project/Scripts/UI/HUDPanel.cs` — CanvasGroup/slideDist/animDuration/ease 필드 추가, Awake() 추가(_originalPos 저장), `_launchReadyCanvasGroup` 추가(null 체크 fallback), Show()/Hide() DOTween 애니메이션 추가
+- `Assets/_Project/Scripts/UI/ResultPanel.cs` — 동일 패턴으로 CanvasGroup + Show()/Hide() 추가
+- `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` — CanvasGroup + Show()/Hide() 추가, OnEnable에서 ShowRandomSkills() 직접 호출 제거, OpenPanel()에서 Show() 호출, OnSkillSelected에서 Hide() 호출, _skillCards[i].gameObject.SetActive() → SetVisible() 교체
+- `Assets/_Project/Scripts/UI/SkillCardUI.cs` — `_canvasGroup` 필드 추가, `SetVisible(bool)` 메서드 추가
+
+**생성 파일:**
+- `Assets/_Project/Scripts/UI/UIButton.cs` — IPointerDownHandler/IPointerUpHandler, DOTween scale 애니메이션
+- `Assets/_Project/Scripts/UI/SafeAreaFitter.cs` — Screen.safeArea 기반 RectTransform offsetMin/offsetMax 적용
+- `Assets/_Project/Scripts/Core/CharacterManager.cs` — Singleton<CharacterManager>, OnHpChanged/OnXpChanged/OnLevelUp static 이벤트, WaveManager.OnMonsterReachedBottom/MonsterBase.OnMonsterDied 구독, TakeDamage/AddXp/레벨업 로직
+- `Assets/_Project/Scripts/UI/MonsterHpBar.cs` — MonsterBase.OnHpChanged 인스턴스 이벤트 구독, Slider 제어
+- `Assets/_Project/Scripts/UI/CharacterHpBar.cs` — CharacterManager.OnHpChanged 구독, Slider 제어
+- `Assets/_Project/Scripts/UI/CharacterXpBar.cs` — CharacterManager.OnXpChanged/OnLevelUp 구독, Slider + TMP_Text 레벨 표시
+- `Assets/_Project/Scripts/UI/DamageTextFx.cs` — IPoolable 구현, DOTween float + DOFade 애니메이션, Play(worldPos, damage, isCritical)
+- `Assets/_Project/Scripts/UI/DamageTextManager.cs` — Singleton<DamageTextManager>, ObjectPool<DamageTextFx>, ShowDamage/Return 메서드
+
+**주요 결정사항:**
+- WaveManager.CheckGameOver() 역방향 for 순회: List 수정 중 순방향 foreach 사용 불가, RemoveAt(i)로 안전하게 처리
+- OnMonsterReachedBottom 발행 후 GameManager.EndGame 호출 제거 — CharacterManager가 HP 차감 후 0이 되면 EndGame 호출하는 구조로 분리
+- HUDPanel._launchReadyIndicator: null 체크 없이 기존 SetActive 방식과 새 CanvasGroup 방식을 SetLaunchIndicatorVisible() 헬퍼로 통합
+- MonsterHpBar는 Start()에서 GetComponentInParent로 MonsterBase 참조 (OnEnable이 아닌 Start에서 처리 — 풀 스폰 시점 순서 고려)
