@@ -162,6 +162,28 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 
 ---
 
+### STEP 8 — INFO 2: WaveData 20개 생성
+
+**배경**
+
+`MonsterSetupEditor.CreateWaveDataAsset()`이 `WaveData_Wave1.asset` 1개만 생성한다. `WaveManager._waveDatas[]`에 할당된 WaveData가 1개뿐이므로 1웨이브 후 즉시 스테이지가 클리어된다. 각 웨이브별 몬스터 구성(종류, 수, 배치)은 이후 Inspector에서 편집할 수 있도록 에셋만 먼저 생성한다.
+
+**수정 파일: `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs`**
+
+- `CreateWaveDataAsset()` 메서드를 `CreateWaveDataAssets()`로 교체한다.
+- Wave1~Wave20 총 20개의 에셋을 생성한다. 각 에셋은:
+  - 파일 경로: `Assets/_Project/Data/WaveData_Wave{N}.asset`
+  - `_waveNumber` 필드를 N(1~20)으로 설정
+  - `_spawnEntries`는 빈 상태로 둠 — Inspector에서 직접 편집
+- 이미 존재하는 에셋은 스킵한다.
+- 메서드 호출부(`SetupMonsterSystem()`에서 `CreateWaveDataAsset()` → `CreateWaveDataAssets()`)도 함께 변경한다.
+
+**Inspector 편집 방법**
+
+생성된 WaveData_Wave1 ~ WaveData_Wave20 에셋을 열면 `_spawnEntries` 리스트를 통해 각 웨이브에 몬스터를 추가할 수 있다. 각 항목에 `MonsterData` 에셋을 연결하고 `GridPosition`(x, y)을 설정하면 해당 위치에 몬스터가 스폰된다.
+
+---
+
 ## 예상 변경/생성 파일 목록
 
 | 구분 | 파일 | 변경 내용 |
@@ -181,6 +203,7 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 | 수정 | `Assets/_Project/Scripts/Ball/BallLauncher.cs` | `OnEnable`/`OnDisable`에서 Instance 접근 제거, static 이벤트 직접 참조로 교체 |
 | 수정 | `Assets/_Project/Scripts/UI/ResultPanel.cs` | `OnEnable`/`OnDisable`에서 Instance 접근 제거, static 이벤트 직접 참조로 교체 |
 | 수정 | `Assets/_Project/Scripts/UI/UIManager.cs` | `OnEnable`/`OnDisable`에서 Instance 접근 제거, static 이벤트 직접 참조로 교체 |
+| 수정 | `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs` | `CreateWaveDataAsset()` → `CreateWaveDataAssets()`로 교체, Wave1~Wave20 에셋 생성 |
 
 ---
 
@@ -197,5 +220,6 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 아래 항목들은 수정 방향이 아직 확정되지 않았습니다. 논의 완료 후 각 항목이 STEP으로 이 plan.md에 추가될 예정입니다.
 
 - ~~**WARNING 6:** OnEnable에서 Singleton Instance 직접 접근~~ → STEP 7로 확정
+- ~~**INFO 2:** WaveData 20개 미생성~~ → STEP 8로 확정
 - **INFO 2:** WaveData 20개 미생성
 - **INFO 3:** DamageTextManager Ball.OnHitMonster 미연결 (시그니처 변경 필요)
