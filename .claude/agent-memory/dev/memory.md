@@ -356,3 +356,19 @@
 - UISetupEditor의 EnsureComponent<T>는 try-catch로 실패 방어 처리 (일부 UI 컴포넌트 AddComponent 순서 의존성 대응)
 - AddMonsterHpBar는 `go.transform.Find("HpBarCanvas") != null` 중복 체크로 멱등성 보장
 - UpdateMonsterHpBars는 EditPrefabContentsScope 패턴 사용 — 프리팹 파일 직접 수정 후 저장
+
+---
+
+## 2026-06-30
+
+### 작업: BallSetupEditor _maxBounces 기본값 추가 + SceneSetupEditor DamageTextManager 제거
+
+**작업 내용:**
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/BallSetupEditor.cs` — `CreateBallDataAsset()` 내 `_criticalMultiplier` 설정 바로 아래에 `so.FindProperty("_maxBounces").intValue = 10;` 1줄 추가
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step6_PlaceManagers()` 내 `PlaceManager<DamageTextManager>("DamageTextManager");` 라인 제거 (UISetupEditor가 전담)
+
+**주요 결정사항:**
+- DamageTextManager 배치 책임이 UISetupEditor로 이전되어 SceneSetupEditor에서 중복 생성 방지
