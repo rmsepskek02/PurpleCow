@@ -86,3 +86,51 @@
 - HandleHitMonster는 plan.md 스펙 준수를 위해 구독 핸들러로 존재하나 실제 데미지 처리는 OnCollisionEnter2D에서 LastDamage 방식으로 처리
 - Monster/Wave 디렉토리는 기존에 .meta 파일만 있고 실제 디렉토리가 없어 mkdir으로 생성
 - MonsterSpawnEntry는 WaveData 파일 내 별도 클래스로 정의 (중첩 클래스 아님 — Unity Serializable 클래스는 파일 루트 레벨에서도 동작)
+
+---
+
+## 2026-06-30
+
+### 작업: Skill 시스템 구현 (SkillData, BallSkillBase, PassiveSkillBase, Active 5종, Passive 7종, SkillManager, SkillSetupEditor)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-06-30/18-00_Skill시스템구현/plan.md`
+- 기존 파일 5개 수정 + 신규 파일 17개 생성
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Data/BallData.cs` — `_maxBounces` 필드 및 `MaxBounces` 프로퍼티 추가 (BounceUpPassive 연동용)
+- `Assets/_Project/Scripts/Ball/Ball.cs` — `_skill`, `_remainingBounces`, `_collider` 필드 추가; `LaunchDirection`/`OnBeforeReturn` 추가; `OnSpawn`/`OnDespawn`/`Launch`/`FixedUpdate`/`CalculateDamage`/`OnCollisionEnter2D` 수정; `SetSkill`/`SetGhostMode`/`ForceReturn`/`OnTriggerEnter2D` 추가
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` — `LaunchBall()`에 `SkillManager.Instance.ApplySkillToBall(ball)` 추가; `LaunchSubBalls()` 메서드 추가
+- `Assets/_Project/Scripts/Monster/MonsterBase.cs` — `_frozenTurnsRemaining`/`IsFrozen` 추가; `OnSpawn()`에 초기화; `MoveDown()`에 freeze 체크; `ApplyFreeze()` 추가
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — `GetWeakestMonster()` 메서드 추가
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Data/SkillData.cs` — ScriptableObject, SkillType/ActiveSkillId/PassiveSkillId 열거형, Value1~3 수치 필드
+- `Assets/_Project/Scripts/Skill/Base/BallSkillBase.cs` — abstract MonoBehaviour, OnBallHit/OnActivate/OnDeactivate
+- `Assets/_Project/Scripts/Skill/Base/PassiveSkillBase.cs` — abstract 순수 C# 클래스, Apply/Remove
+- `Assets/_Project/Scripts/Skill/Active/FireBallSkill.cs` — OverlapCircleAll 폭발 데미지
+- `Assets/_Project/Scripts/Skill/Active/IceBallSkill.cs` — ApplyFreeze 호출
+- `Assets/_Project/Scripts/Skill/Active/GhostBallSkill.cs` — SetGhostMode(true/false) 전환
+- `Assets/_Project/Scripts/Skill/Active/LaserBallSkill.cs` — OnActivate에서 RaycastAll 후 ForceReturn
+- `Assets/_Project/Scripts/Skill/Active/ClusterBallSkill.cs` — LaunchSubBalls 호출, _hasExploded 1회 제어
+- `Assets/_Project/Scripts/Skill/Passive/DamageUpPassive.cs` — AddDamageMultiplier/Remove
+- `Assets/_Project/Scripts/Skill/Passive/CritChanceUpPassive.cs` — AddCritChanceBonus/Remove
+- `Assets/_Project/Scripts/Skill/Passive/CritDamageUpPassive.cs` — AddCritDamageBonus/Remove
+- `Assets/_Project/Scripts/Skill/Passive/SpeedUpPassive.cs` — AddSpeedBonus/Remove
+- `Assets/_Project/Scripts/Skill/Passive/BounceUpPassive.cs` — AddBounceBonus/Remove
+- `Assets/_Project/Scripts/Skill/Passive/KillShotPassive.cs` — MonsterBase.OnMonsterDied 구독, LaunchSubBalls(position, 1)
+- `Assets/_Project/Scripts/Skill/Passive/LastHitPassive.cs` — Ball.OnBeforeReturn 구독, GetWeakestMonster().TakeDamage
+- `Assets/_Project/Scripts/Skill/SkillManager.cs` — Singleton<SkillManager>, 5종 보너스 누적, ApplySkillToBall, Add/Remove 메서드
+- `Assets/_Project/Scripts/Editor/SkillSetupEditor.cs` — MenuItem("PurpleCow/Setup/Skill System Setup"), Active 5종 + Passive 7종 SkillData 에셋 생성
+
+**Git:**
+- 브랜치: `claude/recent-plan-review-xq2hsm`
+- 커밋: `feat: implement Skill system (SkillData, BallSkillBase, PassiveSkillBase, 5 active skills, 7 passive skills, SkillManager, SkillSetupEditor)`
+- push 완료 (22 files changed, 736 insertions)
+
+**주요 결정사항:**
+- `BallData`에 `_maxBounces` 필드 추가 — plan.md 주의사항 5번 기준, BallData SO로 관리
+- `Ball.OnCollisionEnter2D` Monster 분기에서 `TakeDamage` 직접 호출을 제거하지 않고 `_skill?.OnBallHit()` 추가 — 기존 `OnCollisionEnter2D → LastDamage → MonsterBase.OnCollisionEnter2D.TakeDamage` 흐름 유지, 충돌 데미지 중복 방지는 기존 구조에 의존
+- GhostBallSkill의 OnTriggerEnter2D는 `_skill is GhostBallSkill` 조건으로 Ghost 모드 한정 처리
+- SkillSetupEditor에서 `_skillType.enumValueIndex = (int)skillType` 방식으로 enum 값 설정
+- PassiveSkillBase는 MonoBehaviour가 아닌 순수 C# 클래스 — OnEnable/OnDisable 없이 Apply/Remove 쌍으로 이벤트 관리
