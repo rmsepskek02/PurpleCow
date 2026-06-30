@@ -21,3 +21,17 @@
 
 ### 주요 결정사항
 - ProjectHistory.md는 기존 내용 유지 + 신규 섹션 추가 방식으로 편집
+
+---
+
+### 작업 내용 (추가)
+- UIRules.md 신규 생성 (Assets/_Project/Docs/UIRules.md)
+- AGENTS.md Docs 문서 인덱스에 UIRules.md 등록
+
+### 결과
+- UIRules.md 생성 완료: Canvas 구조/레이어, 해상도 대응, Safe Area, 패널 표시/숨김, UI 애니메이션, 버튼 피드백, 성능 최적화 7개 섹션 포함
+- AGENTS.md 인덱스 업데이트 완료
+
+### 주요 결정사항
+- DevRules.md 스타일(마크다운 테이블, 코드블록, 한국어 설명) 일관성 유지
+- 사용자 확정 내용 그대로 반영, 임의 추가 없음
