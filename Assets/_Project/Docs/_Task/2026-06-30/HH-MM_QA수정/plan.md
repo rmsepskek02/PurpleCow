@@ -1,7 +1,7 @@
 # Plan — QA 수정
 
 이 문서는 QA 검토 결과 중 논의가 완료된 항목에 대한 구현 계획을 기술합니다.
-현재는 CRITICAL 2·3·4·5, WARNING 2·3·4·6, INFO 2·3 총 10건의 수정 계획이 STEP 1~10으로 확정되었으며, 나머지 항목(WARNING 5, INFO 1)은 논의 완료 후 순차적으로 추가될 예정입니다.
+CRITICAL 2·3·4·5, WARNING 2·3·4·6, INFO 2·3 총 10건의 수정 계획이 STEP 1~10으로 확정되었습니다. WARNING 5는 의도된 구현으로 수정 불필요, INFO 1은 PDF스펙정합 작업에서 이미 처리된 중복 항목입니다.
 
 ---
 
@@ -259,3 +259,5 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 - ~~**INFO 2:** WaveData 20개 미생성~~ → STEP 8로 확정
 - ~~**INFO 3:** DamageTextManager Ball.OnHitMonster 미연결~~ → STEP 9로 확정
 - ~~**CRITICAL 5:** 스킬 레벨업 시 Ball 인스턴스 공유 문제~~ → STEP 10으로 확정
+- **INFO 1:** BallData 기본값 → PDF스펙정합 STEP 2에서 이미 처리됨, 중복
+- **WARNING 5:** ClusterBall 서브볼 발사 방향 → 몬스터가 위쪽에 위치하는 게임 구조상 의도된 구현, 수정 불필요
