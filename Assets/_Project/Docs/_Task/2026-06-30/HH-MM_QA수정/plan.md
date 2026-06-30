@@ -73,7 +73,7 @@ RestartGame() 호출 시 MonoBehaviour 기반 시스템(WaveManager, CharacterMa
 
 **수정 파일 2: `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs`**
 
-- `GameManager.Instance.OnGameStateChanged`를 구독하여 `GameState.Ready` 상태 수신 시 `_allSkillDatas` 배열을 순회하며 `data.ResetLevel()`을 호출한다.
+- `GameManager.OnGameStateChanged`를 구독하여 `GameState.Ready` 상태 수신 시 `_allSkillDatas` 배열을 순회하며 `data.ResetLevel()`을 호출한다. (STEP 7에서 static으로 전환되므로 Instance 접근 없이 직접 참조)
 
 **수정 파일 3: `Assets/_Project/Scripts/Core/GameManager.cs`**
 
