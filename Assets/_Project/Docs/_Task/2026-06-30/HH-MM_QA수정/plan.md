@@ -1,7 +1,7 @@
 # Plan — QA 수정
 
 이 문서는 QA 검토 결과 중 논의가 완료된 항목에 대한 구현 계획을 기술합니다.
-현재는 CRITICAL 2(WaveData MonsterData 미반영), CRITICAL 3(스킬 선택 중 게임 일시정지 처리) 두 건의 수정 계획이 확정되었으며, 나머지 항목은 논의 완료 후 순차적으로 STEP으로 추가될 예정입니다.
+현재는 CRITICAL 2(WaveData MonsterData 미반영), CRITICAL 3(스킬 선택 중 게임 일시정지 처리), CRITICAL 4(재시작 초기화 미구현) 세 건의 수정 계획이 확정되었으며, 나머지 항목은 논의 완료 후 순차적으로 STEP으로 추가될 예정입니다.
 
 ---
 
@@ -58,6 +58,27 @@ SkillSelectionPanel은 인게임 도중 열리기 때문에 패널이 열려 있
 
 ---
 
+### STEP 3 — CRITICAL 4: 재시작 초기화 구현
+
+**배경**
+
+RestartGame() 호출 시 MonoBehaviour 기반 시스템(WaveManager, CharacterManager, SkillManager 등)은 씬 재로드로 전부 초기화된다. 단, SkillData는 ScriptableObject 에셋이라 씬 재로드로 리셋되지 않으므로, 씬 재로드 전에 SkillSelectionPanel이 명시적으로 레벨을 리셋해야 한다.
+
+**수정 파일 1: `Assets/_Project/Scripts/Data/SkillData.cs`**
+
+- `public void ResetLevel() { _currentLevel = 0; }` 메서드를 추가한다.
+
+**수정 파일 2: `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs`**
+
+- `GameManager.Instance.OnGameStateChanged`를 구독하여 `GameState.Ready` 상태 수신 시 `_allSkillDatas` 배열을 순회하며 `data.ResetLevel()`을 호출한다.
+
+**수정 파일 3: `Assets/_Project/Scripts/Core/GameManager.cs`**
+
+- `RestartGame()` 메서드에서 기존 GameState 변경 후 `SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex)` 호출을 추가한다.
+- 파일 상단에 `using UnityEngine.SceneManagement;`를 추가한다.
+
+---
+
 ## 예상 변경/생성 파일 목록
 
 | 구분 | 파일 | 변경 내용 |
@@ -66,6 +87,9 @@ SkillSelectionPanel은 인게임 도중 열리기 때문에 패널이 열려 있
 | 수정 | `Assets/_Project/Scripts/Wave/WaveManager.cs` | `SpawnWave()` 내 `ApplyData()` 호출 추가 |
 | 수정 | `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` | `OpenPanel()`에 `Time.timeScale = 0f` 추가, `Show()`/`Hide()` Sequence에 `.SetUpdate(true)` 추가 |
 | 수정 | `Assets/_Project/Scripts/UI/UIManager.cs` | `OnSkillSelectionComplete()`에 `Time.timeScale = 1f` 추가 |
+| 수정 | `Assets/_Project/Scripts/Data/SkillData.cs` | `ResetLevel()` 메서드 추가 |
+| 수정 | `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` | GameState.Ready 수신 시 전체 스킬 레벨 리셋 로직 추가 |
+| 수정 | `Assets/_Project/Scripts/Core/GameManager.cs` | `RestartGame()`에 `SceneManager.LoadScene()` 추가, `using UnityEngine.SceneManagement` 추가 |
 
 ---
 
@@ -81,7 +105,6 @@ SkillSelectionPanel은 인게임 도중 열리기 때문에 패널이 열려 있
 
 아래 항목들은 수정 방향이 아직 확정되지 않았습니다. 논의 완료 후 각 항목이 STEP으로 이 plan.md에 추가될 예정입니다.
 
-- **CRITICAL 4:** 재시작 초기화 미구현 (RestartGame)
 - **WARNING 2:** 패시브 스킬 레벨업 시 이벤트 이중 구독
 - **WARNING 3:** MonsterBase 빈 이벤트 핸들러 불필요 구독
 - **WARNING 4:** SkillSelectionPanel Hide() 이중 호출
