@@ -184,6 +184,25 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 
 ---
 
+### STEP 9 — INFO 3: DamageTextManager Ball.OnHitMonster 연결
+
+**배경**
+
+`Ball.OnHitMonster`의 시그니처가 `Action<float, bool>`(damage, isCritical)이라 위치 정보가 없다. `DamageTextManager.ShowDamage()`는 `Vector3 worldPos`를 필요로 하므로 현재 상태에서는 연결이 불가능하다. 게임 중 데미지 숫자 텍스트가 전혀 표시되지 않는다.
+
+**수정 파일 1: `Assets/_Project/Scripts/Ball/Ball.cs`**
+
+- `OnHitMonster` 이벤트 시그니처를 `Action<float, bool>` → `Action<MonsterBase, float, bool>`로 변경한다.
+- `CalculateDamage()` 마지막 줄의 `OnHitMonster?.Invoke(damage, isCritical)`를 `OnHitMonster?.Invoke(target, damage, isCritical)`로 수정한다.
+
+**수정 파일 2: `Assets/_Project/Scripts/UI/DamageTextManager.cs`**
+
+- `OnEnable()`을 추가하여 `Ball.OnHitMonster += HandleHitMonster`를 구독한다.
+- `OnDisable()`을 추가하여 `Ball.OnHitMonster -= HandleHitMonster`를 해제한다.
+- `HandleHitMonster(MonsterBase monster, float damage, bool isCritical)` 메서드를 추가하여 `ShowDamage(monster.transform.position, damage, isCritical)`를 호출한다.
+
+---
+
 ## 예상 변경/생성 파일 목록
 
 | 구분 | 파일 | 변경 내용 |
@@ -204,6 +223,8 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 | 수정 | `Assets/_Project/Scripts/UI/ResultPanel.cs` | `OnEnable`/`OnDisable`에서 Instance 접근 제거, static 이벤트 직접 참조로 교체 |
 | 수정 | `Assets/_Project/Scripts/UI/UIManager.cs` | `OnEnable`/`OnDisable`에서 Instance 접근 제거, static 이벤트 직접 참조로 교체 |
 | 수정 | `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs` | `CreateWaveDataAsset()` → `CreateWaveDataAssets()`로 교체, Wave1~Wave20 에셋 생성 |
+| 수정 | `Assets/_Project/Scripts/Ball/Ball.cs` | `OnHitMonster` 시그니처 `Action<float, bool>` → `Action<MonsterBase, float, bool>` 변경, `Invoke` 호출에 `target` 추가 |
+| 수정 | `Assets/_Project/Scripts/UI/DamageTextManager.cs` | `OnEnable`/`OnDisable` 추가, `HandleHitMonster` 메서드 추가 |
 
 ---
 
@@ -221,5 +242,4 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 
 - ~~**WARNING 6:** OnEnable에서 Singleton Instance 직접 접근~~ → STEP 7로 확정
 - ~~**INFO 2:** WaveData 20개 미생성~~ → STEP 8로 확정
-- **INFO 2:** WaveData 20개 미생성
-- **INFO 3:** DamageTextManager Ball.OnHitMonster 미연결 (시그니처 변경 필요)
+- ~~**INFO 3:** DamageTextManager Ball.OnHitMonster 미연결~~ → STEP 9로 확정
