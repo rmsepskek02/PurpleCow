@@ -291,3 +291,36 @@
 - OnMonsterReachedBottom 발행 후 GameManager.EndGame 호출 제거 — CharacterManager가 HP 차감 후 0이 되면 EndGame 호출하는 구조로 분리
 - HUDPanel._launchReadyIndicator: null 체크 없이 기존 SetActive 방식과 새 CanvasGroup 방식을 SetLaunchIndicatorVisible() 헬퍼로 통합
 - MonsterHpBar는 Start()에서 GetComponentInParent로 MonsterBase 참조 (OnEnable이 아닌 Start에서 처리 — 풀 스폰 시점 순서 고려)
+
+---
+
+## 2026-06-30
+
+### 작업: UI/Scene 에디터 자동화 (UISetupEditor 신규 생성, SceneSetupEditor 수정)
+
+**작업 내용:**
+- 신규 파일 1개 생성 + 기존 파일 1개 수정
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Editor/UISetupEditor.cs` — MenuItem("PurpleCow/Setup/UI Setup"), 6단계 자동화
+
+**UISetupEditor 구현 상세:**
+- Step 1: Canvas 3개 생성 (Canvas_HUD Sort=10 / Canvas_Panel Sort=20 / Canvas_Popup Sort=30), ScreenSpaceOverlay, CanvasScaler 1080x1920 ScaleWithScreenSize
+- Step 2: Canvas_HUD 내부 구성 — SafeAreaPanel(SafeAreaFitter), HUDPanel, ResultPanel, SkillSelectionPanel, CharacterHP(Slider+CharacterHpBar), CharacterXP(Slider+CharacterXpBar+LevelText TMP)
+- Step 3: Canvas_Panel 내부 구성 — LevelUpPanel/PausePanel/BallLevelUpPanel/PrismPanel (빈 패널 + CanvasGroup)
+- Step 4: DamageTextManager(+DamageTextPool 자식) / CharacterManager 씬 배치
+- Step 5: UIManager SerializedObject를 통해 _hudPanel/_resultPanel/_skillSelectionPanel 참조 자동 연결
+- Step 6: SkillCard.prefab 생성 (Icon Image + NameText/DescText/TypeText TMP + SelectButton UIButton + SkillCardUI 컴포넌트)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `using UnityEngine.UI` 추가 (Slider/Canvas/GraphicRaycaster 사용)
+  - `AddMonsterHpBar(GameObject go)` 메서드 추가 — World Space Canvas(HpBarCanvas) + Slider(HpSlider) + MonsterHpBar 컴포넌트, SerializedObject로 _slider 자동 연결
+  - Step2_CreateMonsterPrefabs에서 `PrefabUtility.SaveAsPrefabAsset` 직전에 `AddMonsterHpBar(go)` 호출 삽입
+  - `UpdateMonsterHpBars()` 메뉴 항목 추가 (`PurpleCow/Setup/Update Monster HpBar`) — 기존 프리팹에 HpBar 소급 적용, `PrefabUtility.EditPrefabContentsScope` 사용
+  - Step6_PlaceManagers에 `PlaceManager<CharacterManager>("CharacterManager")` 및 `PlaceManager<DamageTextManager>("DamageTextManager")` 추가
+
+**주요 결정사항:**
+- UISetupEditor의 EnsureComponent<T>는 try-catch로 실패 방어 처리 (일부 UI 컴포넌트 AddComponent 순서 의존성 대응)
+- AddMonsterHpBar는 `go.transform.Find("HpBarCanvas") != null` 중복 체크로 멱등성 보장
+- UpdateMonsterHpBars는 EditPrefabContentsScope 패턴 사용 — 프리팹 파일 직접 수정 후 저장

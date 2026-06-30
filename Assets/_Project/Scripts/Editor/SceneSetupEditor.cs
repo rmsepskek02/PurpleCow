@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 public static class SceneSetupEditor
 {
@@ -124,11 +125,72 @@ public static class SceneSetupEditor
 
             TrySetTag(go, "Monster");
 
+            AddMonsterHpBar(go);
+
             PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
             Object.DestroyImmediate(go);
 
             Debug.Log($"[SceneSetupEditor] {name}.prefab 생성 완료.");
         }
+    }
+
+    private static void AddMonsterHpBar(GameObject go)
+    {
+        // 이미 HpBar 자식이 있으면 스킵
+        if (go.transform.Find("HpBarCanvas") != null) return;
+
+        // World Space Canvas
+        GameObject canvasObj = new GameObject("HpBarCanvas");
+        canvasObj.transform.SetParent(go.transform, false);
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        canvasObj.AddComponent<GraphicRaycaster>();
+
+        RectTransform canvasRect = canvasObj.GetComponent<RectTransform>();
+        canvasRect.sizeDelta        = new Vector2(1f, 0.15f);
+        canvasRect.localPosition    = new Vector3(0f, 0.6f, 0f);
+        canvasRect.localScale       = new Vector3(0.01f, 0.01f, 0.01f);
+
+        // Slider (HP바)
+        GameObject sliderObj = new GameObject("HpSlider");
+        sliderObj.transform.SetParent(canvasObj.transform, false);
+        Slider slider = sliderObj.AddComponent<Slider>();
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.value    = 1f;
+        slider.wholeNumbers = false;
+
+        RectTransform sliderRect = sliderObj.GetComponent<RectTransform>();
+        sliderRect.anchorMin = Vector2.zero;
+        sliderRect.anchorMax = Vector2.one;
+        sliderRect.offsetMin = Vector2.zero;
+        sliderRect.offsetMax = Vector2.zero;
+
+        // MonsterHpBar 컴포넌트
+        MonsterHpBar hpBar = canvasObj.AddComponent<MonsterHpBar>();
+        SerializedObject so = new SerializedObject(hpBar);
+        so.FindProperty("_slider").objectReferenceValue = slider;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    [MenuItem("PurpleCow/Setup/Update Monster HpBar")]
+    private static void UpdateMonsterHpBars()
+    {
+        string[] names = { "Fluffy", "Spider", "StoneBug", "ForestDeer" };
+        foreach (string name in names)
+        {
+            string prefabPath = $"Assets/_Project/Prefabs/Monster/{name}.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null) { Debug.LogWarning($"[SceneSetupEditor] {name}.prefab 없음, 스킵."); continue; }
+
+            using (var scope = new PrefabUtility.EditPrefabContentsScope(prefabPath))
+            {
+                AddMonsterHpBar(scope.prefabContentsRoot);
+            }
+            Debug.Log($"[SceneSetupEditor] {name}.prefab MonsterHpBar 추가 완료.");
+        }
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
     }
 
     // ──────────────────────────────────────────
@@ -239,6 +301,8 @@ public static class SceneSetupEditor
         PlaceManager<WaveManager>("WaveManager");
         PlaceManager<SkillManager>("SkillManager");
         PlaceManager<UIManager>("UIManager");
+        PlaceManager<CharacterManager>("CharacterManager");
+        PlaceManager<DamageTextManager>("DamageTextManager");
     }
 
     private static void PlaceManager<T>(string objName) where T : Component
