@@ -52,7 +52,7 @@ public static class SkillSetupEditor
             value1:     1f,     // 이동 정지 턴 수
             value2:     0f,
             value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Ice_ball.png"
+            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Ice_Ball.png"
         );
 
         CreateSkillData(
@@ -64,7 +64,7 @@ public static class SkillSetupEditor
             value1:     0f,
             value2:     0f,
             value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Ghost_ball.png"
+            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Ghost_Ball.png"
         );
 
         CreateSkillData(
@@ -76,7 +76,7 @@ public static class SkillSetupEditor
             value1:     20f,    // 레이저 데미지
             value2:     0f,
             value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Laser_ball.png"
+            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Laser_Ball.png"
         );
 
         CreateSkillData(
@@ -88,7 +88,7 @@ public static class SkillSetupEditor
             value1:     3f,     // 서브볼 개수
             value2:     0f,
             value3:     0f,
-            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Cluster_ball.png"
+            iconPath:   "Assets/_Project/Sprites/BallSkillIcon/Ball_Cluster_Ball.png"
         );
     }
 
