@@ -10,6 +10,7 @@ public static class MonsterSetupEditor
         EnsureMonsterTag();
         CreateMonsterDataAssets();
         CreateWaveDataAssets();
+        ConnectMonsterDataToPrefabs();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -103,6 +104,45 @@ public static class MonsterSetupEditor
         if (!AssetDatabase.IsValidFolder("Assets/_Project/Data"))
         {
             AssetDatabase.CreateFolder("Assets/_Project", "Data");
+        }
+    }
+
+    private static void ConnectMonsterDataToPrefabs()
+    {
+        string[] names = { "Fluffy", "Spider", "StoneBug", "ForestDeer" };
+
+        foreach (string name in names)
+        {
+            string prefabPath = $"Assets/_Project/Prefabs/Monster/{name}.prefab";
+            string dataPath   = $"Assets/_Project/Data/MonsterData_{name}.asset";
+
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) == null)
+            {
+                Debug.LogWarning($"[MonsterSetupEditor] {name}.prefab 없음, 스킵. Scene Setup을 먼저 실행하세요.");
+                continue;
+            }
+
+            MonsterData data = AssetDatabase.LoadAssetAtPath<MonsterData>(dataPath);
+            if (data == null)
+            {
+                Debug.LogWarning($"[MonsterSetupEditor] MonsterData_{name}.asset 없음, 스킵.");
+                continue;
+            }
+
+            using (var scope = new PrefabUtility.EditPrefabContentsScope(prefabPath))
+            {
+                MonsterBase monster = scope.prefabContentsRoot.GetComponent<MonsterBase>();
+                if (monster == null)
+                {
+                    Debug.LogWarning($"[MonsterSetupEditor] {name}.prefab MonsterBase 컴포넌트 없음.");
+                    continue;
+                }
+
+                SerializedObject so = new SerializedObject(monster);
+                so.FindProperty("_monsterData").objectReferenceValue = data;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            Debug.Log($"[MonsterSetupEditor] {name}.prefab MonsterData 연결 완료.");
         }
     }
 }

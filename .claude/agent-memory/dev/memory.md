@@ -372,3 +372,40 @@
 
 **주요 결정사항:**
 - DamageTextManager 배치 책임이 UISetupEditor로 이전되어 SceneSetupEditor에서 중복 생성 방지
+
+---
+
+## 2026-06-30
+
+### 작업: 에디터 스크립트 참조 연결 자동화 (SceneSetupEditor Step8/9, MonsterSetupEditor ConnectMonsterDataToPrefabs, UISetupEditor Step7/8)
+
+**작업 내용:**
+- 기존 파일 3개 수정 (신규 파일 없음)
+- Inspector 수동 드래그&드롭 4건을 에디터 스크립트로 자동화
+
+**수정 파일:**
+
+1. `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+   - 변경사항 A: SetupScene()에 `Step8_ConnectBallPrefabRefs()` / `Step9_ConnectWaveManagerRefs()` 호출 추가
+   - 변경사항 B: Step1_CreateBallPrefab()의 PhysicsMaterial2D 수동 연결 경고 LogWarning 삭제 (Step8에서 자동 처리)
+   - 변경사항 C: UpdateMonsterHpBars() 바로 뒤에 Step8/Step9 메서드 추가
+     - Step8: Ball.prefab 열어 _ballData(BallData.asset) + CircleCollider2D m_Material(BallBounce.physicsMaterial2D) 연결
+     - Step9: WaveManager 씬 오브젝트에 _waveDatas 배열(20개) + _monsterPrefab(Fluffy) + _poolParent/_spawnRoot(PoolRoot) 연결
+
+2. `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs`
+   - 변경사항 A: SetupMonsterSystem()에 `ConnectMonsterDataToPrefabs()` 호출 추가
+   - 변경사항 B: EnsureDataFolder() 뒤에 `ConnectMonsterDataToPrefabs()` 메서드 추가
+     - Fluffy/Spider/StoneBug/ForestDeer 프리팹 각각 열어 MonsterBase._monsterData에 MonsterData 에셋 연결
+
+3. `Assets/_Project/Scripts/Editor/UISetupEditor.cs`
+   - 변경사항 A: SetupUI()에 `Step7_CreateDamageTextFxPrefab()` / `Step8_ConnectDamageTextManagerRefs()` 호출 추가
+   - 변경사항 B: Step4_SetupManagers()의 DamageTextManager 생성 블록에서 _poolParent 즉시 연결 (SerializedObject 방식)
+   - 변경사항 C: Step6_CreateSkillCardPrefab() 뒤에 Step7/Step8 메서드 추가
+     - Step7: DamageTextFx.prefab 생성 (World Space TextMeshPro 자식 + DamageTextFx 컴포넌트 + _text 자동 연결)
+     - Step8: DamageTextManager 씬 오브젝트에 _prefab(DamageTextFx.prefab) + _poolParent(DamageTextPool) 연결
+
+**주요 결정사항:**
+- Step8_ConnectBallPrefabRefs는 MenuItem으로도 노출 (단독 실행 가능)
+- Step9_ConnectWaveManagerRefs는 씬 오브젝트 참조이므로 MenuItem 없이 SetupScene 플로우에만 포함
+- UISetupEditor Step7은 TextMeshPro(3D World Space)를 사용 — 기존 `using TMPro;` 재사용, 별도 using 불필요
+- DamageTextFx.prefab 생성 시 _text 참조를 SerializedObject로 즉시 연결하여 수동 작업 완전 제거

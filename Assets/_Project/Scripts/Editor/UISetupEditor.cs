@@ -20,6 +20,8 @@ public static class UISetupEditor
         Step4_SetupManagers();
         Step5_ConnectUIManagerRefs();
         Step6_CreateSkillCardPrefab();
+        Step7_CreateDamageTextFxPrefab();
+        Step8_ConnectDamageTextManagerRefs();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -158,11 +160,15 @@ public static class UISetupEditor
         if (GameObject.Find("DamageTextManager") == null)
         {
             GameObject go = new GameObject("DamageTextManager");
-            go.AddComponent<DamageTextManager>();
+            DamageTextManager dtm = go.AddComponent<DamageTextManager>();
             // DamageText 풀 루트
             GameObject poolRoot = new GameObject("DamageTextPool");
             poolRoot.transform.SetParent(go.transform);
-            Debug.Log("[UISetupEditor] DamageTextManager 배치 완료. _prefab과 _poolParent는 수동 연결 필요.");
+            // _poolParent 즉시 연결
+            SerializedObject dtmSo = new SerializedObject(dtm);
+            dtmSo.FindProperty("_poolParent").objectReferenceValue = poolRoot.transform;
+            dtmSo.ApplyModifiedPropertiesWithoutUndo();
+            Debug.Log("[UISetupEditor] DamageTextManager 배치 완료. _prefab은 Step8에서 연결됩니다.");
         }
         else
         {
@@ -266,6 +272,78 @@ public static class UISetupEditor
         PrefabUtility.SaveAsPrefabAsset(go, path);
         Object.DestroyImmediate(go);
         Debug.Log("[UISetupEditor] SkillCard.prefab 생성 완료. Inspector에서 SerializedField 참조 연결 필요.");
+    }
+
+    // ──────────────────────────────────────────
+    // Step 7. DamageTextFx 프리팹 생성
+    // ──────────────────────────────────────────
+
+    private static void Step7_CreateDamageTextFxPrefab()
+    {
+        const string path = "Assets/_Project/Prefabs/UI/DamageTextFx.prefab";
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null)
+        {
+            Debug.Log("[UISetupEditor] DamageTextFx.prefab 이미 존재, 스킵.");
+            return;
+        }
+
+        GameObject go = new GameObject("DamageTextFx");
+
+        // World Space 3D TMP 텍스트 자식
+        GameObject textObj = new GameObject("DamageText");
+        textObj.transform.SetParent(go.transform, false);
+        TextMeshPro tmp = textObj.AddComponent<TextMeshPro>();
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontSize  = 3f;
+
+        // DamageTextFx 컴포넌트 + _text 연결
+        DamageTextFx fx = go.AddComponent<DamageTextFx>();
+        SerializedObject so = new SerializedObject(fx);
+        so.FindProperty("_text").objectReferenceValue = tmp;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        PrefabUtility.SaveAsPrefabAsset(go, path);
+        Object.DestroyImmediate(go);
+        Debug.Log("[UISetupEditor] DamageTextFx.prefab 생성 완료.");
+    }
+
+    // ──────────────────────────────────────────
+    // Step 8. DamageTextManager 참조 연결
+    // ──────────────────────────────────────────
+
+    private static void Step8_ConnectDamageTextManagerRefs()
+    {
+        GameObject dtmObj = GameObject.Find("DamageTextManager");
+        if (dtmObj == null)
+        {
+            Debug.LogWarning("[UISetupEditor] DamageTextManager 씬 오브젝트 없음.");
+            return;
+        }
+
+        DamageTextManager dtm = dtmObj.GetComponent<DamageTextManager>();
+        if (dtm == null)
+        {
+            Debug.LogWarning("[UISetupEditor] DamageTextManager 컴포넌트 없음.");
+            return;
+        }
+
+        const string prefabPath = "Assets/_Project/Prefabs/UI/DamageTextFx.prefab";
+        DamageTextFx fxPrefab = AssetDatabase.LoadAssetAtPath<DamageTextFx>(prefabPath);
+        Transform poolParent = dtmObj.transform.Find("DamageTextPool");
+
+        SerializedObject so = new SerializedObject(dtm);
+        if (fxPrefab != null)
+            so.FindProperty("_prefab").objectReferenceValue = fxPrefab;
+        else
+            Debug.LogWarning("[UISetupEditor] DamageTextFx.prefab 없음.");
+
+        if (poolParent != null)
+            so.FindProperty("_poolParent").objectReferenceValue = poolParent;
+        else
+            Debug.LogWarning("[UISetupEditor] DamageTextPool 없음. DamageTextManager 하위에 DamageTextPool 오브젝트가 필요합니다.");
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[UISetupEditor] DamageTextManager 참조 연결 완료.");
     }
 
     // ──────────────────────────────────────────
