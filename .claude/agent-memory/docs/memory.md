@@ -25,6 +25,7 @@
 ---
 
 ### 작업 내용 (추가)
+<<<<<<< HEAD
 - Ball 시스템 구현 task 문서 생성: research.md, plan.md
 - 경로: Assets/_Project/Docs/_Task/2026-06-30/10-00_Ball시스템구현/
 
@@ -154,3 +155,17 @@
 - 전면/후면 판정: 볼 이동 방향 vs 몬스터 정면 방향 내적으로 판정 (몬스터는 항상 아래를 향한다고 가정)
 - LaserBallSkill: 직선 전체 Raycast → 같은 행(Y좌표 동일) 몬스터 추가 피해로 변경
 - SlowDuration: Time.deltaTime 아닌 턴 기반(MoveDown 호출 시 차감) 방식 채택
+
+---
+
+### 작업 내용 (추가)
+- UIRules.md 신규 생성 (Assets/_Project/Docs/UIRules.md)
+- AGENTS.md Docs 문서 인덱스에 UIRules.md 등록
+
+### 결과
+- UIRules.md 생성 완료: Canvas 구조/레이어, 해상도 대응, Safe Area, 패널 표시/숨김, UI 애니메이션, 버튼 피드백, 성능 최적화 7개 섹션 포함
+- AGENTS.md 인덱스 업데이트 완료
+
+### 주요 결정사항
+- DevRules.md 스타일(마크다운 테이블, 코드블록, 한국어 설명) 일관성 유지
+- 사용자 확정 내용 그대로 반영, 임의 추가 없음

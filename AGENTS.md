@@ -23,6 +23,7 @@
 | ProjectStatus.md | `Assets/_Project/Docs/ProjectStatus.md` | 현재 프로젝트 상태. 작업 완료마다 업데이트 |
 | ProjectHistory.md | `Assets/_Project/Docs/ProjectHistory.md` | 작업 히스토리 누적 기록 |
 | AIFailures.md | `Assets/_Project/Docs/AIFailures.md` | AI 실패 사례 및 재발 방지 기록 |
+| UIRules.md | `Assets/_Project/Docs/UIRules.md` | UI 시스템 구현 규칙. Canvas 구조, 해상도 대응, Safe Area, 패널 제어, 애니메이션, 버튼 피드백, 성능 최적화 정의 |
 
 ---
 
