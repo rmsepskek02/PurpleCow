@@ -296,3 +296,22 @@
 ### 주요 결정사항
 - MonsterBase: OnHitMonster 구독/해제 라인 및 빈 HandleHitMonster() 메서드 전체 제거 (Ball.CalculateDamage()에서 TakeDamage() 직접 호출로 이미 대체된 잔재 코드)
 - SkillSelectionPanel.OnSkillSelected()에서 직접 호출하는 Hide() 라인 제거 (UIManager.OnSkillSelectionComplete() 내부에서 이미 ShowSkillSelection(false) → Hide() 호출하므로 DOTween Sequence 이중 실행 방지)
+
+---
+
+### 작업 내용 (추가)
+- Inspector 연결 및 에디터 수정 task plan.md 생성
+- 경로: Assets/_Project/Docs/_Task/2026-06-30/HH-MM_Inspector연결및에디터수정/plan.md
+- AGENTS.md Task 문서 섹션에 누락된 항목 4건(HH-MM_EditorSetup개선, HH-MM_PDF스펙정합, HH-MM_QA수정, HH-MM_Inspector연결및에디터수정) 일괄 등록
+
+### 결과
+- plan.md 생성 완료: STEP 1~6 상세 계획 작성 (코드 수정 2건 + Inspector 연결 4건)
+- AGENTS.md 인덱스 업데이트 완료
+
+### 주요 결정사항
+- STEP 1: BallSetupEditor.CreateBallDataAsset()에 _maxBounces = 10 초기값 추가 (_criticalMultiplier 라인 바로 아래)
+- STEP 2: SceneSetupEditor.Step6_PlaceManagers()에서 PlaceManager<DamageTextManager>() 호출 제거 (UISetupEditor가 전담)
+- STEP 3: Ball.prefab에 BallData.asset 연결, _maxBounces = 10, BallBounce.physicsMaterial2D 연결
+- STEP 4: Monster 프리팹 4종(Fluffy/Spider/StoneBug/ForestDeer)에 각 MonsterData 에셋 연결
+- STEP 5: 씬 WaveManager에 _waveDatas 20개, _monsterPrefab, _poolParent, _spawnRoot 연결
+- STEP 6: 씬 DamageTextManager에 _prefab(DamageTextFx), _poolParent(DamageTextPool) 연결
