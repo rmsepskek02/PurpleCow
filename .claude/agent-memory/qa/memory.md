@@ -125,3 +125,24 @@ STEP 1~10 전 항목 정상 구현 확인. 누락 없음.
 
 ### 주요 결정사항
 - 코드 수정 없이 검토 결과만 보고
+
+## 2026-06-30 — 9개 Task plan.md 대비 구현 완료 여부 전체 점검
+
+### 작업 내용
+9개 task 폴더의 plan.md를 읽고 실제 .cs 파일과 대조하여 구현 완료 여부 검증.
+검토 대상 파일: Core 6개, Ball 2개, Monster 1개, Wave 1개, Skill 14개, UI 12개, Editor 5개, Data 4개 = 총 45개 .cs 파일
+
+### 결과 요약
+- 02-30_Core시스템구현: 완료
+- 10-00_Ball시스템구현: 완료
+- 14-00_Monster시스템구현: 완료
+- 18-00_Skill시스템구현: 완료
+- 20-00_UI시스템구현: 완료 (단, HUDPanel의 _launchReadyIndicator SetActive 폴백 방식 혼용)
+- HH-MM_EditorSetup개선: 완료
+- HH-MM_PDF스펙정합: 완료
+- HH-MM_QA수정: 완료
+- HH-MM_UI재작업: 완료
+
+### 주요 결정사항
+- 모든 task가 plan.md 명세와 일치하여 구현 완료 판정
+- 미세 차이(BallData _maxBounces 필드 추가 등)는 plan 확장으로 오류 아님
