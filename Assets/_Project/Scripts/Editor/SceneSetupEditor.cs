@@ -471,9 +471,20 @@ public static class SceneSetupEditor
 
         so.FindProperty("_poolParent").objectReferenceValue = poolRoot.transform;
 
+        // Create or find LaunchPoint as child of BallLauncher
+        Transform launchPoint = launcherObj.transform.Find("LaunchPoint");
+        if (launchPoint == null)
+        {
+            GameObject lpObj = new GameObject("LaunchPoint");
+            lpObj.transform.SetParent(launcherObj.transform);
+            lpObj.transform.localPosition = new Vector3(0f, -8f, 0f);
+            launchPoint = lpObj.transform;
+            Debug.Log("[SceneSetupEditor] LaunchPoint 생성 완료.");
+        }
+        so.FindProperty("_launchPoint").objectReferenceValue = launchPoint;
+
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        Debug.LogWarning("[SceneSetupEditor] BallLauncher._launchPoint는 수동으로 연결하세요.");
         Debug.Log("[SceneSetupEditor] BallLauncher 참조 연결 완료.");
     }
 

@@ -10,6 +10,7 @@ public static class MonsterSetupEditor
         EnsureMonsterTag();
         CreateMonsterDataAssets();
         CreateWaveDataAssets();
+        SetupWaveSpawnEntries();
         ConnectMonsterDataToPrefabs();
 
         AssetDatabase.SaveAssets();
@@ -97,6 +98,69 @@ public static class MonsterSetupEditor
             AssetDatabase.CreateAsset(waveData, path);
             Debug.Log($"[MonsterSetupEditor] WaveData 생성: {path}");
         }
+    }
+
+    [MenuItem("PurpleCow/Setup/Setup Wave Spawn Entries")]
+    private static void SetupWaveSpawnEntries()
+    {
+        string[] monsterNames = { "Fluffy", "Spider", "StoneBug", "ForestDeer" };
+        MonsterData[] monsterDatas = new MonsterData[4];
+        for (int i = 0; i < 4; i++)
+        {
+            monsterDatas[i] = AssetDatabase.LoadAssetAtPath<MonsterData>(
+                $"Assets/_Project/Data/MonsterData_{monsterNames[i]}.asset");
+            if (monsterDatas[i] == null)
+                Debug.LogWarning($"[MonsterSetupEditor] MonsterData_{monsterNames[i]}.asset 없음.");
+        }
+
+        for (int waveIdx = 0; waveIdx < 20; waveIdx++)
+        {
+            int waveNumber = waveIdx + 1;
+            string path = $"Assets/_Project/Data/WaveData_Wave{waveNumber}.asset";
+            WaveData waveData = AssetDatabase.LoadAssetAtPath<WaveData>(path);
+            if (waveData == null) continue;
+
+            SerializedObject so = new SerializedObject(waveData);
+            SerializedProperty entriesProp = so.FindProperty("_spawnEntries");
+
+            // 이미 스폰 데이터가 있으면 스킵
+            if (entriesProp.arraySize > 0)
+            {
+                Debug.Log($"[MonsterSetupEditor] WaveData_Wave{waveNumber} 이미 스폰 데이터 있음, 스킵.");
+                continue;
+            }
+
+            // 이 웨이브에서 사용할 몬스터 종류 결정
+            // Wave 1-5: Fluffy only, Wave 6-10: Fluffy+Spider, Wave 11-15: +StoneBug, Wave 16-20: +ForestDeer
+            int monsterTypeCount = waveIdx < 5 ? 1 : waveIdx < 10 ? 2 : waveIdx < 15 ? 3 : 4;
+
+            // 스폰 수: 그룹(0~3)과 그룹 내 위치(0~4)에 따라 증가
+            int groupIdx = waveIdx / 5;
+            int posInGroup = waveIdx % 5;
+            int spawnCount = 3 + posInGroup + groupIdx * 2;
+
+            // GridPosition은 _spawnRoot 기준 상대 격자 인덱스
+            // x: -2 ~ +2 (5열), y: 그룹마다 다른 시작 행(8, 6, 4, 2)에서 행 증가마다 -1
+            int startY = 8 - groupIdx * 2;
+
+            entriesProp.arraySize = spawnCount;
+            for (int s = 0; s < spawnCount; s++)
+            {
+                SerializedProperty entry = entriesProp.GetArrayElementAtIndex(s);
+                int typeIdx = s % monsterTypeCount;
+                entry.FindPropertyRelative("Data").objectReferenceValue = monsterDatas[typeIdx];
+
+                SerializedProperty gridPos = entry.FindPropertyRelative("GridPosition");
+                gridPos.FindPropertyRelative("x").intValue = (s % 5) - 2;   // -2 to +2
+                gridPos.FindPropertyRelative("y").intValue = startY - (s / 5); // startY, startY-1, ...
+            }
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Debug.Log($"[MonsterSetupEditor] WaveData_Wave{waveNumber} 스폰 데이터 {spawnCount}개 설정 완료.");
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("[MonsterSetupEditor] Wave Spawn Entries 설정 완료.");
     }
 
     private static void EnsureDataFolder()

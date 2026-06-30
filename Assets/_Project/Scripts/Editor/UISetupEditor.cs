@@ -22,6 +22,9 @@ public static class UISetupEditor
         Step6_CreateSkillCardPrefab();
         Step7_CreateDamageTextFxPrefab();
         Step8_ConnectDamageTextManagerRefs();
+        Step9_SetupHUDPanelContent();
+        Step10_SetupResultPanelContent();
+        Step11_SetupSkillSelectionPanelContent();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -225,53 +228,73 @@ public static class UISetupEditor
     private static void Step6_CreateSkillCardPrefab()
     {
         const string path = "Assets/_Project/Prefabs/UI/SkillCard.prefab";
-        if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null)
+
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
         {
-            Debug.Log("[UISetupEditor] SkillCard.prefab 이미 존재, 스킵.");
-            return;
+            GameObject go = new GameObject("SkillCard");
+            go.AddComponent<RectTransform>();
+            EnsureComponent<CanvasGroup>(go);
+
+            GameObject iconObj = new GameObject("Icon");
+            iconObj.transform.SetParent(go.transform);
+            iconObj.AddComponent<RectTransform>();
+            iconObj.AddComponent<Image>();
+
+            GameObject nameObj = new GameObject("NameText");
+            nameObj.transform.SetParent(go.transform);
+            nameObj.AddComponent<RectTransform>();
+            nameObj.AddComponent<TextMeshProUGUI>();
+
+            GameObject descObj = new GameObject("DescText");
+            descObj.transform.SetParent(go.transform);
+            descObj.AddComponent<RectTransform>();
+            descObj.AddComponent<TextMeshProUGUI>();
+
+            GameObject typeObj = new GameObject("TypeText");
+            typeObj.transform.SetParent(go.transform);
+            typeObj.AddComponent<RectTransform>();
+            typeObj.AddComponent<TextMeshProUGUI>();
+
+            GameObject btnObj = new GameObject("SelectButton");
+            btnObj.transform.SetParent(go.transform);
+            btnObj.AddComponent<RectTransform>();
+            Button btn = btnObj.AddComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            btnObj.AddComponent<UIButton>();
+
+            go.AddComponent<SkillCardUI>();
+
+            PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            Debug.Log("[UISetupEditor] SkillCard.prefab 생성 완료.");
         }
 
-        GameObject go = new GameObject("SkillCard");
-        go.AddComponent<RectTransform>();
-        EnsureComponent<CanvasGroup>(go);
+        // Always connect internal refs
+        using (var scope = new PrefabUtility.EditPrefabContentsScope(path))
+        {
+            GameObject root = scope.prefabContentsRoot;
+            SkillCardUI card = root.GetComponent<SkillCardUI>();
+            if (card == null) { Debug.LogWarning("[UISetupEditor] SkillCardUI 컴포넌트 없음."); return; }
 
-        // 아이콘 이미지
-        GameObject iconObj = new GameObject("Icon");
-        iconObj.transform.SetParent(go.transform);
-        iconObj.AddComponent<RectTransform>();
-        iconObj.AddComponent<Image>();
+            SerializedObject so = new SerializedObject(card);
 
-        // 이름 텍스트
-        GameObject nameObj = new GameObject("NameText");
-        nameObj.transform.SetParent(go.transform);
-        nameObj.AddComponent<RectTransform>();
-        nameObj.AddComponent<TextMeshProUGUI>();
+            Image iconImg         = root.transform.Find("Icon")?.GetComponent<Image>();
+            TextMeshProUGUI nameTmp = root.transform.Find("NameText")?.GetComponent<TextMeshProUGUI>();
+            TextMeshProUGUI descTmp = root.transform.Find("DescText")?.GetComponent<TextMeshProUGUI>();
+            TextMeshProUGUI typeTmp = root.transform.Find("TypeText")?.GetComponent<TextMeshProUGUI>();
+            Button selectBtn      = root.transform.Find("SelectButton")?.GetComponent<Button>();
+            CanvasGroup cg        = root.GetComponent<CanvasGroup>();
 
-        // 설명 텍스트
-        GameObject descObj = new GameObject("DescText");
-        descObj.transform.SetParent(go.transform);
-        descObj.AddComponent<RectTransform>();
-        descObj.AddComponent<TextMeshProUGUI>();
+            if (iconImg != null)   so.FindProperty("_iconImage").objectReferenceValue       = iconImg;
+            if (nameTmp != null)   so.FindProperty("_nameText").objectReferenceValue         = nameTmp;
+            if (descTmp != null)   so.FindProperty("_descriptionText").objectReferenceValue  = descTmp;
+            if (typeTmp != null)   so.FindProperty("_typeText").objectReferenceValue         = typeTmp;
+            if (selectBtn != null) so.FindProperty("_selectButton").objectReferenceValue     = selectBtn;
+            if (cg != null)        so.FindProperty("_canvasGroup").objectReferenceValue      = cg;
 
-        // 타입 텍스트
-        GameObject typeObj = new GameObject("TypeText");
-        typeObj.transform.SetParent(go.transform);
-        typeObj.AddComponent<RectTransform>();
-        typeObj.AddComponent<TextMeshProUGUI>();
-
-        // 선택 버튼
-        GameObject btnObj = new GameObject("SelectButton");
-        btnObj.transform.SetParent(go.transform);
-        btnObj.AddComponent<RectTransform>();
-        Button btn = btnObj.AddComponent<Button>();
-        btn.transition = Selectable.Transition.None;
-        btnObj.AddComponent<UIButton>();
-
-        go.AddComponent<SkillCardUI>();
-
-        PrefabUtility.SaveAsPrefabAsset(go, path);
-        Object.DestroyImmediate(go);
-        Debug.Log("[UISetupEditor] SkillCard.prefab 생성 완료. Inspector에서 SerializedField 참조 연결 필요.");
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+        Debug.Log("[UISetupEditor] SkillCard.prefab 내부 참조 연결 완료.");
     }
 
     // ──────────────────────────────────────────
@@ -330,6 +353,13 @@ public static class UISetupEditor
         const string prefabPath = "Assets/_Project/Prefabs/UI/DamageTextFx.prefab";
         DamageTextFx fxPrefab = AssetDatabase.LoadAssetAtPath<DamageTextFx>(prefabPath);
         Transform poolParent = dtmObj.transform.Find("DamageTextPool");
+        if (poolParent == null)
+        {
+            GameObject poolObj = new GameObject("DamageTextPool");
+            poolObj.transform.SetParent(dtmObj.transform);
+            poolParent = poolObj.transform;
+            Debug.Log("[UISetupEditor] DamageTextPool 생성 완료.");
+        }
 
         SerializedObject so = new SerializedObject(dtm);
         if (fxPrefab != null)
@@ -337,13 +367,148 @@ public static class UISetupEditor
         else
             Debug.LogWarning("[UISetupEditor] DamageTextFx.prefab 없음.");
 
-        if (poolParent != null)
-            so.FindProperty("_poolParent").objectReferenceValue = poolParent;
-        else
-            Debug.LogWarning("[UISetupEditor] DamageTextPool 없음. DamageTextManager 하위에 DamageTextPool 오브젝트가 필요합니다.");
+        so.FindProperty("_poolParent").objectReferenceValue = poolParent;
 
         so.ApplyModifiedPropertiesWithoutUndo();
         Debug.Log("[UISetupEditor] DamageTextManager 참조 연결 완료.");
+    }
+
+    // ──────────────────────────────────────────
+    // Step 9. HUDPanel 내부 UI 구성 및 참조 연결
+    // ──────────────────────────────────────────
+
+    private static void Step9_SetupHUDPanelContent()
+    {
+        GameObject hudPanelObj = GameObject.Find("HUDPanel");
+        if (hudPanelObj == null) { Debug.LogWarning("[UISetupEditor] HUDPanel 없음."); return; }
+
+        HUDPanel hudPanel = hudPanelObj.GetComponent<HUDPanel>();
+        if (hudPanel == null) { Debug.LogWarning("[UISetupEditor] HUDPanel 컴포넌트 없음."); return; }
+
+        GameObject waveTextObj = EnsureChildObject(hudPanelObj.transform, "WaveText");
+        if (waveTextObj.GetComponent<TextMeshProUGUI>() == null) waveTextObj.AddComponent<TextMeshProUGUI>();
+
+        GameObject scoreTextObj = EnsureChildObject(hudPanelObj.transform, "ScoreText");
+        if (scoreTextObj.GetComponent<TextMeshProUGUI>() == null) scoreTextObj.AddComponent<TextMeshProUGUI>();
+
+        GameObject lriObj = EnsureChildObject(hudPanelObj.transform, "LaunchReadyIndicator");
+        CanvasGroup lriCg = lriObj.GetComponent<CanvasGroup>();
+        if (lriCg == null) lriCg = lriObj.AddComponent<CanvasGroup>();
+
+        SerializedObject so = new SerializedObject(hudPanel);
+        so.FindProperty("_waveText").objectReferenceValue              = waveTextObj.GetComponent<TextMeshProUGUI>();
+        so.FindProperty("_scoreText").objectReferenceValue             = scoreTextObj.GetComponent<TextMeshProUGUI>();
+        so.FindProperty("_launchReadyIndicator").objectReferenceValue  = lriObj;
+        so.FindProperty("_launchReadyCanvasGroup").objectReferenceValue = lriCg;
+
+        CanvasGroup hudCg = hudPanelObj.GetComponent<CanvasGroup>();
+        if (hudCg != null) so.FindProperty("_canvasGroup").objectReferenceValue = hudCg;
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[UISetupEditor] HUDPanel 내부 구성 완료.");
+    }
+
+    // ──────────────────────────────────────────
+    // Step 10. ResultPanel 내부 UI 구성 및 참조 연결
+    // ──────────────────────────────────────────
+
+    private static void Step10_SetupResultPanelContent()
+    {
+        GameObject resultPanelObj = GameObject.Find("ResultPanel");
+        if (resultPanelObj == null) { Debug.LogWarning("[UISetupEditor] ResultPanel 없음."); return; }
+
+        ResultPanel resultPanel = resultPanelObj.GetComponent<ResultPanel>();
+        if (resultPanel == null) { Debug.LogWarning("[UISetupEditor] ResultPanel 컴포넌트 없음."); return; }
+
+        GameObject titleTextObj = EnsureChildObject(resultPanelObj.transform, "TitleText");
+        if (titleTextObj.GetComponent<TextMeshProUGUI>() == null) titleTextObj.AddComponent<TextMeshProUGUI>();
+
+        GameObject scoreTextObj = EnsureChildObject(resultPanelObj.transform, "ScoreText");
+        if (scoreTextObj.GetComponent<TextMeshProUGUI>() == null) scoreTextObj.AddComponent<TextMeshProUGUI>();
+
+        GameObject restartBtnObj = EnsureChildObject(resultPanelObj.transform, "RestartButton");
+        if (restartBtnObj.GetComponent<Button>() == null) restartBtnObj.AddComponent<Button>();
+
+        SerializedObject so = new SerializedObject(resultPanel);
+        so.FindProperty("_resultTitleText").objectReferenceValue = titleTextObj.GetComponent<TextMeshProUGUI>();
+        so.FindProperty("_finalScoreText").objectReferenceValue  = scoreTextObj.GetComponent<TextMeshProUGUI>();
+        so.FindProperty("_restartButton").objectReferenceValue   = restartBtnObj.GetComponent<Button>();
+
+        CanvasGroup resultCg = resultPanelObj.GetComponent<CanvasGroup>();
+        if (resultCg != null) so.FindProperty("_canvasGroup").objectReferenceValue = resultCg;
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[UISetupEditor] ResultPanel 내부 구성 완료.");
+    }
+
+    // ──────────────────────────────────────────
+    // Step 11. SkillSelectionPanel 내부 구성 및 참조 연결
+    // ──────────────────────────────────────────
+
+    private static void Step11_SetupSkillSelectionPanelContent()
+    {
+        GameObject skillPanelObj = GameObject.Find("SkillSelectionPanel");
+        if (skillPanelObj == null) { Debug.LogWarning("[UISetupEditor] SkillSelectionPanel 없음."); return; }
+
+        SkillSelectionPanel skillPanel = skillPanelObj.GetComponent<SkillSelectionPanel>();
+        if (skillPanel == null) { Debug.LogWarning("[UISetupEditor] SkillSelectionPanel 컴포넌트 없음."); return; }
+
+        const string skillCardPath = "Assets/_Project/Prefabs/UI/SkillCard.prefab";
+        GameObject skillCardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(skillCardPath);
+        if (skillCardPrefab == null)
+        {
+            Debug.LogWarning("[UISetupEditor] SkillCard.prefab 없음. Step6을 먼저 실행하세요.");
+            return;
+        }
+
+        // 기존 SkillCardUI 자식 수집
+        System.Collections.Generic.List<SkillCardUI> cardList =
+            new System.Collections.Generic.List<SkillCardUI>();
+        foreach (Transform child in skillPanelObj.transform)
+        {
+            SkillCardUI existing = child.GetComponent<SkillCardUI>();
+            if (existing != null) cardList.Add(existing);
+        }
+
+        // 3개가 될 때까지 프리팹 인스턴스 추가
+        int needed = 3 - cardList.Count;
+        for (int i = 0; i < needed; i++)
+        {
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(
+                skillCardPrefab, skillPanelObj.transform);
+            SkillCardUI card = instance.GetComponent<SkillCardUI>();
+            if (card != null) cardList.Add(card);
+        }
+
+        // SkillData 에셋 로드
+        string[] guids = AssetDatabase.FindAssets("t:SkillData", new[] { "Assets/_Project/Data" });
+        System.Collections.Generic.List<SkillData> skillDatas =
+            new System.Collections.Generic.List<SkillData>();
+        foreach (string guid in guids)
+        {
+            SkillData sd = AssetDatabase.LoadAssetAtPath<SkillData>(
+                AssetDatabase.GUIDToAssetPath(guid));
+            if (sd != null) skillDatas.Add(sd);
+        }
+
+        SerializedObject so = new SerializedObject(skillPanel);
+
+        SerializedProperty skillCardsProp = so.FindProperty("_skillCards");
+        skillCardsProp.arraySize = cardList.Count;
+        for (int i = 0; i < cardList.Count; i++)
+            skillCardsProp.GetArrayElementAtIndex(i).objectReferenceValue = cardList[i];
+
+        SerializedProperty allSkillsProp = so.FindProperty("_allSkillDatas");
+        allSkillsProp.arraySize = skillDatas.Count;
+        for (int i = 0; i < skillDatas.Count; i++)
+            allSkillsProp.GetArrayElementAtIndex(i).objectReferenceValue = skillDatas[i];
+
+        CanvasGroup panelCg = skillPanelObj.GetComponent<CanvasGroup>();
+        if (panelCg != null) so.FindProperty("_canvasGroup").objectReferenceValue = panelCg;
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log($"[UISetupEditor] SkillSelectionPanel 구성 완료. " +
+                  $"SkillCard: {cardList.Count}개, SkillData: {skillDatas.Count}개.");
     }
 
     // ──────────────────────────────────────────
