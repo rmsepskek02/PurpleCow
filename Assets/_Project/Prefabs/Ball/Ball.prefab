@@ -131,7 +131,7 @@ CircleCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 44781c20e86586e4c8af2e96e269b647, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -169,4 +169,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa93893f71ccca9489e32009645223d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ball
-  _ballData: {fileID: 0}
+  _ballData: {fileID: 11400000, guid: b4be15d2eef055b44a8578adf575bba5, type: 2}

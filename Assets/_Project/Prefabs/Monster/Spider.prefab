@@ -272,7 +272,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8855e6d3e687634ab9616373bfbb128, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterBase
-  _monsterData: {fileID: 0}
+  _monsterData: {fileID: 11400000, guid: de05cc0a9e2030a48a4e30606895dc9f, type: 2}
 --- !u!1 &6655174601391782293
 GameObject:
   m_ObjectHideFlags: 0
