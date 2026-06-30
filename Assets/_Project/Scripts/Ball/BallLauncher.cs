@@ -53,7 +53,22 @@ public class BallLauncher : Singleton<BallLauncher>
         Ball ball = _ballPool.Get();
         ball.transform.position = _launchPoint.position;
         ball.Launch(_launchDirection);
+        SkillManager.Instance.ApplySkillToBall(ball);
         _activeBallCount++;
+    }
+
+    public void LaunchSubBalls(Vector2 origin, int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            Ball ball = _ballPool.Get();
+            ball.transform.position = origin;
+            Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized;
+            // 아래 방향 제외 (y > 0 보정)
+            if (randomDir.y < 0) randomDir.y = -randomDir.y;
+            ball.Launch(randomDir);
+            _activeBallCount++;
+        }
     }
 
     private void HandleGameState(GameManager.GameState state)

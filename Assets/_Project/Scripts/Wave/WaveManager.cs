@@ -119,4 +119,17 @@ public class WaveManager : Singleton<WaveManager>
             OnAllWavesCleared?.Invoke();
         }
     }
+
+    public MonsterBase GetWeakestMonster()
+    {
+        if (_activeMonsters.Count == 0) return null;
+
+        MonsterBase weakest = _activeMonsters[0];
+        foreach (MonsterBase monster in _activeMonsters)
+        {
+            if (monster.CurrentHp < weakest.CurrentHp)
+                weakest = monster;
+        }
+        return weakest;
+    }
 }

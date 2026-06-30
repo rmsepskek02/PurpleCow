@@ -6,10 +6,12 @@ public class MonsterBase : MonoBehaviour, IPoolable
     [SerializeField] private MonsterData _monsterData;
 
     private float _currentHp;
-    private bool _isDead;
+    private bool  _isDead;
+    private int   _frozenTurnsRemaining;
 
     public float CurrentHp => _currentHp;
-    public bool IsAlive    => !_isDead;
+    public bool  IsAlive   => !_isDead;
+    public bool  IsFrozen  => _frozenTurnsRemaining > 0;
 
     public static event Action<MonsterBase> OnMonsterDied;
 
@@ -25,8 +27,9 @@ public class MonsterBase : MonoBehaviour, IPoolable
 
     public void OnSpawn()
     {
-        _currentHp = _monsterData.Hp;
-        _isDead = false;
+        _currentHp             = _monsterData.Hp;
+        _isDead                = false;
+        _frozenTurnsRemaining  = 0;
     }
 
     public void OnDespawn()
@@ -53,8 +56,19 @@ public class MonsterBase : MonoBehaviour, IPoolable
         OnMonsterDied?.Invoke(this);
     }
 
+    public void ApplyFreeze(int turns)
+    {
+        _frozenTurnsRemaining = Mathf.Max(_frozenTurnsRemaining, turns);
+    }
+
     public void MoveDown(float distance)
     {
+        if (IsFrozen)
+        {
+            _frozenTurnsRemaining--;
+            return;
+        }
+
         transform.position += (Vector3)(Vector2.down * distance);
     }
 
