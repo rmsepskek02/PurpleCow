@@ -174,3 +174,41 @@
 - Ball 참조는 생성자가 아닌 `Initialize(Ball)` 메서드로 주입 — 스킬 인스턴스 재사용 시 유연성 확보
 - WaveManager.CheckWaveCleared: 마지막 웨이브 여부를 `_currentWaveIndex + 1 >= _waveDatas.Length`로 판단, AdvanceToNextWave는 UIManager가 스킬 선택 완료 후 호출
 - UIManager의 _score는 Ready 상태 전환 시 0으로 초기화 (RestartGame 흐름 대응)
+
+---
+
+## 2026-06-30
+
+### 작업: EditorSetup 개선 (SkillSetupEditor 오타 수정 + SceneSetupEditor 신규 생성)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-06-30/HH-MM_EditorSetup개선/plan.md`
+- 기존 파일 1개 수정 + 신규 파일 1개 생성
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/SkillSetupEditor.cs` — 라인 55/67/79/91의 아이콘 경로 소문자 `ball` → 대문자 `Ball` 수정 4곳 (Ball_Ice_Ball, Ball_Ghost_Ball, Ball_Laser_Ball, Ball_Cluster_Ball)
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — MenuItem("PurpleCow/Setup/Scene Setup"), 7단계 자동화 (Ball 프리팹, Monster 4종, Block 4종, Background, Wall/Ground, Manager 6종, BallLauncher 참조 연결)
+
+**SceneSetupEditor 구현 상세:**
+- Step 1: Ball.prefab (SpriteRenderer + Rigidbody2D GravityScale=0 Continuous + CircleCollider2D + Ball 스크립트, Tag="Ball")
+- Step 2: Monster 4종 (Fluffy/Spider/StoneBug/ForestDeer) — SpriteRenderer + Rigidbody2D Kinematic + BoxCollider2D + MonsterBase, Tag="Monster"
+- Step 3: Block 4종 (Block_1x1~2x2) — SpriteRenderer + BoxCollider2D + MonsterBase (Rigidbody2D 없음), Tag="Monster"
+- Step 4: Background — SpriteRenderer + Position(0,0,1)
+- Step 5: Wall_Left/Wall_Right/Ground — BoxCollider2D + Tag + Position 설정
+- Step 6: Manager 6종 — PlaceManager<T> 제네릭 메서드, try-catch 예외 처리
+- Step 7: BallLauncher SerializedObject — _ballPrefab/PoolRoot Transform 연결, _launchPoint는 수동 안내 LogWarning
+- TrySetTag 유틸리티: try-catch로 미등록 태그 예외 처리
+
+**Git:**
+- 브랜치: `claude/recent-plan-review-xq2hsm`
+- 커밋: `feat: fix SkillSetupEditor icon paths and add SceneSetupEditor`
+- push 완료 (2 files changed, 331 insertions)
+
+**주요 결정사항:**
+- Background Position Z=1로 설정 (렌더 순서 뒤로 — plan.md 지시사항)
+- PlaceManager는 제네릭 메서드로 구현하여 6개 Manager를 동일 패턴으로 처리
+- BallLauncher._ballPrefab 연결 시 Step 1의 반환값(Ball 컴포넌트)을 직접 활용
+- PoolRoot는 씬에서 Find 후 없으면 생성 (중복 실행 시 재사용)
+- Block 프리팹에 Rigidbody2D 없음 (plan.md 지시사항 준수)
