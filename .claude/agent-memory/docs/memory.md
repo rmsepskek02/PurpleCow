@@ -221,3 +221,18 @@
 - CRITICAL 4(재시작 초기화 미구현): 씬 재로드 vs 개별 Reset 방식 결정이 plan.md 단계에서 필요
 - CRITICAL 5(스킬 인스턴스 공유): 레벨업 후 각 Ball에 새 인스턴스 재적용 구조 필요
 - WARNING 2(패시브 이중 구독): CRITICAL에 준하는 우선순위로 처리 권장
+
+---
+
+### 작업 내용 (추가)
+- QA 수정 task plan.md 생성
+- 경로: Assets/_Project/Docs/_Task/2026-06-30/HH-MM_QA수정/plan.md
+
+### 결과
+- plan.md 생성 완료: STEP 1(CRITICAL 2 — WaveData MonsterData 미반영 수정) 상세 구현 계획 작성
+- 논의 예정 항목 8건을 plan.md 하단에 별도 섹션으로 나열 (CRITICAL 3/4, WARNING 2/3/4/6, INFO 2/3)
+
+### 주요 결정사항
+- ApplyData(MonsterData data) 메서드: _monsterData 교체 → _currentHp 재초기화 → OnHpChanged 이벤트 발행 순서
+- WaveManager.SpawnWave()에서 entry.Data != null 조건부로 ApplyData() 호출 (프리팹 기본값 보호)
+- 나머지 항목은 논의 완료 후 STEP으로 순차 추가 예정
