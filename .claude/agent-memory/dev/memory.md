@@ -212,3 +212,47 @@
 - BallLauncher._ballPrefab 연결 시 Step 1의 반환값(Ball 컴포넌트)을 직접 활용
 - PoolRoot는 씬에서 Find 후 없으면 생성 (중복 실행 시 재사용)
 - Block 프리팹에 Rigidbody2D 없음 (plan.md 지시사항 준수)
+
+---
+
+## 2026-06-30
+
+### 작업: PDF 스펙 정합 (SkillData 레벨 시스템, 패시브 전면 교체, Ball/Monster 리팩토링)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-06-30/HH-MM_PDF스펙정합/plan.md`
+- 수정 파일 25개, 삭제 파일 7개, 신규 파일 5개
+
+**수정 파일:**
+- `SkillData.cs` — `SkillLevelData` 구조체 추가, `_value1~3` 제거, `_levels[]` / `_currentLevel` 추가, `PassiveSkillId` 열거형 교체 (7종→5종)
+- `BallSetupEditor.cs` — 기본값 변경: damage 10f→8f, criticalChance 0.1f→0f, criticalMultiplier 2f→1.5f
+- `BallSkillBase.cs` — `OnBallHit(MonsterBase, float)` → `OnBallHit(MonsterBase)` 시그니처 변경, `LevelData` 편의 프로퍼티 추가
+- `PassiveSkillBase.cs` — `LevelData` 편의 프로퍼티 추가
+- `MonsterBase.cs` — `_slowTurnsRemaining`/`_slowPercent`/`_bonusCritChance` 필드 추가, `ApplySlow`/`ApplyBonusCritChance`/`ConsumeBonusCritChance`/`ApplyDot`/`ApplyFreeze(float)` 추가, `MoveDown`에 슬로우 반영, `OnCollisionEnter2D` 중복 데미지 처리 제거
+- `Ball.cs` — `_skill` 단일→`_skills` 리스트 전환, `OnWallHit`/`OnHitMonsterFront`/`OnHitMonsterBack` static 이벤트 추가, `OnBeforeReturn` 제거, `SetSkill`→`AddSkill` 전환, `SetSubBallDamage` 추가, `CalculateDamage` 리팩토링(ConsumeBonusCritChance/ConsumeNextShotDamageBonus 통합), SpeedBonus/BounceBonus 참조 제거, 전면/후면 판정 이벤트 발행
+- `BallLauncher.cs` — `LaunchSubBalls(Vector2, int)` → `(Vector2, int, float damage=0f)` 시그니처 확장
+- `SkillManager.cs` — `_equippedActiveSkill` 단일→`_activeSkills` 리스트, 최대 4/2 제한 강화, `_critChanceBonus` 등 제거, `_nextShotDamageBonus` 추가, `ActiveSkillIds`/`PassiveSkillIds` 프로퍼티 추가
+- `WaveManager.cs` — `_killCountForSkill`/`_totalKillCount` 추가, `CheckSkillUnlock`/`GetMonstersInRow` 추가, `OnKillCountReached` static 이벤트 추가
+- `SkillSelectionPanel.cs` — `WaveManager.OnKillCountReached` 구독/해제, `OpenPanel` 추가, `BuildSkillCardPool` 로직(레벨업/신규 분기), LINQ 사용
+- `SkillFactory.cs` — 패시브 switch 7종→5종 교체
+- `SkillSetupEditor.cs` — `CreateSkillData` 헬퍼를 `SkillLevelData[]` 배열 기반으로 전면 수정, Active 5종 레벨 수치 반영, Passive 5종으로 교체
+- `MonsterSetupEditor.cs` — 몬스터 이름 배열 수정 (Spike→Spider, Blaze→StoneBug, Stone→ForestDeer)
+- Active 스킬 5종 — `OnBallHit(MonsterBase target)` 시그니처 적용 및 PDF 스펙 로직 재구현
+
+**삭제 파일 (패시브 7종):**
+- `DamageUpPassive.cs`, `CritChanceUpPassive.cs`, `CritDamageUpPassive.cs`, `SpeedUpPassive.cs`, `BounceUpPassive.cs`, `KillShotPassive.cs`, `LastHitPassive.cs`
+
+**신규 파일 (패시브 5종):**
+- `WarmTinHeartPassive.cs`, `MagicMirrorPassive.cs`, `AmethystDaggerPassive.cs`, `EmeraldDaggerPassive.cs`, `LastMatchPassive.cs`
+
+**Git:**
+- 브랜치: `claude/recent-plan-review-xq2hsm`
+- 커밋: `feat: PDF spec alignment - skill level system, new passives, ball/monster refactor`
+- push 완료 (30 files changed, 537 insertions, 409 deletions)
+
+**주요 결정사항:**
+- Ball.cs의 `CalculateDamage`를 `target` 파라미터를 받도록 변경 — MonsterBase.ConsumeBonusCritChance 호출 및 target.TakeDamage 직접 처리
+- MonsterBase.OnCollisionEnter2D 중복 데미지 제거 — Ball.CalculateDamage에서 이미 TakeDamage 호출하므로 MonsterBase의 충돌 핸들러는 제거
+- BallLauncher.LaunchSubBalls에 `damage` 기본값 파라미터 추가 — 기존 KillShotPassive 방식 호출도 `damage=0f` 기본값으로 하위 호환
+- Ball.OnSpawn에서 `_skills.Clear()` 처리 — 풀 재사용 시 이전 스킬 목록 초기화
+- SkillSelectionPanel에서 `_cards` → `_skillCards` 필드명 변경 (plan.md 스펙 기준)
