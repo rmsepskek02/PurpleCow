@@ -10,6 +10,8 @@ public class Ball : MonoBehaviour, IPoolable
 
     public static event Action<float, bool> OnHitMonster;
 
+    public float LastDamage { get; private set; }
+
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody2D>();
@@ -45,8 +47,7 @@ public class Ball : MonoBehaviour, IPoolable
     {
         if (collision.gameObject.CompareTag("Monster"))
         {
-            var (damage, isCritical) = CalculateDamage();
-            OnHitMonster?.Invoke(damage, isCritical);
+            CalculateDamage();
             // 볼은 반사 지속 (기본 물리 반사, PhysicsMaterial2D bounciness=1)
         }
         else if (collision.gameObject.CompareTag("Wall"))
@@ -65,6 +66,8 @@ public class Ball : MonoBehaviour, IPoolable
         float damage = isCritical
             ? _ballData.Damage * _ballData.CriticalMultiplier
             : _ballData.Damage;
+        LastDamage = damage;
+        OnHitMonster?.Invoke(damage, isCritical);
         return (damage, isCritical);
     }
 
