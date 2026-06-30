@@ -10,16 +10,19 @@
 ```
 Assets/_Project/Docs/_Task/
 └── YYYY-MM-DD/
-    └── HH-MM_작업요약/
+    └── HH-MM_task-summary-in-english/
         ├── research.md
         └── plan.md
 ```
+
+- 날짜·시간은 KST(한국 표준시, UTC+9) 기준으로 한다
+- 폴더 네이밍은 영어만 사용한다 (한글 사용 금지)
 
 **예시:**
 ```
 Assets/_Project/Docs/_Task/
 └── 2026-06-30/
-    └── 14-30_볼발사로직구현/
+    └── 14-30_ball-launch-logic/
         ├── research.md
         └── plan.md
 ```

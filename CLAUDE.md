@@ -15,6 +15,7 @@
 
 ## 1. task 문서 작업 흐름
 
+- task 문서 작성 전 반드시 [TaskRules.md](Assets/_Project/Docs/TaskRules.md)를 숙지한다
 - 스크립트 생성, 설정 변경, 삭제 등 수정을 요하는 작업 전 task 문서 작성 여부를 항상 확인한다
 - 문서 작성 작업 자체에는 task 문서를 작성하지 않는다
 - plan.md 작성 후 사용자의 명시적인 승인 없이는 절대 구현하지 않는다
