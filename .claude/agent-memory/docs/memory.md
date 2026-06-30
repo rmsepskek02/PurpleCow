@@ -118,3 +118,20 @@
 - WaveManager: OnWaveCleared 이벤트 추가, AdvanceToNextWave() public 전환, TotalWaves 프로퍼티 추가
 - GameManager: IsLastGameSuccess 프로퍼티 추가, EndGame()에서 저장
 - PDF 파일 열람 불가(poppler-utils 미설치)로 PDF 요구사항 직접 반영 불가 — 코드베이스 분석으로 대체
+
+---
+
+### 작업 내용 (추가)
+- EditorSetup 개선 task 문서 생성: research.md, plan.md
+- 경로: Assets/_Project/Docs/_Task/2026-06-30/HH-MM_EditorSetup개선/
+
+### 결과
+- research.md: SkillSetupEditor 아이콘 경로 오타 4곳 특정 (라인 55/67/79/91), 관련 스크립트 7종(Ball, BallLauncher, MonsterBase, WaveManager, GameManager, InputHandler, SkillManager) 컴포넌트 구조 분석 완료
+- plan.md: 작업 1(오타 수정 4건) + 작업 2(SceneSetupEditor 7단계 구현 계획, 프리팹 9종 + 씬 오브젝트) 작성 완료
+
+### 주요 결정사항
+- SkillSetupEditor 오타: Ball_Ice/Ghost/Laser/Cluster _ball.png → _Ball.png (4곳), Ball_Fire는 요청서에 없어 제외
+- SceneSetupEditor Step 7 BallLauncher 연결: _ballPrefab + _poolParent(PoolRoot) 자동 연결, _launchPoint는 수동 연결 안내
+- MonsterData/BallData SO는 자동 연결 제외 (DataSetupEditor 또는 수동 처리)
+- PhysicsMaterial2D(BallBounce) 경로 미정 → 자동 연결 보류, 경고 로그로 안내
+- UIManager 스크립트 미존재 가능성 → try-catch 예외 처리 후 계속 진행
