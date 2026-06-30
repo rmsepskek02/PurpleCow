@@ -1,7 +1,7 @@
 # Plan — QA 수정
 
 이 문서는 QA 검토 결과 중 논의가 완료된 항목에 대한 구현 계획을 기술합니다.
-현재는 CRITICAL 2(WaveData MonsterData 미반영), CRITICAL 3(스킬 선택 중 게임 일시정지 처리), CRITICAL 4(재시작 초기화 미구현), WARNING 2(패시브 스킬 레벨업 시 이벤트 이중 구독) 네 건의 수정 계획이 확정되었으며, 나머지 항목은 논의 완료 후 순차적으로 STEP으로 추가될 예정입니다.
+현재는 CRITICAL 2(WaveData MonsterData 미반영), CRITICAL 3(스킬 선택 중 게임 일시정지 처리), CRITICAL 4(재시작 초기화 미구현), WARNING 2(패시브 스킬 레벨업 시 이벤트 이중 구독), WARNING 3(MonsterBase 빈 이벤트 핸들러 제거), WARNING 4(SkillSelectionPanel Hide() 이중 호출 수정) 여섯 건의 수정 계획이 확정되었으며, 나머지 항목은 논의 완료 후 순차적으로 STEP으로 추가될 예정입니다.
 
 ---
 
@@ -101,6 +101,32 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 
 ---
 
+### STEP 5 — WARNING 3: MonsterBase 빈 이벤트 핸들러 제거
+
+**배경**
+
+원래 Ball이 OnHitMonster 이벤트를 발행하면 MonsterBase가 구독해서 TakeDamage()를 처리하는 설계였으나, Ball.CalculateDamage()에서 target.TakeDamage()를 직접 호출하는 방식으로 바뀌면서 핸들러 내부만 비워진 잔재 코드다. 불필요한 구독을 제거한다.
+
+**수정 파일: `Assets/_Project/Scripts/Monster/MonsterBase.cs`**
+
+- `OnEnable()`에서 `Ball.OnHitMonster += HandleHitMonster` 라인을 제거한다.
+- `OnDisable()`에서 `Ball.OnHitMonster -= HandleHitMonster` 라인을 제거한다.
+- 빈 `HandleHitMonster(float damage, bool isCritical)` 메서드 전체를 제거한다.
+
+---
+
+### STEP 6 — WARNING 4: SkillSelectionPanel Hide() 이중 호출 수정
+
+**배경**
+
+현재 OnSkillSelected()가 UIManager.OnSkillSelectionComplete()와 Hide()를 모두 호출해 DOTween Sequence가 두 번 실행된다. UIManager.OnSkillSelectionComplete() 내부에서 이미 ShowSkillSelection(false) → Hide()가 호출되므로 중복이다. 패널 닫기는 UIManager 한 곳에서만 처리하도록 통일한다.
+
+**수정 파일: `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs`**
+
+- `OnSkillSelected()`에서 직접 호출하는 `Hide()` 라인을 제거한다.
+
+---
+
 ## 예상 변경/생성 파일 목록
 
 | 구분 | 파일 | 변경 내용 |
@@ -113,6 +139,8 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 | 수정 | `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` | GameState.Ready 수신 시 전체 스킬 레벨 리셋 로직 추가 |
 | 수정 | `Assets/_Project/Scripts/Core/GameManager.cs` | `RestartGame()`에 `SceneManager.LoadScene()` 추가, `using UnityEngine.SceneManagement` 추가 |
 | 수정 | `Assets/_Project/Scripts/Skill/SkillManager.cs` | `AddPassiveSkill()` 레벨업 분기에 `existing.Remove()` 호출 추가 |
+| 수정 | `Assets/_Project/Scripts/Monster/MonsterBase.cs` | `OnEnable()`/`OnDisable()` 내 `OnHitMonster` 구독/해제 라인 제거, 빈 `HandleHitMonster()` 메서드 제거 |
+| 수정 | `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` | `OnSkillSelected()` 내 직접 `Hide()` 호출 라인 제거 |
 
 ---
 
@@ -128,8 +156,6 @@ existing.Remove(); existing.SkillData.LevelUp(); existing.Apply(); return;
 
 아래 항목들은 수정 방향이 아직 확정되지 않았습니다. 논의 완료 후 각 항목이 STEP으로 이 plan.md에 추가될 예정입니다.
 
-- **WARNING 3:** MonsterBase 빈 이벤트 핸들러 불필요 구독
-- **WARNING 4:** SkillSelectionPanel Hide() 이중 호출
 - **WARNING 6:** OnEnable에서 Singleton Instance 직접 접근
 - **INFO 2:** WaveData 20개 미생성
 - **INFO 3:** DamageTextManager Ball.OnHitMonster 미연결 (시그니처 변경 필요)

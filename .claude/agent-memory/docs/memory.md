@@ -282,3 +282,17 @@
 - AddPassiveSkill() 레벨업 분기: existing.Remove() → existing.SkillData.LevelUp() → existing.Apply() 순서로 수정
 - 이벤트 구독 방식 패시브(MagicMirror, AmethystDagger, EmeraldDagger, LastMatch)는 Apply() 중복 호출 시 핸들러 누적 → Remove() 선행 필수
 - WarmTinHeart는 AddDamageMultiplier() 배율 누적 방지를 위해 Remove() 선행 필수
+
+---
+
+### 작업 내용 (추가)
+- QA 수정 task plan.md에 STEP 5(WARNING 3 — MonsterBase 빈 이벤트 핸들러 제거) 및 STEP 6(WARNING 4 — SkillSelectionPanel Hide() 이중 호출 수정) 추가
+- "논의 예정 항목"에서 WARNING 3, WARNING 4 두 항목 제거
+- 서문 설명 업데이트 (CRITICAL 2/3/4 + WARNING 2/3/4 여섯 건 확정 명시)
+
+### 결과
+- plan.md 수정 완료: STEP 5/6 신규 추가, 파일 목록에 MonsterBase.cs(핸들러 제거) / SkillSelectionPanel.cs(Hide 중복 제거) 추가, 논의 예정 항목에서 WARNING 3/4 제거
+
+### 주요 결정사항
+- MonsterBase: OnHitMonster 구독/해제 라인 및 빈 HandleHitMonster() 메서드 전체 제거 (Ball.CalculateDamage()에서 TakeDamage() 직접 호출로 이미 대체된 잔재 코드)
+- SkillSelectionPanel.OnSkillSelected()에서 직접 호출하는 Hide() 라인 제거 (UIManager.OnSkillSelectionComplete() 내부에서 이미 ShowSkillSelection(false) → Hide() 호출하므로 DOTween Sequence 이중 실행 방지)
