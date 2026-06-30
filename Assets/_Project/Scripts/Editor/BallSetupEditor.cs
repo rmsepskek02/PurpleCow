@@ -101,6 +101,7 @@ public static class BallSetupEditor
         so.FindProperty("_speed").floatValue = 10f;
         so.FindProperty("_criticalChance").floatValue = 0f;
         so.FindProperty("_criticalMultiplier").floatValue = 1.5f;
+        so.FindProperty("_maxBounces").intValue = 10;
         so.ApplyModifiedPropertiesWithoutUndo();
 
         AssetDatabase.CreateAsset(ballData, path);

@@ -302,7 +302,6 @@ public static class SceneSetupEditor
         PlaceManager<SkillManager>("SkillManager");
         PlaceManager<UIManager>("UIManager");
         PlaceManager<CharacterManager>("CharacterManager");
-        PlaceManager<DamageTextManager>("DamageTextManager");
     }
 
     private static void PlaceManager<T>(string objName) where T : Component
