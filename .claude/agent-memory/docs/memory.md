@@ -169,3 +169,20 @@
 ### 주요 결정사항
 - DevRules.md 스타일(마크다운 테이블, 코드블록, 한국어 설명) 일관성 유지
 - 사용자 확정 내용 그대로 반영, 임의 추가 없음
+
+---
+
+### 작업 내용 (추가)
+- UIRules.md 수정 (Assets/_Project/Docs/UIRules.md)
+- Canvas_HUD 구조에 CharacterXP 항목 추가 (섹션 1)
+- 섹션 8 (데미지 텍스트), 섹션 9 (몬스터 HP바), 섹션 10 (캐릭터 HP / 경험치 / 레벨 시스템) 신규 추가
+
+### 결과
+- UIRules.md 수정 완료: 총 4곳 변경 (CharacterXP 항목, 섹션 8/9/10 추가)
+
+### 주요 결정사항
+- DamageTextFx: World Space TMP 직접 배치 방식 (Canvas 없음)
+- MonsterHpBar: 각 몬스터 프리팹에 World Space Canvas + Slider 자식으로 부착
+- CharacterManager가 HP, XP, 레벨 모두 담당 (Singleton)
+- WaveManager에 OnMonsterReachedBottom static event 추가 필요 (CharacterManager 연동)
+- XP 획득 조건: 몬스터 처치 및 통과 모두 reward만큼 획득
