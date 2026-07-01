@@ -43,3 +43,18 @@
 
 task 문서는 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH:MM_작업요약/` 경로에 생성됩니다.
 자세한 규칙은 [TaskRules.md](Assets/_Project/Docs/TaskRules.md)를 참고하세요.
+
+### 2026-06-30
+
+| 폴더 | research | plan | 설명 |
+|------|----------|------|------|
+| `02-30_Core시스템구현` | O | O | Singleton, ObjectPool, GameManager, InputHandler 구현 |
+| `10-00_Ball시스템구현` | O | O | BallLauncher, Ball, BallData, ObjectPool 연동 구현 |
+| `14-00_Monster시스템구현` | O | O | MonsterBase, MonsterData, WaveManager 구현 |
+| `18-00_Skill시스템구현` | O | O | SkillManager, BallSkillBase, PassiveSkillBase, 스킬 5종+7종 구현 |
+| `20-00_UI시스템구현` | O | O | UIManager, HUDPanel, ResultPanel, SkillSelectionPanel, SkillCardUI, SkillFactory 구현 계획 |
+| `HH-MM_UI재작업` | O | O | UI 전체 재작업. UIRules 위반 수정(CanvasGroup, DOTween, UIButton), 미구현 8종 신규 생성(CharacterManager, MonsterHpBar, DamageTextFx 등) |
+| `HH-MM_EditorSetup개선` | O | O | 에디터 셋업 스크립트 개선 작업 |
+| `HH-MM_PDF스펙정합` | O | O | PDF 스펙 기반 코드 정합성 검토 및 수정 |
+| `HH-MM_QA수정` | O | O | QA 검토 결과 수정. CRITICAL 2·3·4·5, WARNING 2·3·4·6, INFO 2·3 총 10건 수정 |
+| `15-50_Inspector연결및에디터수정` | X | O | 에디터 스크립트 버그 수정 2건(BallSetupEditor _maxBounces 누락, SceneSetupEditor DamageTextManager 중복), Inspector 참조 연결 4건(Ball.prefab, Monster 프리팹 4종, WaveManager, DamageTextManager) |

@@ -1,0 +1,164 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Ball : MonoBehaviour, IPoolable
+{
+    [SerializeField] private BallData _ballData;
+
+    private Rigidbody2D          _rigidbody;
+    private Collider2D           _collider;
+    private bool                 _isActive;
+    private List<BallSkillBase>  _skills = new List<BallSkillBase>();
+    private int                  _remainingBounces;
+    private float                _subBallDamageOverride;
+
+    public Vector2 LaunchDirection { get; private set; }
+    public float   LastDamage      { get; private set; }
+
+    public static event Action<MonsterBase, float, bool> OnHitMonster;
+    public static event Action                    OnWallHit;
+    public static event Action<MonsterBase>       OnHitMonsterFront;
+    public static event Action<MonsterBase>       OnHitMonsterBack;
+
+    private void Awake()
+    {
+        _rigidbody = GetComponent<Rigidbody2D>();
+        _collider  = GetComponent<Collider2D>();
+    }
+
+    public void OnSpawn()
+    {
+        _isActive              = true;
+        _remainingBounces      = _ballData.MaxBounces;
+        _subBallDamageOverride = 0f;
+        _skills.Clear();
+        _rigidbody.linearVelocity = Vector2.zero;
+    }
+
+    public void OnDespawn()
+    {
+        _isActive = false;
+        _rigidbody.linearVelocity = Vector2.zero;
+        foreach (var skill in _skills)
+            skill.OnDeactivate();
+        _skills.Clear();
+    }
+
+    public void Launch(Vector2 direction)
+    {
+        LaunchDirection = direction;
+        float speed = _ballData.Speed;
+        _rigidbody.linearVelocity = direction * speed;
+    }
+
+    private void FixedUpdate()
+    {
+        if (!_isActive)
+            return;
+
+        float speed = _ballData.Speed;
+        _rigidbody.linearVelocity = _rigidbody.linearVelocity.normalized * speed;
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Monster"))
+        {
+            if (collision.gameObject.TryGetComponent<MonsterBase>(out MonsterBase monster))
+            {
+                CalculateDamage(monster);
+
+                // 전면/후면 판정 — 볼 이동 방향이 아래(velocity.y < 0)면 전면 타격
+                Vector2 vel = _rigidbody.linearVelocity.normalized;
+                if (vel.y < 0f)
+                    OnHitMonsterFront?.Invoke(monster);
+                else
+                    OnHitMonsterBack?.Invoke(monster);
+
+                foreach (var skill in _skills)
+                    skill.OnBallHit(monster);
+            }
+        }
+        else if (collision.gameObject.CompareTag("Wall"))
+        {
+            OnWallHit?.Invoke();
+            _remainingBounces--;
+            if (_remainingBounces <= 0)
+            {
+                ReturnToPool();
+            }
+        }
+        else if (collision.gameObject.CompareTag("Ground"))
+        {
+            ReturnToPool();
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        // Ghost 모드(isTrigger=true)에서 몬스터 데미지 처리
+        bool hasGhostSkill = false;
+        foreach (var skill in _skills)
+        {
+            if (skill is GhostBallSkill) { hasGhostSkill = true; break; }
+        }
+
+        if (hasGhostSkill && other.CompareTag("Monster"))
+        {
+            if (other.TryGetComponent<MonsterBase>(out MonsterBase monster))
+            {
+                CalculateDamage(monster);
+                foreach (var skill in _skills)
+                    skill.OnBallHit(monster);
+            }
+        }
+    }
+
+    private void CalculateDamage(MonsterBase target)
+    {
+        float baseDamage = _subBallDamageOverride > 0f ? _subBallDamageOverride : _ballData.Damage;
+
+        float critChance = _ballData.CriticalChance + target.ConsumeBonusCritChance();
+        bool  isCritical = UnityEngine.Random.value < critChance;
+
+        float critMultiplier = _ballData.CriticalMultiplier;
+        float damage = isCritical
+            ? baseDamage * critMultiplier
+            : baseDamage;
+
+        damage *= (1f + SkillManager.Instance.DamageMultiplierBonus);
+        damage += SkillManager.Instance.ConsumeNextShotDamageBonus();
+
+        LastDamage = damage;
+        target.TakeDamage(damage);
+        OnHitMonster?.Invoke(target, damage, isCritical);
+    }
+
+    public void AddSkill(BallSkillBase skill)
+    {
+        _skills.Add(skill);
+        skill.Initialize(this);
+        skill.OnActivate();
+    }
+
+    public void SetSubBallDamage(float damage)
+    {
+        _subBallDamageOverride = damage;
+    }
+
+    public void SetGhostMode(bool isGhost)
+    {
+        _collider.isTrigger = isGhost;
+    }
+
+    public void ForceReturn()
+    {
+        ReturnToPool();
+    }
+
+    private void ReturnToPool()
+    {
+        BallLauncher.Instance.ReturnBall(this);
+    }
+}

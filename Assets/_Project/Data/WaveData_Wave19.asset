@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61b8c34644f47da4d86ffa93b953e9cc, type: 3}
+  m_Name: WaveData_Wave19
+  m_EditorClassIdentifier: Assembly-CSharp::WaveData
+  _waveNumber: 19
+  _spawnEntries:
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: -2, y: 2}
+  - Data: {fileID: 11400000, guid: de05cc0a9e2030a48a4e30606895dc9f, type: 2}
+    GridPosition: {x: -1, y: 2}
+  - Data: {fileID: 11400000, guid: cde2924df17b1cd4da79e543383d0511, type: 2}
+    GridPosition: {x: 0, y: 2}
+  - Data: {fileID: 11400000, guid: 01baf0a1f2c22d1449155dde81066bdc, type: 2}
+    GridPosition: {x: 1, y: 2}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: 2, y: 2}
+  - Data: {fileID: 11400000, guid: de05cc0a9e2030a48a4e30606895dc9f, type: 2}
+    GridPosition: {x: -2, y: 1}
+  - Data: {fileID: 11400000, guid: cde2924df17b1cd4da79e543383d0511, type: 2}
+    GridPosition: {x: -1, y: 1}
+  - Data: {fileID: 11400000, guid: 01baf0a1f2c22d1449155dde81066bdc, type: 2}
+    GridPosition: {x: 0, y: 1}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: 1, y: 1}
+  - Data: {fileID: 11400000, guid: de05cc0a9e2030a48a4e30606895dc9f, type: 2}
+    GridPosition: {x: 2, y: 1}
+  - Data: {fileID: 11400000, guid: cde2924df17b1cd4da79e543383d0511, type: 2}
+    GridPosition: {x: -2, y: 0}
+  - Data: {fileID: 11400000, guid: 01baf0a1f2c22d1449155dde81066bdc, type: 2}
+    GridPosition: {x: -1, y: 0}

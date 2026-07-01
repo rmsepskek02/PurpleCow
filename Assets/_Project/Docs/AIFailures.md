@@ -35,3 +35,19 @@
 - **실패 내용**: docs 에이전트에게 위임하지 않고 Claude가 직접 파일 수정
 - **원인**: 에이전트 운영 구조 규칙이 미확립된 상태
 - **재발 방지**: CLAUDE.md에 에이전트 운영 구조 명시, 문서 작업은 반드시 docs 에이전트에게 위임
+
+---
+
+## 2026-07-01
+
+### 에디터 스크립트 씬 자동 저장 누락
+- **상황**: UISetupEditor, SceneSetupEditor에서 씬 오브젝트 참조(BallLauncher._launchPoint, HUDPanel._waveText 등) 연결 후 `AssetDatabase.SaveAssets()`만 호출
+- **실패 내용**: 씬 오브젝트 변경이 디스크에 저장되지 않아 재실행 시 참조가 초기화됨
+- **원인**: `AssetDatabase.SaveAssets()`는 .asset, .prefab 등 에셋 파일만 저장하며 씬(.unity) 파일은 저장하지 않음
+- **재발 방지**: 씬 오브젝트를 수정하는 에디터 스크립트는 반드시 마지막에 `EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene())` 호출
+
+### 카메라 orthographic size 미설정
+- **상황**: SceneSetupEditor에서 카메라 orthographic size 설정 누락
+- **실패 내용**: 기본값 5로 방치 → 플레이 영역(x:±5.5, y:-10~+8)의 약 1/4만 보임, 배경만 표시되는 것처럼 보이는 문제 발생
+- **원인**: 에디터 스크립트가 카메라 설정을 포함하지 않았고, 플레이 영역 좌표 검토 시 카메라 시야 범위를 함께 확인하지 않음
+- **재발 방지**: SceneSetupEditor 실행 시 카메라 orthographic size를 플레이 영역에 맞게 설정 (현재 프로젝트: 1080x1920, 플레이 영역 width 11 → orthographic size = 10)
