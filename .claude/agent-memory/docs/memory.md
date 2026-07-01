@@ -345,3 +345,24 @@
 - STEP 5(SceneSetupEditor Step9_ConnectWaveManagerRefs): 씬 WaveManager _waveDatas 20개 + _monsterPrefab + _poolParent + _spawnRoot 자동 연결
 - STEP 6(UISetupEditor Step7_CreateDamageTextFxPrefab + Step8_ConnectDamageTextManagerRefs): DamageTextFx 프리팹 자동 생성 + DamageTextManager 참조 자동 연결
 - 에디터 실행 순서: Ball System Setup → Monster System Setup → Scene Setup → UI Setup
+
+---
+
+## 2026-07-01
+
+### 작업 내용
+- plan.md 업데이트: Assets/_Project/Docs/_Task/2026-06-30/15-50_Inspector연결및에디터수정/plan.md
+- ProjectStatus.md 업데이트: Assets/_Project/Docs/ProjectStatus.md
+- ProjectHistory.md 업데이트: Assets/_Project/Docs/ProjectHistory.md
+- AIFailures.md 업데이트: Assets/_Project/Docs/AIFailures.md
+
+### 결과
+- plan.md: STEP 3~6 완료 표시, STEP 7~13 신규 추가, 파일 목록 테이블 확장 (총 16개 파일)
+- ProjectStatus.md: 날짜 2026-07-01, 단계 갱신, 완료 작업 2건 추가, 진행 중 비우기, 다음 작업 순서 교체
+- ProjectHistory.md: 2026-07-01 섹션 추가 (에디터 스크립트 자동화 완성, 런타임 버그 수정 3건)
+- AIFailures.md: 2026-07-01 섹션 추가 (씬 자동 저장 누락, 카메라 orthographic size 미설정)
+
+### 주요 결정사항
+- 브랜치: claude/recent-plan-review-xq2hsm에서 문서만 수정, 커밋/푸시는 Claude가 처리
+- AssetDatabase.SaveAssets()만으로는 씬 저장 불가 → EditorSceneManager.SaveScene() 필수
+- 카메라 orthographic size는 플레이 영역 폭(11)에 맞춰 10으로 설정

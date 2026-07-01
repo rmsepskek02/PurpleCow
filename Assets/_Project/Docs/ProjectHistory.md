@@ -80,3 +80,44 @@ Assets/_Project/Scripts/
 - `Assets/_Project/Docs/_Task/2026-06-30/02-30_Core시스템구현/plan.md` 생성
 - 구현 대상: Singleton<T>, IPoolable, ObjectPool<T>, GameManager, InputHandler
 - 현재 상태: plan.md 사용자 승인 대기 중
+
+---
+
+## 2026-07-01
+
+### Inspector 연결 에디터 스크립트 자동화 완성
+
+기존 STEP 3~6 완료 이후, 추가적인 자동화 항목 7건을 구현하였다.
+
+**SceneSetupEditor.cs**
+- `Step7_ConnectBallLauncherRefs()`에 LaunchPoint 빈 GameObject 자동 생성 및 `BallLauncher._launchPoint` 연결 로직 추가
+- 씬 오브젝트 변경 후 `EditorSceneManager.SaveScene()` 호출 추가
+
+**UISetupEditor.cs**
+- `Step6_CreateSkillCardPrefab()` 수정: 프리팹 존재 여부와 무관하게 `EditPrefabContentsScope`로 SkillCardUI 내부 참조(`_iconImage`, `_nameText`, `_descriptionText`, `_typeText`, `_selectButton`, `_canvasGroup`) 항상 연결
+- `Step8_ConnectDamageTextManagerRefs()` 수정: DamageTextPool 자식이 없으면 자동 생성 후 `_poolParent` 연결 (기존엔 경고만 출력)
+- `Step9_SetupHUDPanelContent()` 신규: HUDPanel 하위에 WaveText(TMP_Text), ScoreText(TMP_Text), LaunchReadyIndicator(CanvasGroup) 자식 생성 및 HUDPanel 참조 연결
+- `Step10_SetupResultPanelContent()` 신규: ResultPanel 하위에 TitleText(TMP_Text), ScoreText(TMP_Text), RestartButton(Button) 자식 생성 및 ResultPanel 참조 연결
+- `Step11_SetupSkillSelectionPanelContent()` 신규: SkillCard.prefab 3개 인스턴스화 후 `SkillSelectionPanel._skillCards` 연결, SkillData 10종 로드 후 `_allSkillDatas` 연결
+- 씬 오브젝트 변경 후 `EditorSceneManager.SaveScene()` 호출 추가
+
+**MonsterSetupEditor.cs**
+- `SetupWaveSpawnEntries()` 신규: Wave 1~20 MonsterSpawnEntry 데이터 자동 설정
+  - Wave 1~5: Fluffy만
+  - Wave 6~10: Fluffy + Spider
+  - Wave 11~15: Fluffy + Spider + StoneBug
+  - Wave 16~20: Fluffy + Spider + StoneBug + ForestDeer (4종 전부)
+
+### 런타임 버그 수정
+
+**InputHandler.cs**
+- `UnityEngine.Input` → `UnityEngine.InputSystem.Mouse / Touchscreen` 교체
+- Player Settings에서 New Input System 사용 설정 시 `InvalidOperationException`이 발생하던 문제 수정
+
+**GameManager.cs**
+- `Start()` 메서드 추가하여 게임 시작 시 자동으로 `StartGame()` 호출
+- 기존에는 게임 상태가 Ready로 고정되어 HUD가 숨겨지고 볼 발사가 불가했던 문제 수정
+
+**SampleScene.unity**
+- 카메라 `orthographic size: 5 → 10` 수정
+- 기본값 5로는 플레이 영역(x:±5.5, y:-10~+8)의 약 1/4만 보였던 문제 수정

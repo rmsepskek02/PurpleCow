@@ -4,9 +4,9 @@
 
 ---
 
-## 현재 상태 (2026-06-30 기준)
+## 현재 상태 (2026-07-01 기준)
 
-**단계**: Core 시스템 구현 준비 완료 — plan.md 승인 대기 중
+**단계**: Inspector 연결 자동화 및 런타임 버그 수정 완료 — 기본 플레이 가능 상태
 
 **완료된 작업**
 - [x] 프로젝트 생성 (Unity 6000.3.10f1, Universal 2D URP, Android)
@@ -15,16 +15,17 @@
 - [x] 문서 시스템 구축 (CLAUDE.md, AGENTS.md, DevRules.md, TaskRules.md 등)
 - [x] 아키텍처 설계 확정
 - [x] Core 시스템 task 문서 작성 (research.md + plan.md)
+- [x] Inspector 연결 에디터 스크립트 자동화 완성 (LaunchPoint, SkillCard, HUD/Result/SkillSelection 패널, WaveData 스폰 데이터)
+- [x] 런타임 버그 수정: InputHandler (New Input System), GameManager 자동 시작, 카메라 orthographic size 조정
 
 **진행 중**
-- [ ] Core 시스템 구현 (plan.md 승인 대기)
+없음
 
 **다음 작업 순서**
-1. Core: Singleton<T>, IPoolable, ObjectPool<T>, GameManager, InputHandler
-2. Ball: BallLauncher, BallController, BallSkillHandler
-3. Monster: MonsterBase, WaveManager + ScriptableObjects
-4. Skill: SkillBase, Active/Passive 스킬들
-5. UI: UIManager, HUD, Result 화면
+1. TMP 한글 폰트 설정 (현재 LiberationSans SDF에 한글 없어 경고 발생)
+2. 게임 밸런스 조정 (WaveData 스폰 수, 몬스터 스탯, 볼 데이터)
+3. UI 비주얼 작업 (HUD 텍스트 폰트/레이아웃, 결과 화면)
+4. 게임 테스트 및 QA
 
 ## 주요 기술 결정
 
