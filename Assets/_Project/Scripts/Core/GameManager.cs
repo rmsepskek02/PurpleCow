@@ -11,6 +11,11 @@ public class GameManager : Singleton<GameManager>
     public GameState CurrentState { get; private set; }
     public bool IsLastGameSuccess { get; private set; }
 
+    private void Start()
+    {
+        StartGame();
+    }
+
     public void StartGame()
     {
         CurrentState = GameState.Playing;
