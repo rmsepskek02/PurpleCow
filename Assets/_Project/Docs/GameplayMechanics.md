@@ -1,4 +1,4 @@
-# BallTrajectoryMechanic.md
+# GameplayMechanics.md
 
 이 문서는 UI 규칙이 아니라 "게임 내 구체적인 알고리즘/메커닉"을 기록하는 문서입니다.
 UI 배치나 연출이 아닌, 게임플레이 로직 자체의 동작 방식(조준, 발사, 충돌, 귀환 등)을 다룹니다.

@@ -384,3 +384,19 @@
 - PDF 명시 구현 제외 항목(튜토리얼/배속/1스테이지보스/자동조준/리롤/융합)은 스크린샷 등장 여부와 무관하게 전부 제외로 명시
 - 탄도 예측선의 "비행 중 재조준" 기능은 코드 확인이 안 된 상태이므로 미확정으로 별도 표시, 후속 코드 검토 필요 항목에 포함
 - 이미지 파일은 아직 미추가 상태 — 섹션 11에 경로 플레이스홀더만 남기고 텍스트 설명만 기록
+
+---
+
+### 작업 내용 (추가)
+- BallTrajectoryMechanic.md → GameplayMechanics.md 파일명 일반화 작업
+- 신규 생성: Assets/_Project/Docs/GameplayMechanics.md
+- AGENTS.md Docs 문서 인덱스에서 BallTrajectoryMechanic.md 항목 갱신
+
+### 결과
+- GameplayMechanics.md 생성 완료: 기존 본문("1. 볼 발사 및 궤도 시스템", "현재 구현과의 차이 (TODO)") 그대로 유지, 최상단 제목만 `# GameplayMechanics.md`로 변경, 서두 설명 문구는 기존 문구 그대로 유지(이미 일반화된 표현 포함되어 있었음)
+- AGENTS.md 인덱스 업데이트 완료: 파일명/경로를 GameplayMechanics.md로 교체, 설명 문구에 "확정된 게임플레이 메커닉을 계속 추가 기록" 표현 보강
+- 기존 BallTrajectoryMechanic.md 파일은 삭제 도구가 없어 그대로 유지 — 실제 삭제는 오케스트레이터(사용자)가 직접 처리 예정
+
+### 주요 결정사항
+- 사용자가 볼 궤도 외 다른 게임 알고리즘/메커닉도 이 문서에 계속 추가할 계획이라 파일명을 더 일반적인 GameplayMechanics.md로 변경
+- 본문 내용/구조는 변경하지 않고 제목과 인덱스만 갱신하여 향후 섹션 추가 시 혼란 없도록 처리
