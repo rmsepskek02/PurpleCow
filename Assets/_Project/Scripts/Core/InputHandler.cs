@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class InputHandler : Singleton<InputHandler>
 {
@@ -7,23 +8,53 @@ public class InputHandler : Singleton<InputHandler>
     public static event Action OnRelease;
 
     private Vector2 _dragStartPosition;
+    private bool _isDragging;
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        Vector2? pressedPos  = null;
+        Vector2? currentPos  = null;
+        bool     released    = false;
+
+        if (Touchscreen.current != null && Touchscreen.current.touches.Count > 0)
         {
-            _dragStartPosition = Input.mousePosition;
+            var touch = Touchscreen.current.touches[0];
+            var phase = touch.phase.ReadValue();
+
+            if (phase == UnityEngine.InputSystem.TouchPhase.Began)
+                pressedPos = touch.position.ReadValue();
+            else if (phase == UnityEngine.InputSystem.TouchPhase.Moved ||
+                     phase == UnityEngine.InputSystem.TouchPhase.Stationary)
+                currentPos = touch.position.ReadValue();
+            else if (phase == UnityEngine.InputSystem.TouchPhase.Ended ||
+                     phase == UnityEngine.InputSystem.TouchPhase.Canceled)
+                released = true;
+        }
+        else if (Mouse.current != null)
+        {
+            if (Mouse.current.leftButton.wasPressedThisFrame)
+                pressedPos = Mouse.current.position.ReadValue();
+            if (Mouse.current.leftButton.isPressed)
+                currentPos = Mouse.current.position.ReadValue();
+            if (Mouse.current.leftButton.wasReleasedThisFrame)
+                released = true;
         }
 
-        if (Input.GetMouseButton(0))
+        if (pressedPos.HasValue)
         {
-            Vector2 currentPosition = Input.mousePosition;
-            Vector2 direction = (currentPosition - _dragStartPosition).normalized;
+            _dragStartPosition = pressedPos.Value;
+            _isDragging = true;
+        }
+
+        if (currentPos.HasValue && _isDragging)
+        {
+            Vector2 direction = (currentPos.Value - _dragStartPosition).normalized;
             OnDrag?.Invoke(direction);
         }
 
-        if (Input.GetMouseButtonUp(0))
+        if (released && _isDragging)
         {
+            _isDragging = false;
             OnRelease?.Invoke();
         }
     }
