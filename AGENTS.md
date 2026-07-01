@@ -25,7 +25,7 @@
 | AIFailures.md | `Assets/_Project/Docs/AIFailures.md` | AI 실패 사례 및 재발 방지 기록 |
 | UIRules.md | `Assets/_Project/Docs/UIRules.md` | UI 시스템 구현 규칙. Canvas 구조, 해상도 대응, Safe Area, 패널 제어, 애니메이션, 버튼 피드백, 성능 최적화 정의 |
 | PlayerActiveSkill기획.md | `Assets/_Project/Docs/PlayerActiveSkill기획.md` | 플레이어 액티브 스킬 시스템 기획. 스킬 4종(필드 동결/버서크/분신/마법 폭격) 효과, 공통 규칙, UI 명세 정의 |
-| ReferenceUI이해.md | `Assets/_Project/Docs/ReferenceUI이해.md` | 원본 게임(통통 디펜스: 핀볼 마스터) 실플레이 스크린샷 기반 UI/게임플레이 이해 정리. PDF 제외 항목, 확정 사항, 미구현 갭 정의 |
+| BallTrajectoryMechanic.md | `Assets/_Project/Docs/BallTrajectoryMechanic.md` | 게임 내 알고리즘/메커닉 스펙 문서. 볼 발사/궤도 시스템(조준, 프리뷰, 귀환, 재발사) 정의 및 현재 구현과의 차이(TODO) 기록 |
 
 ---
 
