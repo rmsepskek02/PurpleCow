@@ -419,3 +419,17 @@
 ### 주요 결정사항
 - 이 프로젝트의 기존 컨벤션(ProjectStatus.md에 기록된 "Inspector 연결 에디터 스크립트 자동화 완성")에 따라 씬/프리팹 UI 연결 작업은 항상 Editor 스크립트 자동화로 처리하고 수동 Inspector 작업 문구는 plan.md에 남기지 않음
 - 레벨 표시는 `CurrentLevel`(0-based) + 1로 보정하는 것을 Active/Passive 공통 규칙으로 확정하여 코드 예시에 일관 반영
+
+---
+
+### 작업 내용 (추가)
+- CLAUDE.md에 "6. 참고 자료 (원본 자료 경로)" 섹션 신규 추가
+- 경로: /home/user/PurpleCow/CLAUDE.md
+
+### 결과
+- 기존 0~5번 섹션 구조를 읽고 5번(에이전트 운영 구조) 바로 다음에 6번 섹션 추가
+- 공식 요구사항 스펙 PDF(`PurpleCow_클라이언트_채용과제.pdf`), 원본 게임 레퍼런스 스크린샷(`Assets/_Project/Docs/targetUI/`), 이미 정리된 참고 문서(UIRules.md, GameplayMechanics.md) 3개 항목을 bullet로 기록
+- 기존 문체(간결한 한글 bullet, 파일 링크 표기)를 그대로 따름, 0~5번 기존 내용은 변경하지 않음
+
+### 주요 결정사항
+- 새 세션 시작 시 원본 자료를 매번 재탐색하지 않도록 "PDF/스크린샷 원본 → 확정 문서(UIRules.md/GameplayMechanics.md) 우선 확인 → 불확실한 부분만 원본 재참고" 순서를 명시
