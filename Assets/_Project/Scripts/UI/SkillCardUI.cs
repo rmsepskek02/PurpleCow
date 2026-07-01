@@ -9,6 +9,7 @@ public class SkillCardUI : MonoBehaviour
     [SerializeField] private TMP_Text   _nameText;
     [SerializeField] private TMP_Text   _descriptionText;
     [SerializeField] private TMP_Text   _typeText;
+    [SerializeField] private TMP_Text   _damageText;
     [SerializeField] private Button     _selectButton;
     [SerializeField] private CanvasGroup _canvasGroup;
 
@@ -33,6 +34,14 @@ public class SkillCardUI : MonoBehaviour
         _nameText.text        = data.SkillName;
         _descriptionText.text = data.Description;
         _typeText.text        = data.SkillType == SkillType.Active ? "액티브" : "패시브";
+
+        bool isActive = data.SkillType == SkillType.Active;
+        if (_damageText != null)
+        {
+            _damageText.gameObject.SetActive(isActive);
+            if (isActive)
+                _damageText.text = data.CurrentLevelData.BallDamage.ToString("0");
+        }
     }
 
     private void HandleSelectClicked()

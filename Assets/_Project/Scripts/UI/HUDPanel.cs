@@ -6,6 +6,7 @@ public class HUDPanel : MonoBehaviour
 {
     [SerializeField] private TMP_Text    _waveText;
     [SerializeField] private TMP_Text    _scoreText;
+    [SerializeField] private TMP_Text    _progressText;
     [SerializeField] private GameObject  _launchReadyIndicator;
     [SerializeField] private CanvasGroup _launchReadyCanvasGroup;
 
@@ -25,6 +26,7 @@ public class HUDPanel : MonoBehaviour
     private void OnEnable()
     {
         WaveManager.OnWaveStarted         += HandleWaveStarted;
+        WaveManager.OnMonsterCountChanged  += HandleMonsterCountChanged;
         BallLauncher.OnAllBallsReturned   += HandleAllBallsReturned;
         UIManager.OnScoreChanged          += HandleScoreChanged;
     }
@@ -32,6 +34,7 @@ public class HUDPanel : MonoBehaviour
     private void OnDisable()
     {
         WaveManager.OnWaveStarted         -= HandleWaveStarted;
+        WaveManager.OnMonsterCountChanged  -= HandleMonsterCountChanged;
         BallLauncher.OnAllBallsReturned   -= HandleAllBallsReturned;
         UIManager.OnScoreChanged          -= HandleScoreChanged;
     }
@@ -52,6 +55,12 @@ public class HUDPanel : MonoBehaviour
     private void HandleAllBallsReturned()
     {
         SetLaunchIndicatorVisible(false);
+    }
+
+    private void HandleMonsterCountChanged(int remaining, int total)
+    {
+        int percent = total > 0 ? Mathf.RoundToInt((float)(total - remaining) / total * 100f) : 0;
+        _progressText.text = $"{percent}%";
     }
 
     private void HandleScoreChanged(int score)

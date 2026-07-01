@@ -8,6 +8,9 @@ public class SkillSelectionPanel : MonoBehaviour
     [SerializeField] private SkillCardUI[] _skillCards;
     [SerializeField] private SkillData[]   _allSkillDatas;
 
+    [SerializeField] private SkillSlotGroup _activeSlotGroup;
+    [SerializeField] private SkillSlotGroup _passiveSlotGroup;
+
     [SerializeField] private CanvasGroup _canvasGroup;
     [SerializeField] private float _slideDist    = 50f;
     [SerializeField] private float _animDuration = 0.3f;
@@ -23,13 +26,23 @@ public class SkillSelectionPanel : MonoBehaviour
     {
         WaveManager.OnKillCountReached  += OpenPanel;
         GameManager.OnGameStateChanged  += HandleGameStateChanged;
+        SkillManager.OnActiveSkillsChanged  += HandleActiveSkillsChanged;
+        SkillManager.OnPassiveSkillsChanged += HandlePassiveSkillsChanged;
     }
 
     private void OnDisable()
     {
         WaveManager.OnKillCountReached  -= OpenPanel;
         GameManager.OnGameStateChanged  -= HandleGameStateChanged;
+        SkillManager.OnActiveSkillsChanged  -= HandleActiveSkillsChanged;
+        SkillManager.OnPassiveSkillsChanged -= HandlePassiveSkillsChanged;
     }
+
+    private void HandleActiveSkillsChanged(List<BallSkillBase> skills)
+        => _activeSlotGroup.UpdateActiveSlots(skills);
+
+    private void HandlePassiveSkillsChanged(List<PassiveSkillBase> skills)
+        => _passiveSlotGroup.UpdatePassiveSlots(skills);
 
     private void HandleGameStateChanged(GameManager.GameState state)
     {
@@ -44,7 +57,15 @@ public class SkillSelectionPanel : MonoBehaviour
     {
         Time.timeScale = 0f;
         ShowRandomSkills();
+        RefreshSlotGroups();
         Show();
+    }
+
+    private void RefreshSlotGroups()
+    {
+        var sm = SkillManager.Instance;
+        _activeSlotGroup.UpdateActiveSlots(new List<BallSkillBase>(sm.EquippedActiveSkills));
+        _passiveSlotGroup.UpdatePassiveSlots(new List<PassiveSkillBase>(sm.EquippedPassiveSkills));
     }
 
     private void ShowRandomSkills()

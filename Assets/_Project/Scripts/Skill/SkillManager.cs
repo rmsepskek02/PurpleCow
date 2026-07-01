@@ -66,4 +66,7 @@ public class SkillManager : Singleton<SkillManager>
 
     public IReadOnlyList<int> ActiveSkillIds  => _activeSkills.ConvertAll(s => s.SkillData.SkillId);
     public IReadOnlyList<int> PassiveSkillIds => _passiveSkills.ConvertAll(s => s.SkillData.SkillId);
+
+    public IReadOnlyList<BallSkillBase>    EquippedActiveSkills  => _activeSkills;
+    public IReadOnlyList<PassiveSkillBase> EquippedPassiveSkills => _passiveSkills;
 }

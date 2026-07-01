@@ -14,7 +14,7 @@ Canvas_HUD    (Sort Order: 10)  ← 항상 표시
   ├─ SafeAreaPanel              ← SafeAreaFitter 컴포넌트 부착
   │    ├─ HUD_Static Canvas     ← 변하지 않는 배경/테두리/아이콘
   │    └─ HUD_Dynamic Canvas    ← HP바, 웨이브 진행바, 텍스트
-  ├─ TopBar   (스테이지명, 몬스터 HP바, %, 아이콘*)
+  ├─ TopBar   (스테이지명, %, 아이콘*)
   ├─ TopButtons (▶ 재생, ⏸ 일시정지)
   ├─ WaveBar  (진행바 + 웨이브 번호 배지)
   ├─ CharacterHP (캐릭터 HP바 - 하단)

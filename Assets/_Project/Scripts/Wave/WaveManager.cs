@@ -18,12 +18,14 @@ public class WaveManager : Singleton<WaveManager>
     private List<MonsterBase> _activeMonsters = new List<MonsterBase>();
     private int _currentWaveIndex;
     private int _totalKillCount;
+    private int _currentWaveTotalCount;
 
     public static event Action<int>         OnWaveStarted;
     public static event Action              OnWaveCleared;
     public static event Action              OnAllWavesCleared;
     public static event Action              OnKillCountReached;
     public static event Action<MonsterBase> OnMonsterReachedBottom;
+    public static event Action<int, int>    OnMonsterCountChanged; // (남은 수, 전체 수)
 
     public int TotalWaves => _waveDatas.Length;
 
@@ -71,7 +73,10 @@ public class WaveManager : Singleton<WaveManager>
             _activeMonsters.Add(monster);
         }
 
+        _currentWaveTotalCount = waveData.SpawnEntries.Count;
+
         OnWaveStarted?.Invoke(waveData.WaveNumber);
+        OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
     }
 
     private void HandleAllBallsReturned()
@@ -98,6 +103,7 @@ public class WaveManager : Singleton<WaveManager>
                 _activeMonsters.RemoveAt(i);
                 _monsterPool.Return(monster);
                 OnMonsterReachedBottom?.Invoke(monster);
+                OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
             }
         }
     }
@@ -109,6 +115,7 @@ public class WaveManager : Singleton<WaveManager>
 
         _totalKillCount++;
         CheckSkillUnlock();
+        OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
 
         CheckWaveCleared();
     }

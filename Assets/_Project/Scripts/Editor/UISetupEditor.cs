@@ -26,6 +26,8 @@ public static class UISetupEditor
         Step9_SetupHUDPanelContent();
         Step10_SetupResultPanelContent();
         Step11_SetupSkillSelectionPanelContent();
+        Step12_CreateSkillSlotPrefab();
+        Step13_SetupSkillSlotGroups();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -115,6 +117,17 @@ public static class UISetupEditor
         charHpRect.sizeDelta        = new Vector2(0f, 30f);
         if (charHpObj.GetComponent<Slider>() == null) charHpObj.AddComponent<Slider>();
         EnsureComponent<CharacterHpBar>(charHpObj);
+
+        // TMP_Text (현재/최대 HP 숫자 표시)
+        GameObject hpTextObj = EnsureChildObject(charHpObj.transform, "HpText");
+        EnsureRectTransform(hpTextObj);
+        if (hpTextObj.GetComponent<TextMeshProUGUI>() == null)
+            hpTextObj.AddComponent<TextMeshProUGUI>();
+
+        CharacterHpBar hpBar = charHpObj.GetComponent<CharacterHpBar>();
+        SerializedObject hpBarSo = new SerializedObject(hpBar);
+        hpBarSo.FindProperty("_hpText").objectReferenceValue = hpTextObj.GetComponent<TextMeshProUGUI>();
+        hpBarSo.ApplyModifiedPropertiesWithoutUndo();
 
         // ── CharacterXP 바 (CharacterHP 위)
         GameObject charXpObj = EnsureChildObject(hudRoot, "CharacterXP");
@@ -257,6 +270,11 @@ public static class UISetupEditor
             typeObj.AddComponent<RectTransform>();
             typeObj.AddComponent<TextMeshProUGUI>();
 
+            GameObject damageObj = new GameObject("DamageText");
+            damageObj.transform.SetParent(go.transform);
+            damageObj.AddComponent<RectTransform>();
+            damageObj.AddComponent<TextMeshProUGUI>();
+
             GameObject btnObj = new GameObject("SelectButton");
             btnObj.transform.SetParent(go.transform);
             btnObj.AddComponent<RectTransform>();
@@ -278,12 +296,22 @@ public static class UISetupEditor
             SkillCardUI card = root.GetComponent<SkillCardUI>();
             if (card == null) { Debug.LogWarning("[UISetupEditor] SkillCardUI 컴포넌트 없음."); return; }
 
+            // 기존 프리팹에 DamageText 자식이 없는 경우 보정 생성
+            if (root.transform.Find("DamageText") == null)
+            {
+                GameObject damageObj = new GameObject("DamageText");
+                damageObj.transform.SetParent(root.transform);
+                damageObj.AddComponent<RectTransform>();
+                damageObj.AddComponent<TextMeshProUGUI>();
+            }
+
             SerializedObject so = new SerializedObject(card);
 
             Image iconImg         = root.transform.Find("Icon")?.GetComponent<Image>();
             TextMeshProUGUI nameTmp = root.transform.Find("NameText")?.GetComponent<TextMeshProUGUI>();
             TextMeshProUGUI descTmp = root.transform.Find("DescText")?.GetComponent<TextMeshProUGUI>();
             TextMeshProUGUI typeTmp = root.transform.Find("TypeText")?.GetComponent<TextMeshProUGUI>();
+            TextMeshProUGUI damageTmp = root.transform.Find("DamageText")?.GetComponent<TextMeshProUGUI>();
             Button selectBtn      = root.transform.Find("SelectButton")?.GetComponent<Button>();
             CanvasGroup cg        = root.GetComponent<CanvasGroup>();
 
@@ -291,6 +319,7 @@ public static class UISetupEditor
             if (nameTmp != null)   so.FindProperty("_nameText").objectReferenceValue         = nameTmp;
             if (descTmp != null)   so.FindProperty("_descriptionText").objectReferenceValue  = descTmp;
             if (typeTmp != null)   so.FindProperty("_typeText").objectReferenceValue         = typeTmp;
+            if (damageTmp != null) so.FindProperty("_damageText").objectReferenceValue       = damageTmp;
             if (selectBtn != null) so.FindProperty("_selectButton").objectReferenceValue     = selectBtn;
             if (cg != null)        so.FindProperty("_canvasGroup").objectReferenceValue      = cg;
 
@@ -393,6 +422,9 @@ public static class UISetupEditor
         GameObject scoreTextObj = EnsureChildObject(hudPanelObj.transform, "ScoreText");
         if (scoreTextObj.GetComponent<TextMeshProUGUI>() == null) scoreTextObj.AddComponent<TextMeshProUGUI>();
 
+        GameObject progressTextObj = EnsureChildObject(hudPanelObj.transform, "ProgressText");
+        if (progressTextObj.GetComponent<TextMeshProUGUI>() == null) progressTextObj.AddComponent<TextMeshProUGUI>();
+
         GameObject lriObj = EnsureChildObject(hudPanelObj.transform, "LaunchReadyIndicator");
         CanvasGroup lriCg = lriObj.GetComponent<CanvasGroup>();
         if (lriCg == null) lriCg = lriObj.AddComponent<CanvasGroup>();
@@ -400,6 +432,7 @@ public static class UISetupEditor
         SerializedObject so = new SerializedObject(hudPanel);
         so.FindProperty("_waveText").objectReferenceValue              = waveTextObj.GetComponent<TextMeshProUGUI>();
         so.FindProperty("_scoreText").objectReferenceValue             = scoreTextObj.GetComponent<TextMeshProUGUI>();
+        so.FindProperty("_progressText").objectReferenceValue          = progressTextObj.GetComponent<TextMeshProUGUI>();
         so.FindProperty("_launchReadyIndicator").objectReferenceValue  = lriObj;
         so.FindProperty("_launchReadyCanvasGroup").objectReferenceValue = lriCg;
 
@@ -511,6 +544,144 @@ public static class UISetupEditor
         so.ApplyModifiedPropertiesWithoutUndo();
         Debug.Log($"[UISetupEditor] SkillSelectionPanel 구성 완료. " +
                   $"SkillCard: {cardList.Count}개, SkillData: {skillDatas.Count}개.");
+    }
+
+    // ──────────────────────────────────────────
+    // Step 12. SkillSlot 프리팹 생성
+    // ──────────────────────────────────────────
+
+    private static void Step12_CreateSkillSlotPrefab()
+    {
+        const string path = "Assets/_Project/Prefabs/UI/SkillSlot.prefab";
+
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+        {
+            GameObject go = new GameObject("SkillSlot");
+            go.AddComponent<RectTransform>();
+
+            GameObject filledObj = new GameObject("Filled");
+            filledObj.transform.SetParent(go.transform);
+            filledObj.AddComponent<RectTransform>();
+
+            GameObject iconObj = new GameObject("Icon");
+            iconObj.transform.SetParent(filledObj.transform);
+            iconObj.AddComponent<RectTransform>();
+            iconObj.AddComponent<Image>();
+
+            GameObject levelTextObj = new GameObject("LevelText");
+            levelTextObj.transform.SetParent(filledObj.transform);
+            levelTextObj.AddComponent<RectTransform>();
+            levelTextObj.AddComponent<TextMeshProUGUI>();
+
+            GameObject emptyObj = new GameObject("Empty");
+            emptyObj.transform.SetParent(go.transform);
+            emptyObj.AddComponent<RectTransform>();
+            Image emptyImg = emptyObj.AddComponent<Image>();
+            emptyImg.color = Color.black;
+
+            go.AddComponent<SkillSlotIcon>();
+
+            PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            Debug.Log("[UISetupEditor] SkillSlot.prefab 생성 완료.");
+        }
+
+        // Always connect internal refs
+        using (var scope = new PrefabUtility.EditPrefabContentsScope(path))
+        {
+            GameObject root = scope.prefabContentsRoot;
+            SkillSlotIcon slot = root.GetComponent<SkillSlotIcon>();
+            if (slot == null) { Debug.LogWarning("[UISetupEditor] SkillSlotIcon 컴포넌트 없음."); return; }
+
+            SerializedObject so = new SerializedObject(slot);
+
+            GameObject filledRoot = root.transform.Find("Filled")?.gameObject;
+            GameObject emptyRoot  = root.transform.Find("Empty")?.gameObject;
+            Image iconImg           = root.transform.Find("Filled/Icon")?.GetComponent<Image>();
+            TextMeshProUGUI levelTmp = root.transform.Find("Filled/LevelText")?.GetComponent<TextMeshProUGUI>();
+
+            if (iconImg != null)    so.FindProperty("_iconImage").objectReferenceValue  = iconImg;
+            if (levelTmp != null)   so.FindProperty("_levelText").objectReferenceValue  = levelTmp;
+            if (filledRoot != null) so.FindProperty("_filledRoot").objectReferenceValue = filledRoot;
+            if (emptyRoot != null)  so.FindProperty("_emptyRoot").objectReferenceValue  = emptyRoot;
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+        Debug.Log("[UISetupEditor] SkillSlot.prefab 내부 참조 연결 완료.");
+    }
+
+    // ──────────────────────────────────────────
+    // Step 13. SkillSelectionPanel Active/Passive 슬롯 그룹 구성
+    // ──────────────────────────────────────────
+
+    private static void Step13_SetupSkillSlotGroups()
+    {
+        GameObject skillPanelObj = GameObject.Find("SkillSelectionPanel");
+        if (skillPanelObj == null) { Debug.LogWarning("[UISetupEditor] SkillSelectionPanel 없음."); return; }
+
+        SkillSelectionPanel skillPanel = skillPanelObj.GetComponent<SkillSelectionPanel>();
+        if (skillPanel == null) { Debug.LogWarning("[UISetupEditor] SkillSelectionPanel 컴포넌트 없음."); return; }
+
+        const string skillSlotPath = "Assets/_Project/Prefabs/UI/SkillSlot.prefab";
+        GameObject skillSlotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(skillSlotPath);
+        if (skillSlotPrefab == null)
+        {
+            Debug.LogWarning("[UISetupEditor] SkillSlot.prefab 없음. Step12를 먼저 실행하세요.");
+            return;
+        }
+
+        SkillSlotGroup activeGroup  = SetupSlotGroup(skillPanelObj.transform, "ActiveSkillGroup",  "Active Skill",  4, skillSlotPrefab);
+        SkillSlotGroup passiveGroup = SetupSlotGroup(skillPanelObj.transform, "PassiveSkillGroup", "Passive Skill", 2, skillSlotPrefab);
+
+        SerializedObject so = new SerializedObject(skillPanel);
+        if (activeGroup  != null) so.FindProperty("_activeSlotGroup").objectReferenceValue  = activeGroup;
+        if (passiveGroup != null) so.FindProperty("_passiveSlotGroup").objectReferenceValue = passiveGroup;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        Debug.Log("[UISetupEditor] SkillSelectionPanel Active/Passive 슬롯 그룹 구성 완료.");
+    }
+
+    private static SkillSlotGroup SetupSlotGroup(
+        Transform parent, string groupName, string labelText, int slotCount, GameObject skillSlotPrefab)
+    {
+        GameObject groupObj = EnsureChildObject(parent, groupName);
+        EnsureRectTransform(groupObj);
+        SkillSlotGroup group = EnsureComponent<SkillSlotGroup>(groupObj);
+
+        // 라벨 (Active Skill / Passive Skill)
+        GameObject labelObj = EnsureChildObject(groupObj.transform, "Label");
+        EnsureRectTransform(labelObj);
+        TextMeshProUGUI labelTmp = labelObj.GetComponent<TextMeshProUGUI>();
+        if (labelTmp == null) labelTmp = labelObj.AddComponent<TextMeshProUGUI>();
+        labelTmp.text = labelText;
+
+        // 기존 SkillSlotIcon 자식 수집
+        System.Collections.Generic.List<SkillSlotIcon> slotList =
+            new System.Collections.Generic.List<SkillSlotIcon>();
+        foreach (Transform child in groupObj.transform)
+        {
+            SkillSlotIcon existing = child.GetComponent<SkillSlotIcon>();
+            if (existing != null) slotList.Add(existing);
+        }
+
+        // 필요한 개수만큼 프리팹 인스턴스 추가
+        int needed = slotCount - slotList.Count;
+        for (int i = 0; i < needed; i++)
+        {
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(
+                skillSlotPrefab, groupObj.transform);
+            SkillSlotIcon slotIcon = instance.GetComponent<SkillSlotIcon>();
+            if (slotIcon != null) slotList.Add(slotIcon);
+        }
+
+        SerializedObject groupSo = new SerializedObject(group);
+        SerializedProperty slotsProp = groupSo.FindProperty("_slots");
+        slotsProp.arraySize = slotList.Count;
+        for (int i = 0; i < slotList.Count; i++)
+            slotsProp.GetArrayElementAtIndex(i).objectReferenceValue = slotList[i];
+        groupSo.ApplyModifiedPropertiesWithoutUndo();
+
+        return group;
     }
 
     // ──────────────────────────────────────────

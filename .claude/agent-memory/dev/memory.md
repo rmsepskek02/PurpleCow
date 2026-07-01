@@ -409,3 +409,34 @@
 - Step9_ConnectWaveManagerRefs는 씬 오브젝트 참조이므로 MenuItem 없이 SetupScene 플로우에만 포함
 - UISetupEditor Step7은 TextMeshPro(3D World Space)를 사용 — 기존 `using TMPro;` 재사용, 별도 using 불필요
 - DamageTextFx.prefab 생성 시 _text 참조를 SerializedObject로 즉시 연결하여 수동 작업 완전 제거
+
+---
+
+## 2026-07-01
+
+### 작업: UI HUD Gap Fill (캐릭터 HP바 숫자, 스킬 카드 데미지, Active/Passive 슬롯 UI, 스테이지 진행률 %)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-01/18-41_ui-hud-gap-fill/plan.md` (사용자 승인 문서, 그대로 구현)
+- 기존 파일 6개 수정 + 신규 파일 2개 생성 (SkillSlot.prefab은 UISetupEditor 실행 시 자동 생성 예정, 아직 미실행)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/UI/CharacterHpBar.cs` — `using TMPro;` 추가, `[SerializeField] private TMP_Text _hpText;` 추가, `UpdateHp()`에서 `_hpText.text = $"{current} / {max}"` 갱신
+- `Assets/_Project/Scripts/UI/SkillCardUI.cs` — `[SerializeField] private TMP_Text _damageText;` 추가, `Setup()` 마지막에 `SkillType.Active`일 때만 `_damageText` 활성화 + `data.CurrentLevelData.BallDamage.ToString("0")` 표시, Passive는 `SetActive(false)`
+- `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` — `_activeSlotGroup`/`_passiveSlotGroup`(SkillSlotGroup) 필드 추가, `OnEnable`/`OnDisable`에 `SkillManager.OnActiveSkillsChanged`/`OnPassiveSkillsChanged` 구독/해제 추가, `HandleActiveSkillsChanged`/`HandlePassiveSkillsChanged` 핸들러 추가, `OpenPanel()`에서 `RefreshSlotGroups()` 호출 추가(패널 열릴 때 `SkillManager.EquippedActiveSkills`/`EquippedPassiveSkills`로 최초 1회 슬롯 갱신)
+- `Assets/_Project/Scripts/Skill/SkillManager.cs` — `public IReadOnlyList<BallSkillBase> EquippedActiveSkills => _activeSkills;`, `public IReadOnlyList<PassiveSkillBase> EquippedPassiveSkills => _passiveSkills;` 프로퍼티 추가 (plan.md 주의사항 2번 열린 이슈 해결 — 패널 최초 오픈 시 아이콘 포함 리스트 즉시 조회용)
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — `private int _currentWaveTotalCount;` 필드 추가, `public static event Action<int, int> OnMonsterCountChanged;` 추가, `SpawnWave()`(스폰 직후 `_currentWaveTotalCount` 세팅 후 발행)/`HandleMonsterDied()`(`_totalKillCount++` 이후 발행)/`CheckGameOver()`(바닥 통과 제거 직후 발행) 3곳에서 `OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount)` 호출
+- `Assets/_Project/Scripts/UI/HUDPanel.cs` — `[SerializeField] private TMP_Text _progressText;` 추가, `OnEnable`/`OnDisable`에 `WaveManager.OnMonsterCountChanged` 구독/해제 추가, `HandleMonsterCountChanged(int remaining, int total)` 추가해 `{(total-remaining)/total*100}%` 텍스트 갱신
+- `Assets/_Project/Scripts/Editor/UISetupEditor.cs` — `Step2_SetupHUDCanvas()`에 `CharacterHP` 하위 `HpText` TMP 생성/연결, `Step6_CreateSkillCardPrefab()`에 `DamageText` TMP 생성(신규+기존 프리팹 보정) 및 `_damageText` 연결, `Step9_SetupHUDPanelContent()`에 `ProgressText` TMP 생성/`_progressText` 연결, 신규 `Step12_CreateSkillSlotPrefab()`(SkillSlot.prefab 생성 — Filled/Icon+LevelText, Empty(검은 Image), `SkillSlotIcon` 연결) + 신규 `Step13_SetupSkillSlotGroups()`(SkillSelectionPanel 하위에 ActiveSkillGroup(4칸)/PassiveSkillGroup(2칸) + Label 생성, SkillSlot.prefab 인스턴스화, `_activeSlotGroup`/`_passiveSlotGroup` 연결) 추가, `SetupUI()` 실행 순서에 `Step12`/`Step13` 추가
+
+**신규 생성 파일:**
+- `Assets/_Project/Scripts/UI/SkillSlotIcon.cs` — 슬롯 1칸, `_iconImage`/`_levelText`/`_filledRoot`/`_emptyRoot` 필드, `SetFilled(Sprite, int level)`/`SetEmpty()` 메서드
+- `Assets/_Project/Scripts/UI/SkillSlotGroup.cs` — `_slots` 배열, `UpdateActiveSlots(List<BallSkillBase>)`/`UpdatePassiveSlots(List<PassiveSkillBase>)` — 두 메서드 모두 `CurrentLevel + 1`로 1-based 레벨(`x1`/`x2`/`x3`) 배지 표시
+
+**주요 결정사항:**
+- plan.md 주의사항 2번(열린 이슈) 해결: `SkillManager`에 `EquippedActiveSkills`/`EquippedPassiveSkills`(`IReadOnlyList<T>`, 내부 리스트 그대로 노출) 프로퍼티를 신규 추가하고, `SkillSelectionPanel.OpenPanel()`에서 `RefreshSlotGroups()`를 호출해 패널이 열릴 때 이미 장착된 스킬을 아이콘까지 즉시 반영하도록 구현. 기존 이벤트 기반 갱신(`OnActiveSkillsChanged`/`OnPassiveSkillsChanged`)은 그대로 유지
+- Passive 슬롯도 Active와 동일하게 `CurrentLevel + 1` 레벨 배지 표시 (plan.md 확정 사항 그대로 반영)
+- `SkillCardUI._damageText`는 Passive일 때 `gameObject.SetActive(false)`로 완전히 숨김 (텍스트만 비우는 방식이 아님)
+- `WaveManager.OnMonsterCountChanged`는 `HandleMonsterDied`/`CheckGameOver`/`SpawnWave` 3곳에서 발행 — 같은 프레임에 여러 번 발행될 수 있음(plan.md 주의사항 4번 인지, 별도 디바운스 처리는 하지 않음, 성능 규칙 위배 아님)
+- `UISetupEditor.cs`는 코드만 수정 완료, `[MenuItem("PurpleCow/Setup/UI Setup")]`은 Unity 에디터 GUI 환경이 아니므로 실행하지 않음 — 사용자가 Unity 에디터에서 직접 실행 필요
+- `UIRules.md`의 "몬스터 HP바" 문구 수정(TopBar 항목)은 문서 작업이므로 dev 에이전트 범위에서 제외(docs 에이전트 담당)
