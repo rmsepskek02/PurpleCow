@@ -400,3 +400,22 @@
 ### 주요 결정사항
 - 사용자가 볼 궤도 외 다른 게임 알고리즘/메커닉도 이 문서에 계속 추가할 계획이라 파일명을 더 일반적인 GameplayMechanics.md로 변경
 - 본문 내용/구조는 변경하지 않고 제목과 인덱스만 갱신하여 향후 섹션 추가 시 혼란 없도록 처리
+
+---
+
+### 작업 내용 (추가)
+- UI HUD Gap Fill task plan.md 수정 (사용자 확정사항 3건 반영)
+- 경로: Assets/_Project/Docs/_Task/2026-07-01/18-41_ui-hud-gap-fill/plan.md
+- 수정 전 `Assets/_Project/Scripts/Editor/UISetupEditor.cs`를 읽어 기존 Editor 자동화 패턴(`EnsureChildObject` + `TextMeshProUGUI`/`Image` 생성 → `SerializedObject.FindProperty(...).objectReferenceValue` 연결, 프리팹은 `PrefabUtility.SaveAsPrefabAsset` + `EditPrefabContentsScope`로 2단계 처리) 파악 후 반영
+
+### 결과
+- 확정 1: 슬롯 `x{N}` 배지는 레벨 의미로 확정 — "주의사항" 1번을 확정 문구로 교체, `SkillSlotGroup.cs` 코드 예시(`UpdateActiveSlots`/`UpdatePassiveSlots`)에서 `SetFilled()` 호출부를 `skills[i].SkillData.CurrentLevel + 1`로 수정
+- 확정 2: Passive 슬롯도 동일 레벨 배지 표시로 확정 — "주의사항" 3번을 PDF 근거(Lv.1/2/3 수치, `SkillData._levels` 공통 구조) 포함한 확정 문구로 교체, 코드는 변경 없음(이미 동일 패턴)
+- 확정 3(중요 변경): "Inspector 작업"/수동 연결 문구를 전면 제거하고 `UISetupEditor.cs` 기존 Step 함수(`Step2_SetupHUDCanvas`, `Step6_CreateSkillCardPrefab`, `Step9_SetupHUDPanelContent`, `Step11_SetupSkillSelectionPanelContent`)에 각각 HP 텍스트/데미지 텍스트/진행률 텍스트/슬롯 UI 생성·연결 로직을 추가하는 방향으로 재작성, 슬롯 UI용 신규 `Step12_CreateSkillSlotPrefab()`(+ 필요 시 `Step13`) 및 `SkillSlot.prefab` 신규 생성 파일 항목 추가
+- "예상 변경/생성 파일 목록"에 `UISetupEditor.cs`를 수정 대상으로 추가, "Unity 에디터에서 별도 처리 필요" 섹션명을 "Editor 스크립트로 자동화 처리"로 변경하고 각 항목에 담당 Step 함수 명시
+- "주의사항" 5번을 "`UISetupEditor.cs` 실행(`PurpleCow > Setup > UI Setup` 메뉴)까지 완료해야 화면에 보인다"는 취지로 재작성
+- 전체 재검토 결과 서두 요약, 구현 목표, TaskRules.md 문서 구조(서두/구현 목표/단계별 작업 계획/예상 변경 파일 목록/주의사항) 일관성 확인 완료
+
+### 주요 결정사항
+- 이 프로젝트의 기존 컨벤션(ProjectStatus.md에 기록된 "Inspector 연결 에디터 스크립트 자동화 완성")에 따라 씬/프리팹 UI 연결 작업은 항상 Editor 스크립트 자동화로 처리하고 수동 Inspector 작업 문구는 plan.md에 남기지 않음
+- 레벨 표시는 `CurrentLevel`(0-based) + 1로 보정하는 것을 Active/Passive 공통 규칙으로 확정하여 코드 예시에 일관 반영
