@@ -366,3 +366,21 @@
 - 브랜치: claude/recent-plan-review-xq2hsm에서 문서만 수정, 커밋/푸시는 Claude가 처리
 - AssetDatabase.SaveAssets()만으로는 씬 저장 불가 → EditorSceneManager.SaveScene() 필수
 - 카메라 orthographic size는 플레이 영역 폭(11)에 맞춰 10으로 설정
+
+---
+
+### 작업 내용 (추가)
+- ReferenceUI이해.md 신규 생성: Assets/_Project/Docs/ReferenceUI이해.md
+- 원본 게임(통통 디펜스: 핀볼 마스터) 실플레이 스크린샷 4장 기반, 사용자와 확정한 UI/게임플레이 이해를 기획 참고 문서로 정리
+- AGENTS.md Docs 문서 인덱스에 ReferenceUI이해.md 등록
+
+### 결과
+- ReferenceUI이해.md 생성 완료: 배경(PDF 최우선, 제외 항목), 스테이지 진행률 바, 처치 게이지/레벨 배지, 플레이어 HP 바, Auto 버튼, 탄도 예측선(비행 중 재조준 포함), 데미지 표시 방식(파이어볼 DOT 수치 표 포함), 부유 아이템(볼 스프라이트 추정), Best 추천 아이콘, 미구현 갭 정리 표, 레퍼런스 이미지 플레이스홀더 섹션까지 총 11개 섹션 작성
+- task 문서가 아닌 기획 참고 문서이므로 `_Task/` 폴더가 아닌 `Docs/` 최상위에 생성
+- AGENTS.md 인덱스 업데이트 완료
+
+### 주요 결정사항
+- 파일명은 PlayerActiveSkill기획.md 등 기존 한글 파일명 컨벤션을 따라 `ReferenceUI이해.md`로 명명
+- PDF 명시 구현 제외 항목(튜토리얼/배속/1스테이지보스/자동조준/리롤/융합)은 스크린샷 등장 여부와 무관하게 전부 제외로 명시
+- 탄도 예측선의 "비행 중 재조준" 기능은 코드 확인이 안 된 상태이므로 미확정으로 별도 표시, 후속 코드 검토 필요 항목에 포함
+- 이미지 파일은 아직 미추가 상태 — 섹션 11에 경로 플레이스홀더만 남기고 텍스트 설명만 기록
