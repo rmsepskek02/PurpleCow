@@ -449,3 +449,22 @@
 ### 주요 결정사항
 - targetUI/(이미지 폴더)와 PDF는 "문서"가 아니라 원본 참고 자료이므로 기존 "루트 문서"/"Docs 문서" 테이블에 섞지 않고 별도 "참고 자료" 섹션으로 분리하는 것이 AGENTS.md 기존 구조(문서 인덱스 → 에이전트 → Task 문서) 흐름상 가장 자연스럽다고 판단
 - CLAUDE.md 3번 bullet 삭제는 이전 세션에서 사용자 요청 없이 임의로 추가된 내용을 되돌리는 정정 작업
+
+---
+
+### 작업 내용 (추가)
+- Ball Launch Mechanics task research.md 신규 생성
+- 경로: Assets/_Project/Docs/_Task/2026-07-01/21-15_ball-launch-mechanics/research.md
+- GameplayMechanics.md 섹션 1(볼 발사/궤도 시스템) TODO 항목의 실제 재구현을 위한 첫 단계(research.md만, plan.md는 별도 승인 후 진행)
+
+### 결과
+- InputHandler.cs/BallLauncher.cs/Ball.cs 코드 레벨 동작 방식 상세 정리("현재 상태" 섹션): 터치 Began 시점에는 이벤트가 없고 OnDrag(드래그 중)/OnRelease(1회)만 존재, 발사는 릴리즈 1회성, Wall/Ground 충돌 시 위치 이동 없이 즉시 ReturnToPool, 재발사 트리거 코드 전무
+- 궤적 프리뷰(LineRenderer/Trajectory/AimIndicator) 키워드로 Assets/_Project 전체 Grep 결과 GameplayMechanics.md 문서 자체 1건만 매칭 확인 → 관련 기존 컴포넌트 없음을 코드 레벨에서 재확인
+- 관련 파일 테이블 작성: InputHandler/BallLauncher/Ball/BallData/ObjectPool/IPoolable/WaveManager/HUDPanel/ClusterBallSkill/SceneSetupEditor 10개 파일의 역할과 연결 관계 정리, LaunchPoint가 BallLauncher 자식의 고정 좌표(0,-8,0) 빈 오브젝트임을 SceneSetupEditor 코드로 확인
+- 요구사항 7개 항목별(터치 즉시 조준/첫 충돌 구간 프리뷰/실시간 드래그 추적/물리 반사 이동/하단 귀환/재발사 시 최신 방향/속도 항상 일정) 현재 코드 상태 매핑 테이블 작성 — 물리 반사 이동과 속도 고정 2개 항목은 이미 요구사항과 부합, 나머지는 전면 신규 구현 필요로 분류
+- 결론에 재설계 필요 핵심 3가지(조준 이벤트 체계, 궤적 프리뷰 시각화, 귀환·재발사 사이클)와 WaveManager/HUDPanel이 의존하는 OnAllBallsReturned 의미 충돌 가능성, LaunchPoint-캐릭터 연동 여부 미확정 지점을 명시 (구체적 구현 방법은 미포함, plan.md 단계로 이월)
+
+### 주요 결정사항
+- plan.md는 이번에 작성하지 않음(사용자가 별도 승인 후 진행 예정) — TaskRules.md 절차 준수
+- research.md에는 "무엇이 문제인지"까지만 정리하고 구현 방법은 포함하지 않음
+- 재발사 사이클 도입 시 WaveManager(몬스터 하강 트리거)와 HUDPanel(조준 인디케이터)이 BallLauncher.OnAllBallsReturned에 의존하는 부분이 의미 충돌 가능성이 있어 plan.md 단계에서 반드시 논의 필요하다고 결론에 명시
