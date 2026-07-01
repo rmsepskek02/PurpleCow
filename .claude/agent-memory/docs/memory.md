@@ -433,3 +433,19 @@
 
 ### 주요 결정사항
 - 새 세션 시작 시 원본 자료를 매번 재탐색하지 않도록 "PDF/스크린샷 원본 → 확정 문서(UIRules.md/GameplayMechanics.md) 우선 확인 → 불확실한 부분만 원본 재참고" 순서를 명시
+
+---
+
+### 작업 내용 (추가)
+- CLAUDE.md "6. 참고 자료 (원본 자료 경로)" 섹션에서 3번째 bullet("이미 정리된 참고 문서": UIRules.md, GameplayMechanics.md 안내) 삭제 — 사용자 요청 범위(PDF, 스크린샷 경로 2개)를 벗어난 임의 추가 항목으로 확인되어 롤백
+- 경로: /home/user/PurpleCow/CLAUDE.md
+- AGENTS.md에 "참고 자료" 섹션 신규 추가
+- 경로: /home/user/PurpleCow/AGENTS.md
+
+### 결과
+- CLAUDE.md: 1번(공식 요구사항 스펙 PDF), 2번(원본 게임 레퍼런스 스크린샷) bullet만 유지, 3번 bullet 삭제 완료
+- AGENTS.md: 기존 "Docs 문서" 테이블(하단) ~ "에이전트" 테이블(상단) 사이에 "참고 자료" 섹션 신규 삽입. 테이블 컬럼은 기존 문서 인덱스와 동일한 "자료 | 경로 | 설명" 3컬럼 스타일 채택. PurpleCow_클라이언트_채용과제.pdf, targetUI/ 2개 항목 등록
+
+### 주요 결정사항
+- targetUI/(이미지 폴더)와 PDF는 "문서"가 아니라 원본 참고 자료이므로 기존 "루트 문서"/"Docs 문서" 테이블에 섞지 않고 별도 "참고 자료" 섹션으로 분리하는 것이 AGENTS.md 기존 구조(문서 인덱스 → 에이전트 → Task 문서) 흐름상 가장 자연스럽다고 판단
+- CLAUDE.md 3번 bullet 삭제는 이전 세션에서 사용자 요청 없이 임의로 추가된 내용을 되돌리는 정정 작업

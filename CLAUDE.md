@@ -67,6 +67,3 @@
 - **원본 게임 레퍼런스 스크린샷**: `Assets/_Project/Docs/targetUI/` (실제 플레이 캡처 이미지 6장)
   - 원본 게임(통통 디펜스: 핀볼 마스터, CookApps, `com.cookapps.bouncedefense`) 실제 플레이 화면 캡처
   - UI 레이아웃, 게임플레이 메커닉을 시각적으로 확인할 때 참고한다
-- **이미 정리된 참고 문서**: [UIRules.md](Assets/_Project/Docs/UIRules.md), [GameplayMechanics.md](Assets/_Project/Docs/GameplayMechanics.md)
-  - 위 PDF/이미지를 분석해서 이미 확정된 UI 규칙과 게임 메커닉이 정리되어 있다
-  - 매번 PDF/이미지를 처음부터 재분석하지 말고 이 두 문서를 먼저 확인하고, 불확실하거나 새로 확인이 필요한 부분만 원본 PDF/이미지를 다시 참고한다
