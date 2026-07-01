@@ -13,4 +13,18 @@ MonoBehaviour:
   m_Name: WaveData_Wave5
   m_EditorClassIdentifier: Assembly-CSharp::WaveData
   _waveNumber: 5
-  _spawnEntries: []
+  _spawnEntries:
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: -2, y: 8}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: -1, y: 8}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: 0, y: 8}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: 1, y: 8}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: 2, y: 8}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: -2, y: 7}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: -1, y: 7}

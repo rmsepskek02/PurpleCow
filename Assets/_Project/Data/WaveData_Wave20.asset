@@ -13,4 +13,30 @@ MonoBehaviour:
   m_Name: WaveData_Wave20
   m_EditorClassIdentifier: Assembly-CSharp::WaveData
   _waveNumber: 20
-  _spawnEntries: []
+  _spawnEntries:
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: -2, y: 2}
+  - Data: {fileID: 11400000, guid: de05cc0a9e2030a48a4e30606895dc9f, type: 2}
+    GridPosition: {x: -1, y: 2}
+  - Data: {fileID: 11400000, guid: cde2924df17b1cd4da79e543383d0511, type: 2}
+    GridPosition: {x: 0, y: 2}
+  - Data: {fileID: 11400000, guid: 01baf0a1f2c22d1449155dde81066bdc, type: 2}
+    GridPosition: {x: 1, y: 2}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: 2, y: 2}
+  - Data: {fileID: 11400000, guid: de05cc0a9e2030a48a4e30606895dc9f, type: 2}
+    GridPosition: {x: -2, y: 1}
+  - Data: {fileID: 11400000, guid: cde2924df17b1cd4da79e543383d0511, type: 2}
+    GridPosition: {x: -1, y: 1}
+  - Data: {fileID: 11400000, guid: 01baf0a1f2c22d1449155dde81066bdc, type: 2}
+    GridPosition: {x: 0, y: 1}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: 1, y: 1}
+  - Data: {fileID: 11400000, guid: de05cc0a9e2030a48a4e30606895dc9f, type: 2}
+    GridPosition: {x: 2, y: 1}
+  - Data: {fileID: 11400000, guid: cde2924df17b1cd4da79e543383d0511, type: 2}
+    GridPosition: {x: -2, y: 0}
+  - Data: {fileID: 11400000, guid: 01baf0a1f2c22d1449155dde81066bdc, type: 2}
+    GridPosition: {x: -1, y: 0}
+  - Data: {fileID: 11400000, guid: 06997bc8d96944648b054e60b214827f, type: 2}
+    GridPosition: {x: 0, y: 0}
