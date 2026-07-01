@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,6 +23,7 @@ public static class SceneSetupEditor
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
 
         Debug.Log("[SceneSetupEditor] Scene Setup 완료.");
     }

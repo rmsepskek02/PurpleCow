@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -28,6 +29,7 @@ public static class UISetupEditor
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
         Debug.Log("[UISetupEditor] UI Setup 완료.");
     }
 
