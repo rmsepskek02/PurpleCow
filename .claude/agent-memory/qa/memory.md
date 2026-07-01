@@ -146,3 +146,21 @@ STEP 1~10 전 항목 정상 구현 확인. 누락 없음.
 ### 주요 결정사항
 - 모든 task가 plan.md 명세와 일치하여 구현 완료 판정
 - 미세 차이(BallData _maxBounces 필드 추가 등)는 plan 확장으로 오류 아님
+
+## 2026-07-01 원본 게임 스크린샷 vs 코드베이스 대조 검증 (7항목)
+
+### 작업 내용
+원본 게임(통통 디펜스: 핀볼 마스터) 플레이 스크린샷 4장에서 파악된 UI/게임플레이 요소 7가지를 현재 코드베이스와 대조 검증. PDF 명시 제외 항목(튜토리얼/배속/1스테이지 보스/자동조준/선택지 다시뽑기/융합 시스템)은 검증 대상에서 제외.
+
+### 결과 요약
+1. 킬카운트 배지(카운트다운): 미구현. `WaveManager.cs`는 `_totalKillCount`(누적) 증가 후 `_totalKillCount % _killCountForSkill == 0`(L118)일 때 이벤트만 발생시킴 — "남은 수" 계산 로직 없음. `HUDPanel.cs` L64는 `_scoreText.text = "처치: {score}"`로 누적 처치 수 표시만 함. 카운트다운 배지 UI 자체가 존재하지 않음.
+2. 플레이어 HP 시스템: 구현되어 있고 스크린샷과 구조적으로 일치. `WaveManager.OnMonsterReachedBottom` → `CharacterManager.cs` L37 `HandleMonsterReachedBottom` → L39 `TakeDamage` → L51 `OnHpChanged` 이벤트 → `CharacterHpBar.cs` L8/L11 `UpdateHp`가 Slider.value 갱신. 단, HP 숫자 텍스트(230/258/300 형태) 표시 필드는 `CharacterHpBar.cs`에 없음(Slider만 존재) — 부분 불일치.
+3. 스테이지 진행률 %/스테이지 테마명: 미구현. 프로젝트 전체 검색 결과 "진행률/Progress/StageName" 관련 코드 없음. `HUDPanel.cs` L48은 "WAVE n / total" 텍스트만 존재.
+4. 데미지 숫자 팝업: 구현되어 있고 일치. `Ball.cs` L135 `OnHitMonster?.Invoke` → `DamageTextManager.cs` L19/L27 구독 → `ShowDamage` → `DamageTextFx.cs` L32-37 `Play()`에서 흰색(`_normalColor = Color.white`) 텍스트로 표시. 크리티컬 시 노란색/확대.
+5. 스킬 카드 데미지 수치: 미구현. `SkillCardUI.cs` L28-36 `Setup()`은 아이콘/이름/설명/타입만 표시, 데미지 텍스트 필드 없음. `SkillData.cs` L56 `CurrentLevelData.BallDamage` 필드가 존재하므로 연결 가능.
+6. Active 4슬롯/Passive 2슬롯 시각 UI: 미구현. `SkillManager.cs` L29/L34/L40/L46에 내부 제한 로직(`CanEquipActive`, `CanEquipPassive`, Count>=4/2)은 존재하나, `Assets/_Project/Scripts/UI` 내 슬롯 아이콘 표시 UI 파일 자체가 없음(Slot 관련 파일 검색 결과 없음).
+7. 투사체 탄도 예측선: 미구현. `InputHandler.cs`(드래그 방향 계산만, L51), `BallLauncher.cs`(방향 저장만, L38-41)에 LineRenderer/궤적 미리보기 로직 전혀 없음. 자동조준과는 무관한 별개의 "드래그 중 궤적 프리뷰" 기능이며 PDF 제외 항목에 해당하지 않으므로 구현 검토 대상.
+
+### 주요 결정사항
+- 파일 수정 없이 자연어 보고만 수행함(QA 에이전트 책임 범위 준수).
+- PDF 제외 항목(튜토리얼/배속/1스테이지 보스/자동조준/선택지 다시뽑기/융합)은 코드 확인도 하지 않음.
