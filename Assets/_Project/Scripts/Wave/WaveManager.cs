@@ -10,7 +10,6 @@ public class WaveManager : Singleton<WaveManager>
     [SerializeField] private int _initialPoolSize = 20;
     [SerializeField] private Transform _spawnRoot;
     [SerializeField] private float _gridCellSize = 1.0f;
-    [SerializeField] private float _monsterMoveDistance;
     [SerializeField] private float _bottomBoundaryY;
     [SerializeField] private int _killCountForSkill = 5;
 
@@ -42,14 +41,17 @@ public class WaveManager : Singleton<WaveManager>
 
     private void OnEnable()
     {
-        BallLauncher.OnAllBallsReturned += HandleAllBallsReturned;
         MonsterBase.OnMonsterDied += HandleMonsterDied;
     }
 
     private void OnDisable()
     {
-        BallLauncher.OnAllBallsReturned -= HandleAllBallsReturned;
         MonsterBase.OnMonsterDied -= HandleMonsterDied;
+    }
+
+    private void Update()
+    {
+        CheckGameOver();
     }
 
     private void SpawnWave(int index)
@@ -77,20 +79,6 @@ public class WaveManager : Singleton<WaveManager>
 
         OnWaveStarted?.Invoke(waveData.WaveNumber);
         OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
-    }
-
-    private void HandleAllBallsReturned()
-    {
-        MoveAllMonstersDown();
-        CheckGameOver();
-    }
-
-    private void MoveAllMonstersDown()
-    {
-        foreach (MonsterBase monster in _activeMonsters)
-        {
-            monster.MoveDown(_monsterMoveDistance);
-        }
     }
 
     private void CheckGameOver()

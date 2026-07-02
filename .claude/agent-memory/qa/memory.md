@@ -146,3 +146,27 @@ STEP 1~10 전 항목 정상 구현 확인. 누락 없음.
 ### 주요 결정사항
 - 모든 task가 plan.md 명세와 일치하여 구현 완료 판정
 - 미세 차이(BallData _maxBounces 필드 추가 등)는 plan 확장으로 오류 아님
+
+## 2026-07-02 — 볼 발사 메커닉 재설계(ball-launch-mechanics) 코드 리뷰
+
+### 작업 내용
+plan.md/research.md(`Assets/_Project/Docs/_Task/2026-07-01/21-15_ball-launch-mechanics/`) 기준으로
+`InputHandler.cs`, `BallLauncher.cs`, `Ball.cs`, `SkillManager.cs`, `SkillSelectionPanel.cs`,
+`WaveManager.cs`, `MonsterBase.cs`, `IceBallSkill.cs`, `HUDPanel.cs` git diff 전체 검토.
+`GameManager.cs`/`UIManager.cs`/`ObjectPool.cs`/`SkillFactory.cs`/`SkillData.cs`/Active 스킬 5종도 교차 확인.
+
+### 결과 요약
+- CRITICAL: 2건 (Wall 충돌 로스터 볼 영구 이탈 버그 + 확산 경로, 궤적 프리뷰(4단계) 전면 미구현)
+- MAJOR: 2건 (GameState 게이팅 완전 제거로 게임오버 후에도 로스터 무한 순환, ApplySkillToBall 죽은 코드 잔존은 Minor로 하향)
+- MINOR: 다수 (아래 본문 참고)
+
+### 주요 발견사항
+1. **(Critical, 확인됨)** `Ball.OnCollisionEnter2D`의 `"Wall"` 분기(Ball.cs:111-119)는 `IsRosterMember` 체크 없이 `_remainingBounces<=0`이면 무조건 `ReturnToPool()`. 로스터 볼이 벽 충돌로 소진되면 `BallLauncher._roster`는 죽은 Ball 참조를 영구 보유, 이후 `ObjectPool.Get()`이 그 인스턴스를 재사용하면 두 로스터 항목이 같은 Ball을 공유하는 상태 충돌 발생. `BallData.asset`의 `_maxBounces: 0`(에디터 스크립트는 10으로 설정하지만 커밋된 asset은 여전히 0)으로 인해 최초 벽 접촉 즉시 발동하는 사실상 확정적 버그. `ReturnToLaunchPoint()` 귀환 중 벽에 재충돌해도 동일 경로로 소실됨(방향 재보정 로직 없음).
+2. **(Critical, 신규 발견)** plan.md 4단계(궤적 프리뷰, `TrajectoryPreview.cs`)가 완전히 미구현. `LineRenderer`/`Physics2D.Raycast` 관련 코드가 저장소 어디에도 없고, `InputHandler.OnAimBegin`도 구독자가 0명인 죽은 이벤트. dev agent-memory에도 "4단계는 이번 범위 제외"로 명시되어 있어, 상위 지시의 "5단계 전부 완료"와 실제 구현 상태가 불일치함.
+3. **(Major)** `BallLauncher`가 `GameManager.OnGameStateChanged` 구독을 완전히 제거해 `Result`/`Ready` 상태에서도 로스터 볼이 계속 귀환·재발사 사이클을 돔.
+4. 나머지 항목(로스터 상한 9개 강제, SkillSelectionPanel 중복 추가 방지, EquipActiveSkill bool 반환 호출부 정합성, 스킬 재부착 로직, MonsterBase 초 단위 전환, IceBallSkill 시그니처)은 모두 문제 없음으로 확인.
+5. Minor: `SkillManager.ApplySkillToBall(Ball)`이 로스터 도입 후 호출부 없는 죽은 코드로 남음.
+
+### 주요 결정사항
+- 코드 수정 없이 자연어로 심각도(Critical/Major/Minor) 순 보고, ReportFindings 도구 미사용
+- BallData.asset의 _maxBounces 실제 값을 asset 파일까지 직접 열어 확인(에디터 스크립트 코드만으로 판단하지 않음)

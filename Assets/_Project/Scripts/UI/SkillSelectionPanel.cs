@@ -128,7 +128,12 @@ public class SkillSelectionPanel : MonoBehaviour
         if (data.SkillType == SkillType.Active)
         {
             BallSkillBase skill = SkillFactory.CreateActiveSkill(data);
-            SkillManager.Instance.EquipActiveSkill(skill);
+            bool isNewSkill = SkillManager.Instance.EquipActiveSkill(skill);
+            // 신규 타입 선택 시에만 로스터에 볼이 1개 추가된다. 기존 타입 재선택은 레벨업만 반영되며
+            // (SkillData.CurrentLevel이 이미 갱신되어 로스터가 재발사 시 자동으로 최신 레벨을 참조),
+            // 볼 개수는 늘지 않는다.
+            if (isNewSkill)
+                BallLauncher.Instance.AddBallToRoster(data);
         }
         else
         {
