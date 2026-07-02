@@ -119,16 +119,14 @@ public class Ball : MonoBehaviour, IPoolable
                 return;
             }
 
+            // 로스터 소속 볼은 벽 반사 횟수 개념이 없다. 몇 번을 튕기든 순수 반사만 하며,
+            // 오직 Ground 충돌에서만 귀환한다.
+            if (BallLauncher.Instance.IsRosterMember(this))
+                return;
+
             _remainingBounces--;
             if (_remainingBounces <= 0)
-            {
-                // 로스터 소속 볼만 캐릭터 위치로 귀환 후 재발사한다.
-                // 로스터 밖의 볼(서브볼 등)은 기존과 동일하게 즉시 풀로 반환한다.
-                if (BallLauncher.Instance.IsRosterMember(this))
-                    ReturnToLaunchPoint();
-                else
-                    ReturnToPool();
-            }
+                ReturnToPool();
         }
         else if (collision.gameObject.CompareTag("Ground"))
         {
