@@ -440,3 +440,110 @@
 - `WaveManager.OnMonsterCountChanged`는 `HandleMonsterDied`/`CheckGameOver`/`SpawnWave` 3곳에서 발행 — 같은 프레임에 여러 번 발행될 수 있음(plan.md 주의사항 4번 인지, 별도 디바운스 처리는 하지 않음, 성능 규칙 위배 아님)
 - `UISetupEditor.cs`는 코드만 수정 완료, `[MenuItem("PurpleCow/Setup/UI Setup")]`은 Unity 에디터 GUI 환경이 아니므로 실행하지 않음 — 사용자가 Unity 에디터에서 직접 실행 필요
 - `UIRules.md`의 "몬스터 HP바" 문구 수정(TopBar 항목)은 문서 작업이므로 dev 에이전트 범위에서 제외(docs 에이전트 담당)
+
+## 2026-07-02
+
+### 작업: 몬스터 시간 기반 하강 구현 (plan.md 5단계, ball-launch-mechanics task)
+
+**근거 문서:** `Assets/_Project/Docs/_Task/2026-07-01/21-15_ball-launch-mechanics/plan.md` "5단계 — 몬스터 시간 기반 하강 구현" (1~4단계는 다른 에이전트가 동시 작업 중이라 범위 제외)
+
+**변경 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — `OnEnable`/`OnDisable`에서 `BallLauncher.OnAllBallsReturned` 구독 완전 제거, `HandleAllBallsReturned()`/`MoveAllMonstersDown()` 메서드 삭제, 사용처가 사라진 `_monsterMoveDistance` 필드 삭제. 신규 `Update()`를 추가해 매 프레임 `CheckGameOver()` 호출(MonsterBase 이벤트 방식 대신 단순한 쪽 선택)
+- `Assets/_Project/Scripts/Monster/MonsterBase.cs` — 턴 기반 `_frozenTurnsRemaining`(int)/`_slowTurnsRemaining`(int) → 시간 기반 `_frozenSecondsRemaining`(float)/`_slowSecondsRemaining`(float)로 전환. `IsFrozen`도 float 비교로 수정. `ApplyFreeze(int turns)` 오버로드 제거하고 `ApplyFreeze(float seconds)` 단일 시그니처로 통합, `ApplySlow(int turns, float percent)` → `ApplySlow(float seconds, float percent)`로 변경. 턴 호출 기반 `MoveDown(float distance)` 메서드를 제거하고 신규 `Update()`(물리 아님, 단순 위치 이동이라 FixedUpdate 대신 Update 선택)를 추가해 매 프레임 `_monsterData.MoveSpeed * Time.deltaTime`만큼 연속 하강, freeze 중엔 스킵, slow 중엔 속도에 `(1f - _slowPercent)` 적용
+- `Assets/_Project/Scripts/Skill/Active/IceBallSkill.cs` — `ApplySlow(Mathf.RoundToInt(LevelData.Value2), LevelData.Value3)`의 반올림 제거하고 `ApplySlow(LevelData.Value2, LevelData.Value3)`로 변경(초 단위 float 그대로 전달)
+- `Assets/_Project/Scripts/UI/HUDPanel.cs` — `BallLauncher.OnAllBallsReturned` 구독을 `GameManager.OnGameStateChanged` 구독으로 교체, `HandleAllBallsReturned()` → `HandleGameStateChanged(GameManager.GameState state)`(Playing이면 표시, 그 외 숨김)로 교체. `Start()`의 하드코딩된 `SetLaunchIndicatorVisible(false)`도 `GameManager.Instance.CurrentState == Playing` 조건으로 교체(스크립트 실행 순서 무관하게 초기 상태 정확히 반영)
+
+**주요 결정사항:**
+- `CheckGameOver()` 매 프레임 호출 방식(`WaveManager.Update()`)을 선택. `MonsterBase`가 바닥 도달을 스스로 감지해 이벤트 발행하는 방식 대신 더 단순한 쪽으로 판단(DevRules.md 단순함 우선 원칙)
+- `MonsterBase.Update()`는 물리(Rigidbody) 없이 순수 `transform.position` 이동이므로 DevRules.md의 "물리 관련 처리는 FixedUpdate() 사용" 규칙 대상이 아니라고 판단해 `Update()` 채택(Monster 스크립트에 Rigidbody2D 없음을 Grep으로 확인)
+- `BallLauncher.OnAllBallsReturned` 이벤트 선언/발행부(`BallLauncher.cs`) 자체는 plan.md 지시대로 손대지 않음 — 구독부만 정리
+- 사용처가 사라진 `_monsterMoveDistance`(WaveManager) 필드는 dead code이므로 함께 제거. `Assets/Scenes/SampleScene.unity`에는 해당 필드의 직렬화 값이 남아있으나 Unity가 알 수 없는 필드를 무시하므로 컴파일/런타임 오류 없음(별도 조치 안 함)
+- `Ball.cs`/`BallLauncher.cs`/`InputHandler.cs`/`SkillManager.cs`/`SkillSelectionPanel.cs`는 다른 에이전트 작업 범위이므로 전혀 수정하지 않음
+
+---
+
+## 2026-07-02
+
+### 작업: 볼 발사 메커닉 재설계 1~3단계 (조준 이벤트 체계 / 볼 로스터 데이터 모델 / 귀환·재발사 사이클)
+
+**근거 문서:** `Assets/_Project/Docs/_Task/2026-07-01/21-15_ball-launch-mechanics/plan.md` 1~3단계만 (4단계 궤적 프리뷰, 5단계 몬스터 하강은 이번 범위 제외, 5단계는 다른 에이전트가 동시 작업 완료함)
+
+**변경 파일:**
+- `Assets/_Project/Scripts/Core/InputHandler.cs` — `public static event Action OnAimBegin;` 신설(파라미터 없음 — 현재 스코프에서 소비하는 곳이 없어 단순함 우선 원칙에 따라 최소 형태로 결정), `Update()`의 `pressedPos.HasValue` 분기(터치/클릭 시작 프레임)에서 1회 발행
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` — 전면 재작성. `private class BallRosterEntry { SkillData SkillData; Ball Ball; }`(SkillData가 null이면 노말볼) 도입, `List<BallRosterEntry> _roster` 신설. `Start()`에서 `InitializeRoster()`로 노말볼 5개(`_normalBallCount` 필드, 기본값 5)를 기본 방향 `Vector2.up`(필드 초기값)으로 게임 시작 즉시 자동 발사. `HandleRelease()`/`LaunchBall()`/`_canLaunch`/`GameManager.OnGameStateChanged` 구독 완전 제거(더 이상 릴리즈가 발사를 트리거하지 않으므로), `InputHandler.OnDrag` 구독만 유지. `LaunchRosterEntry()`(최초 합류 시 위치 세팅+발사+스킬 부착+`_activeBallCount++`), `AddBallToRoster(SkillData)`(신규 특수볼 타입 획득 시 로스터에 볼 1개 추가 후 즉시 발사), `RelaunchBall(Ball)`(귀환 후 재발사 — `PrepareForRelaunch()`+`Launch(_launchDirection)`+스킬 재부착, `_activeBallCount` 변경 없음), `IsRosterMember(Ball)`(로스터 소속 여부 조회, `Ball.cs`가 Ground 충돌 시 귀환 사이클 대상인지 판단하는 데 사용) 신규 공개. `LaunchPoint`/`LaunchDirection` 읽기 전용 프로퍼티 추가. `OnAllBallsReturned`/`ReturnBall()`/`LaunchSubBalls()`는 기존 그대로 유지(진짜 풀 반환이 필요한 경로용, 클러스터 서브볼 등)
+- `Assets/_Project/Scripts/Ball/Ball.cs` — `OnCollisionEnter2D`의 `"Ground"` 분기를 `BallLauncher.Instance.IsRosterMember(this)`로 분기: 로스터 소속 볼만 신규 `ReturnToLaunchPoint()`(속도 방향을 `LaunchPoint` 쪽으로 강제 재설정, 위치는 그대로 — 순간이동 아님) 호출, 로스터 밖의 볼(클러스터 서브볼 등)은 기존과 동일하게 즉시 `ReturnToPool()`. `"Wall"` 분기는 plan.md 확정사항대로 전혀 변경하지 않음. `FixedUpdate()`에 `_isReturning` 상태일 때 `LaunchPoint`까지의 거리를 매 프레임 체크해 도달 시(`RETURN_ARRIVAL_DISTANCE = 0.3f`) `BallLauncher.Instance.RelaunchBall(this)` 호출하는 분기 추가(기존 speed-normalize 라인은 그대로 유지). 신규 `PrepareForRelaunch()`(반사 횟수/서브볼 데미지 초기화 + 장착 스킬 `OnDeactivate()` 후 `Clear()` — `OnSpawn()`과 달리 풀을 거치지 않는 재발사 경로 전용) 공개 메서드 추가, `OnSpawn()`/`OnDespawn()`에 `_isReturning = false` 리셋 추가
+- `Assets/_Project/Scripts/Skill/SkillManager.cs` — `EquipActiveSkill(BallSkillBase)` 반환형을 `void`→`bool`로 변경(신규 장착이면 true, 레벨업/슬롯 초과면 false). 기존 레벨업 분기(`OnActiveSkillsChanged` 미발행)는 그대로 유지, 반환값만 추가
+- `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` — `ApplySkill()`에서 `EquipActiveSkill()`의 반환값을 받아 `true`(신규 타입)일 때만 `BallLauncher.Instance.AddBallToRoster(data)` 호출하도록 연동. 기존 타입 재선택(레벨업)은 로스터 변경 없음 — 로스터 항목이 동일 `SkillData` 에셋 참조를 그대로 들고 있어 재발사 시 `SkillFactory.CreateActiveSkill(entry.SkillData)`가 자동으로 최신 `CurrentLevel`을 반영
+
+**주요 결정사항:**
+- **볼 타입 열거형(`BallType`) 신설 안 함** — 로스터 항목의 "타입 정체성"을 별도 enum 대신 기존 `SkillData` 참조(특수볼은 해당 에셋, 노말볼은 `null`)로 표현. `BallType`↔`ActiveSkillId` 간 변환 코드를 추가로 만들 필요가 없고 기존 `SkillFactory.CreateActiveSkill(SkillData)` 구조를 그대로 재사용 가능해 DevRules.md "단순함 우선"에 더 부합한다고 판단
+- **로스터 데이터 구조**: `BallLauncher` 내부 `private class BallRosterEntry`(중첩 클래스, 2필드)로 최소 구현. `Ball` 자체에는 타입/레벨 필드를 추가하지 않음(정체성은 로스터가, `Ball`은 상태만 담당하는 plan.md의 역할 분담 그대로 채택)
+- **로스터 밖 볼(서브볼) 구분**: `Ball.OnCollisionEnter2D`의 `"Ground"` 분기에서 `BallLauncher.IsRosterMember(this)`로 분기해, `ClusterBallSkill.LaunchSubBalls()`로 생성된 서브볼은 기존과 동일하게 Ground 충돌 시 즉시 풀 반환되도록 유지 — 이번 재설계가 범위 밖인 서브볼 발사 경로의 동작을 바꾸지 않기 위한 선택
+- **귀환 방향 재설정은 Ground 충돌 시점 1회만**: 매 프레임 방향을 강제로 재보정하지 않고, Ground 충돌 순간에만 속도 방향을 `LaunchPoint`로 재설정한 뒤 기존 FixedUpdate의 속력 유지 로직에 맡김(plan.md 문구 "그 시점에... 재설정한다"를 문자 그대로 1회성으로 해석). 이후 Wall 충돌이 재차 발생하면 방향이 다시 바뀔 수 있으나 plan.md가 Wall 분기를 "기존처럼" 그대로 유지하라고 확정했으므로 별도 방어 로직을 추가하지 않음(잠재적 엣지케이스로 보고만 함)
+- **`_activeBallCount` 증감 규칙 재정의**: 로스터 볼은 최초 `LaunchRosterEntry()` 1회만 카운트 증가시키고, 귀환→재발사(`RelaunchBall`)는 볼이 계속 "활성" 상태였으므로 카운트를 건드리지 않음(풀 반환 없이 사이클 반복) — 이 때문에 `OnAllBallsReturned`는 로스터 도입 후 정상 플레이 중에는 사실상 발생하지 않게 됨(research.md에서 이미 예견된 부작용이며, 5단계 작업(다른 에이전트)이 이를 이미 반영해 `WaveManager`/`HUDPanel` 구독을 제거함)
+- **`_canLaunch`/`GameManager.OnGameStateChanged` 구독 제거**: 발사가 더 이상 릴리즈에 종속되지 않고 로스터 초기화(`Start()`)/귀환 시점에 자동으로 일어나므로, 게임 상태 게이팅이 이번 스코프 요구사항에 없어 죽은 필드로 남기지 않고 제거
+- **게임 시작 즉시 자동 발사**는 `GameManager`의 상태 이벤트에 의존하지 않고 `BallLauncher.Start()`에서 무조건 실행하도록 구현(스크립트 실행 순서와 무관하게 "터치 무관, 즉시" 요구사항을 보장하기 위함)
+- `WaveManager.cs`/`MonsterBase.cs`/`HUDPanel.cs`는 지시사항대로 전혀 수정하지 않음(5단계 작업이 이미 동시 진행되어 `OnAllBallsReturned` 구독이 제거되어 있음을 확인)
+
+---
+
+## 2026-07-02
+
+### 작업: 볼 발사 메커닉 재설계 QA 버그 4건 수정
+
+**근거 문서:** `Assets/_Project/Docs/_Task/2026-07-01/21-15_ball-launch-mechanics/plan.md` (신규 plan 없이 기존 plan.md 기준 QA 지적사항 직접 수정 지시)
+
+**변경 파일:**
+- `Assets/_Project/Scripts/Ball/Ball.cs` — `OnCollisionEnter2D`의 `"Wall"` 분기 수정. 기존에는 `_remainingBounces` 소진 시 무조건 `ReturnToPool()`을 호출해 로스터 볼이 영구 이탈하는 Critical 버그가 있었음. `"Ground"` 분기와 동일한 패턴으로 `BallLauncher.Instance.IsRosterMember(this)`를 분기해 로스터 소속 볼은 `ReturnToLaunchPoint()`(귀환 후 재발사), 로스터 밖 볼(서브볼 등)은 기존대로 `ReturnToPool()` 유지. 추가로 `_isReturning`(이미 귀환 중) 상태에서 벽에 부딪히는 경우, 반사 카운트를 건드리지 않고 `ReturnToLaunchPoint()`로 방향만 재계산하도록 분기 최상단에 가드 추가(가장 단순한 처리 — 방향이 벽 충돌로 흐트러져도 다시 LaunchPoint 쪽으로 재조준)
+- `Assets/_Project/Data/BallData.asset` — `_maxBounces: 0` → `_maxBounces: 10`으로 직접 YAML 수정(ScriptableObject 에셋을 텍스트로 직접 편집). `BallSetupEditor.cs:104`가 신규 생성 시 10으로 설정하도록 되어 있었으나 기존 에셋 파일 자체는 0으로 저장되어 있던 데이터 불일치를 해소
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` — 로스터 재설계 과정에서 제거됐던 `GameManager.OnGameStateChanged` 구독을 최소 형태로 재도입. `_currentGameState` 필드 추가, `OnEnable`/`OnDisable`에서 구독/해제, `HandleGameStateChanged(GameManager.GameState state)`로 캐싱. `RelaunchBall(Ball)` 최상단에 `if (_currentGameState != GameManager.GameState.Playing) return;` 가드 추가 — 게임 오버/클리어(Result) 이후 로스터 볼의 재발사만 차단(초기 로스터 발사/신규 볼 합류 경로는 건드리지 않음, plan.md 지시대로 최소 게이팅)
+- `Assets/_Project/Scripts/Skill/SkillManager.cs` — 로스터 모델 도입 후 호출부가 없어진 죽은 코드 `ApplySkillToBall(Ball ball)` 메서드 삭제(Grep으로 호출부 없음을 재확인 후 제거)
+
+**주요 결정사항:**
+- Wall 분기의 `_isReturning` 처리는 "반사 카운트 재체크 불필요, 방향만 재계산"을 가장 단순하게 구현하기 위해 분기 최상단에서 조기 `return`으로 처리 — Ground 충돌로 이미 귀환 모드에 들어간 볼이 벽에 튕겨도 반사 카운트 소모/풀 반환 로직을 거치지 않고 항상 LaunchPoint로 재조준됨
+- `RelaunchBall()` 가드만 추가하고 `LaunchRosterEntry()`/`InitializeRoster()`/`AddBallToRoster()`는 건드리지 않음 — 지시사항이 "RelaunchBall이 실제 재발사를 하지 않도록" 최소 게이팅만 요구했고, 게임 시작 시 최초 발사는 게이팅 대상이 아니므로 범위를 넓히지 않음(단순함 우선)
+- 가드가 걸려 `RelaunchBall`이 조기 반환되면 볼은 `Ball.FixedUpdate()`에서 `_isReturning = false`로 전환된 채 직전 속도(LaunchPoint 방향) 그대로 계속 이동하게 됨 — "정지"가 아니라 "관성 유지"이나, plan.md 지시사항이 "정지 또는 재발사 안 함" 둘 다 허용했고 별도 정지 로직 추가는 과설계로 판단해 채택하지 않음
+
+---
+
+## 2026-07-02
+
+### 작업: 궤적 프리뷰 신규 구현 (`TrajectoryPreview.cs`) — 볼 발사 메커닉 재설계 4단계
+
+**근거 문서:** `Assets/_Project/Docs/_Task/2026-07-01/21-15_ball-launch-mechanics/plan.md` "4단계 — 궤적 프리뷰 신규 컴포넌트" 섹션, `Assets/_Project/Docs/GameplayMechanics.md` 섹션 1
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` — 신규 MonoBehaviour. `Awake()`에서 자식 GameObject 3개(`TrajectoryLine`/`HitDot`/`HitRing`)를 동적 생성해 각각 `LineRenderer`를 스스로 준비(씬 수작업 연결 불필요). `OnEnable`/`OnDisable`에서 `InputHandler.OnAimBegin`(즉시 표시+현재 `BallLauncher.LaunchDirection`으로 계산)/`OnDrag`(매 프레임 갱신)/`OnRelease`(전체 숨김) 구독. `UpdateTrajectory()`가 `LaunchPoint.position`→1차 충돌(`hit1`)→`Vector2.Reflect`로 반사 방향 계산→2차 충돌(`hit2`)까지 계산해 점선(단일 `LineRenderer`, 3점: origin/hit1/hit2)과 `hit2` 위치의 레드닷(`HitDot`)/원형 궤적선(`HitRing`)을 표시. 3차 충돌 이후는 계산하지 않음.
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step6_PlaceManagers()`에 `PlaceManager<TrajectoryPreview>("TrajectoryPreview");` 1줄 추가(기존 Manager 배치 패턴과 동일하게 씬에 자동 생성).
+
+**주요 결정사항:**
+- **Raycast 방식 — `Physics2D.Raycast` 단발 대신 `Physics2D.RaycastAll` + 태그 필터링 채택**: 씬 확인 결과(`ProjectSettings/TagManager.asset`) `Wall`/`Ground`/`Monster` 태그 콜라이더가 모두 레이어 0(`Default`) 하나에만 존재해 레이어마스크로는 분리 불가. 또한 이 프로젝트는 이미 로스터 사이클 구조(노말볼 5개+특수볼)가 상시 화면에 비행 중이므로, 단순 `Physics2D.Raycast` 1회 호출 시 조준선 경로상의 다른 볼 콜라이더(태그 없음/`Untagged`, `Ball` 태그는 `TagManager.asset`에 미등록 상태로 확인됨)가 벽/바닥/몬스터보다 먼저 잡혀 궤적이 잘못 계산되는 문제가 있어, `RaycastAll` 결과를 `fraction` 기준 정렬 후 `Wall`/`Ground`/`Monster` 태그를 가진 첫 콜라이더만 유효한 충돌로 채택하는 방식으로 대체. 이는 지시문의 "볼 자신의 콜라이더 제외" 요구를 태그 필터링으로 자연스럽게 만족.
+- **점선 렌더링 — 런타임 생성 텍스처 + `LineRenderer.textureMode = Tile`**: 커스텀 셰이더 없이 `Sprites/Default`(Built-in RP, 프로젝트에 URP 미적용 확인) 머티리얼에 4x1 픽셀 흑백 텍스처(앞 절반 불투명/뒤 절반 투명)를 입히고 `material.mainTextureScale.x = 1/DASH_WORLD_SIZE`로 대시 간격을 일정하게 유지. 시작점→1차 충돌→2차 충돌 3점을 하나의 `LineRenderer`로 이어 그려 반사 지점에서도 대시가 자연스럽게 이어지도록 함.
+- **레드닷/원형 궤적선 — 별도 `LineRenderer` 2개로 원형 점열 생성**: `HitDot`은 반지름 대비 두꺼운 선 두께로 채워진 것처럼 보이게, `HitRing`은 얇은 선 두께의 고리로 구현(둘 다 `loop = true`). 스프라이트 에셋 신규 추가 없이 지시문에서 허용한 "LineRenderer로 그린 작은 도트" 방식 채택.
+- **`OnRelease` 시 프리뷰 숨김 처리**: `GameplayMechanics.md`/plan.md 주의사항에는 릴리즈 후 유지 여부가 불명확하다고 되어 있었으나, 이번 작업 지시문 6번("조준하지 않을 때(터치 안 함)는 전부 숨긴다")이 명확히 규정하여 이를 그대로 따름.
+- 색상/두께/반지름 등은 `[SerializeField]`로 노출해 Inspector에서 추후 시각적 튜닝 가능하도록 함(디자인 에이전트 조정 대상).
+- `InputHandler.cs`/`BallLauncher.cs`는 기존 완성 코드를 그대로 활용했고 수정하지 않음.
+
+---
+
+## 2026-07-02
+
+### 작업: BallLauncher 로스터 초기 발사 시간차 적용
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` 수정 (신규 파일 없음)
+- 게임 시작 시 노말볼 5개가 한 프레임에 완전히 겹쳐 동시 발사되던 것을 `_rosterLaunchInterval`초 간격으로 순차 발사하도록 변경
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs`
+  - `[SerializeField] private float _rosterLaunchInterval = 0.1f;` 필드 추가 (Inspector 노출)
+  - `private void InitializeRoster()` → `private IEnumerator CoInitializeRoster()`로 전환 (DevRules.md 코루틴 네이밍 `Co + PascalCase` 준수), 루프 내 `LaunchRosterEntry` 호출 직후 마지막 볼이 아니면 `yield return new WaitForSeconds(_rosterLaunchInterval)` 삽입
+  - `Start()`에서 `InitializeRoster()` 직접 호출 → `StartCoroutine(CoInitializeRoster())`로 교체
+  - `using System.Collections;` 추가 (`IEnumerator` 사용을 위함)
+  - `AddBallToRoster(SkillData)`는 지시사항대로 건드리지 않음 (볼 1개만 추가하는 경로라 시간차 불필요)
+
+**주요 결정사항:**
+- 시간차는 마지막 볼 발사 후에는 대기하지 않도록 `i < _normalBallCount - 1` 조건으로 처리 — 불필요한 프레임 지연 방지
+- Grep으로 `InitializeRoster` 참조를 전수 확인해 BallLauncher.cs 내부(Start 호출부, 메서드 정의)만 존재함을 검증 후 안전하게 변경

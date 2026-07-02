@@ -16,4 +16,4 @@ MonoBehaviour:
   _speed: 10
   _criticalChance: 0
   _criticalMultiplier: 1.5
-  _maxBounces: 0
+  _maxBounces: 10

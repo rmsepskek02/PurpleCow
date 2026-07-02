@@ -22,13 +22,15 @@ public class SkillManager : Singleton<SkillManager>
         _passiveSkills = new List<PassiveSkillBase>();
     }
 
-    public void EquipActiveSkill(BallSkillBase skill)
+    // 반환값: 로스터에 새 볼을 추가해야 하는 "신규 장착"이면 true, 기존 타입의 "레벨업"이면 false.
+    public bool EquipActiveSkill(BallSkillBase skill)
     {
         var existing = _activeSkills.Find(s => s.SkillData.SkillId == skill.SkillData.SkillId);
-        if (existing != null) { existing.SkillData.LevelUp(); return; }
-        if (_activeSkills.Count >= 4) return;
+        if (existing != null) { existing.SkillData.LevelUp(); return false; }
+        if (_activeSkills.Count >= 4) return false;
         _activeSkills.Add(skill);
         OnActiveSkillsChanged?.Invoke(_activeSkills);
+        return true;
     }
 
     public bool CanEquipActive => _activeSkills.Count < 4;
@@ -50,12 +52,6 @@ public class SkillManager : Singleton<SkillManager>
         skill.Remove();
         _passiveSkills.Remove(skill);
         OnPassiveSkillsChanged?.Invoke(_passiveSkills);
-    }
-
-    public void ApplySkillToBall(Ball ball)
-    {
-        foreach (var skill in _activeSkills)
-            ball.AddSkill(SkillFactory.CreateActiveSkill(skill.SkillData));
     }
 
     public void AddDamageMultiplier(float value)    => _damageMultiplierBonus += value;

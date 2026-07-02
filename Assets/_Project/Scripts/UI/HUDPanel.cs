@@ -27,7 +27,7 @@ public class HUDPanel : MonoBehaviour
     {
         WaveManager.OnWaveStarted         += HandleWaveStarted;
         WaveManager.OnMonsterCountChanged  += HandleMonsterCountChanged;
-        BallLauncher.OnAllBallsReturned   += HandleAllBallsReturned;
+        GameManager.OnGameStateChanged     += HandleGameStateChanged;
         UIManager.OnScoreChanged          += HandleScoreChanged;
     }
 
@@ -35,7 +35,7 @@ public class HUDPanel : MonoBehaviour
     {
         WaveManager.OnWaveStarted         -= HandleWaveStarted;
         WaveManager.OnMonsterCountChanged  -= HandleMonsterCountChanged;
-        BallLauncher.OnAllBallsReturned   -= HandleAllBallsReturned;
+        GameManager.OnGameStateChanged     -= HandleGameStateChanged;
         UIManager.OnScoreChanged          -= HandleScoreChanged;
     }
 
@@ -43,7 +43,7 @@ public class HUDPanel : MonoBehaviour
     {
         _totalWaves = WaveManager.Instance.TotalWaves;
         UpdateScore(0);
-        SetLaunchIndicatorVisible(false);
+        SetLaunchIndicatorVisible(GameManager.Instance.CurrentState == GameManager.GameState.Playing);
     }
 
     private void HandleWaveStarted(int waveNumber)
@@ -52,9 +52,9 @@ public class HUDPanel : MonoBehaviour
         SetLaunchIndicatorVisible(true);
     }
 
-    private void HandleAllBallsReturned()
+    private void HandleGameStateChanged(GameManager.GameState state)
     {
-        SetLaunchIndicatorVisible(false);
+        SetLaunchIndicatorVisible(state == GameManager.GameState.Playing);
     }
 
     private void HandleMonsterCountChanged(int remaining, int total)

@@ -10,7 +10,7 @@ public class IceBallSkill : BallSkillBase
         if (UnityEngine.Random.value < LevelData.Value1)
         {
             target.ApplyFreeze(LevelData.Value2);
-            target.ApplySlow(Mathf.RoundToInt(LevelData.Value2), LevelData.Value3);
+            target.ApplySlow(LevelData.Value2, LevelData.Value3);
             target.TakeDamage(_ball.LastDamage * LevelData.Value3);
         }
     }

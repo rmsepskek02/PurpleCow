@@ -8,14 +8,14 @@ public class MonsterBase : MonoBehaviour, IPoolable
 
     private float _currentHp;
     private bool  _isDead;
-    private int   _frozenTurnsRemaining;
-    private int   _slowTurnsRemaining;
+    private float _frozenSecondsRemaining;
+    private float _slowSecondsRemaining;
     private float _slowPercent;
     private float _bonusCritChance;
 
     public float CurrentHp    => _currentHp;
     public bool  IsAlive      => !_isDead;
-    public bool  IsFrozen     => _frozenTurnsRemaining > 0;
+    public bool  IsFrozen     => _frozenSecondsRemaining > 0f;
     public MonsterData Data   => _monsterData;
 
     public static event Action<MonsterBase> OnMonsterDied;
@@ -23,12 +23,12 @@ public class MonsterBase : MonoBehaviour, IPoolable
 
     public void OnSpawn()
     {
-        _currentHp             = _monsterData.Hp;
-        _isDead                = false;
-        _frozenTurnsRemaining  = 0;
-        _slowTurnsRemaining    = 0;
-        _slowPercent           = 0f;
-        _bonusCritChance       = 0f;
+        _currentHp              = _monsterData.Hp;
+        _isDead                 = false;
+        _frozenSecondsRemaining = 0f;
+        _slowSecondsRemaining   = 0f;
+        _slowPercent            = 0f;
+        _bonusCritChance        = 0f;
         OnHpChanged?.Invoke(_currentHp, _monsterData.Hp);
     }
 
@@ -64,20 +64,14 @@ public class MonsterBase : MonoBehaviour, IPoolable
         OnMonsterDied?.Invoke(this);
     }
 
-    public void ApplyFreeze(int turns)
-    {
-        _frozenTurnsRemaining = Mathf.Max(_frozenTurnsRemaining, turns);
-    }
-
     public void ApplyFreeze(float seconds)
     {
-        // 초 기반은 turns 기반으로 근사 변환 (1턴=1초 가정)
-        ApplyFreeze(Mathf.RoundToInt(seconds));
+        _frozenSecondsRemaining = Mathf.Max(_frozenSecondsRemaining, seconds);
     }
 
-    public void ApplySlow(int turns, float percent)
+    public void ApplySlow(float seconds, float percent)
     {
-        _slowTurnsRemaining = turns;
+        _slowSecondsRemaining = seconds;
         _slowPercent = percent;
     }
 
@@ -109,22 +103,27 @@ public class MonsterBase : MonoBehaviour, IPoolable
         }
     }
 
-    public void MoveDown(float distance)
+    private void Update()
     {
-        if (IsFrozen)
+        if (_isDead)
+            return;
+
+        float deltaTime = Time.deltaTime;
+
+        if (_frozenSecondsRemaining > 0f)
         {
-            _frozenTurnsRemaining--;
+            _frozenSecondsRemaining -= deltaTime;
             return;
         }
 
-        if (_slowTurnsRemaining > 0)
+        float speed = _monsterData.MoveSpeed;
+
+        if (_slowSecondsRemaining > 0f)
         {
-            distance *= (1f - _slowPercent);
-            _slowTurnsRemaining--;
+            speed *= (1f - _slowPercent);
+            _slowSecondsRemaining -= deltaTime;
         }
 
-        transform.position += (Vector3)(Vector2.down * distance);
+        transform.position += Vector3.down * speed * deltaTime;
     }
-
-
 }

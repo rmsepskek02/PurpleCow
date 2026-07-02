@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 
 public class InputHandler : Singleton<InputHandler>
 {
+    public static event Action OnAimBegin;
     public static event Action<Vector2> OnDrag;
     public static event Action OnRelease;
 
@@ -44,6 +45,7 @@ public class InputHandler : Singleton<InputHandler>
         {
             _dragStartPosition = pressedPos.Value;
             _isDragging = true;
+            OnAimBegin?.Invoke();
         }
 
         if (currentPos.HasValue && _isDragging)

@@ -410,6 +410,7 @@ public static class SceneSetupEditor
         PlaceManager<SkillManager>("SkillManager");
         PlaceManager<UIManager>("UIManager");
         PlaceManager<CharacterManager>("CharacterManager");
+        PlaceManager<TrajectoryPreview>("TrajectoryPreview");
     }
 
     private static void PlaceManager<T>(string objName) where T : Component
