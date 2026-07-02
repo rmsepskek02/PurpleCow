@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,6 +10,7 @@ public class BallLauncher : Singleton<BallLauncher>
     [SerializeField] private int _initialPoolSize = 10;
     [SerializeField] private Transform _launchPoint;
     [SerializeField] private int _normalBallCount = 5;
+    [SerializeField] private float _rosterLaunchInterval = 0.1f;
 
     private ObjectPool<Ball> _ballPool;
     private Vector2 _launchDirection = Vector2.up;
@@ -38,7 +40,7 @@ public class BallLauncher : Singleton<BallLauncher>
 
     private void Start()
     {
-        InitializeRoster();
+        StartCoroutine(CoInitializeRoster());
     }
 
     private void OnEnable()
@@ -64,7 +66,8 @@ public class BallLauncher : Singleton<BallLauncher>
     }
 
     // 게임 시작 즉시(터치 무관) 노말볼 5개를 기본 방향(Vector2.up)으로 자동 발사해 사이클을 시작한다.
-    private void InitializeRoster()
+    // 5개를 동시에 발사하지 않고 _rosterLaunchInterval 간격으로 순차 발사한다.
+    private IEnumerator CoInitializeRoster()
     {
         for (int i = 0; i < _normalBallCount; i++)
         {
@@ -72,6 +75,9 @@ public class BallLauncher : Singleton<BallLauncher>
             var entry = new BallRosterEntry { SkillData = null, Ball = ball };
             _roster.Add(entry);
             LaunchRosterEntry(entry, _launchDirection);
+
+            if (i < _normalBallCount - 1)
+                yield return new WaitForSeconds(_rosterLaunchInterval);
         }
     }
 

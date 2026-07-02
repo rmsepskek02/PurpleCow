@@ -525,3 +525,25 @@
 - **`OnRelease` 시 프리뷰 숨김 처리**: `GameplayMechanics.md`/plan.md 주의사항에는 릴리즈 후 유지 여부가 불명확하다고 되어 있었으나, 이번 작업 지시문 6번("조준하지 않을 때(터치 안 함)는 전부 숨긴다")이 명확히 규정하여 이를 그대로 따름.
 - 색상/두께/반지름 등은 `[SerializeField]`로 노출해 Inspector에서 추후 시각적 튜닝 가능하도록 함(디자인 에이전트 조정 대상).
 - `InputHandler.cs`/`BallLauncher.cs`는 기존 완성 코드를 그대로 활용했고 수정하지 않음.
+
+---
+
+## 2026-07-02
+
+### 작업: BallLauncher 로스터 초기 발사 시간차 적용
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` 수정 (신규 파일 없음)
+- 게임 시작 시 노말볼 5개가 한 프레임에 완전히 겹쳐 동시 발사되던 것을 `_rosterLaunchInterval`초 간격으로 순차 발사하도록 변경
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs`
+  - `[SerializeField] private float _rosterLaunchInterval = 0.1f;` 필드 추가 (Inspector 노출)
+  - `private void InitializeRoster()` → `private IEnumerator CoInitializeRoster()`로 전환 (DevRules.md 코루틴 네이밍 `Co + PascalCase` 준수), 루프 내 `LaunchRosterEntry` 호출 직후 마지막 볼이 아니면 `yield return new WaitForSeconds(_rosterLaunchInterval)` 삽입
+  - `Start()`에서 `InitializeRoster()` 직접 호출 → `StartCoroutine(CoInitializeRoster())`로 교체
+  - `using System.Collections;` 추가 (`IEnumerator` 사용을 위함)
+  - `AddBallToRoster(SkillData)`는 지시사항대로 건드리지 않음 (볼 1개만 추가하는 경로라 시간차 불필요)
+
+**주요 결정사항:**
+- 시간차는 마지막 볼 발사 후에는 대기하지 않도록 `i < _normalBallCount - 1` 조건으로 처리 — 불필요한 프레임 지연 방지
+- Grep으로 `InitializeRoster` 참조를 전수 확인해 BallLauncher.cs 내부(Start 호출부, 메서드 정의)만 존재함을 검증 후 안전하게 변경
