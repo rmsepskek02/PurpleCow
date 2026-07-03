@@ -526,3 +526,18 @@
 ### 주요 결정사항
 - GameplayMechanics.md 섹션 1(원본 스펙)과 실제 구현 코드가 이미 일치하는 상태였으므로, 신규 섹션은 "스펙 재서술"이 아니라 "구현 관점에서의 시각/Inspector 규칙"에 집중해서 작성 (GameplayMechanics.md 링크로 원본 스펙 참조 위임)
 - 기존 UIRules.md 섹션 8/9/10과 동일한 톤(담당 클래스 명시 → bullet 설명 → 구현 방식/표) 유지
+
+---
+
+### 작업 내용 (추가)
+- 배경/해상도 대응 task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/research.md`
+- 사용자가 대화 중 이미 확정한 조사 내용(ProjectSettings.asset Player Settings 값, Background_1_Stage.png/.meta, SampleScene.unity Background/Main Camera 상태, SceneSetupEditor.cs Step4_PlaceBackground, targetUI 레퍼런스 비교, 정투영 카메라 뷰포트 계산, 사용자 확정 제약조건 3+1가지, Cover-Fit 합의 방향)을 TaskRules.md 구조(현재 상태/관련 파일 및 의존성/문제점 구현 대상 파악/결론)에 맞게 정리. 새로운 조사는 추가하지 않고, 언급된 파일들(ProjectSettings.asset 46/62-65/76-77번째 줄, Background_1_Stage.png.meta, SampleScene.unity Background Transform 906-907번째 줄·Main Camera Transform 1276번째 줄·Camera 1225-1226/1250-1251번째 줄, SceneSetupEditor.cs 344-368번째 줄)을 직접 Read로 재확인하여 라인 번호를 정확히 인용
+
+### 결과
+- research.md 생성 완료: Player Settings 미고정(Auto Rotation 4방향, 가로 기본 해상도) + Background 스프라이트 고정 크기 배치(스케일 조정 로직 없음) 2대 원인 정리, 정투영 카메라 뷰포트 공식(세로 고정=orthoSize×2, 가로 가변=orthoSize×2×aspect) 및 Cover-Fit 해결 방향(구체 구현은 plan.md로 이월)까지 포함
+- AGENTS.md는 "Task 문서" 섹션이 이미 "개별 task 폴더 목록을 별도로 관리하지 않음" 방침으로 되어 있어 이번에는 인덱스 추가 작업 없이 완료
+
+### 주요 결정사항
+- 사용자가 이미 대화로 확정한 사실관계만 반영하고 추가 조사는 하지 않되, 정확성을 위해 언급된 파일들은 직접 Read로 재확인하여 라인 번호를 검증 후 인용
+- Cover-Fit 스케일 로직 + 카메라 배경색 보정 + Player Settings Portrait 고정, 이 세 가지의 "구체적 구현 방식"은 research.md에서 확정하지 않고 plan.md 단계로 명시적으로 이월

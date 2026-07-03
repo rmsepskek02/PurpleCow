@@ -1,0 +1,97 @@
+# Research — 배경/해상도 대응
+
+이 문서는 다양한 Android 기기 종횡비에서 배경(Background_1_Stage.png)이 화면을 여백 없이 채우지 못하는 문제와, Player Settings의 화면 방향이 세로로 고정되어 있지 않은 문제를 다룬다. 현재 씬/설정/에셋 상태를 조사하고, 원본 게임 레퍼런스와 비교하여 원인을 파악한 뒤 해결 방향의 큰 틀을 정리한다.
+
+## 현재 상태
+
+### Player Settings — 화면 방향 미고정
+
+`ProjectSettings/ProjectSettings.asset` 확인 결과, 아래 값들이 세로 모바일 핀볼 게임에 맞게 수정된 적이 없는 Unity 기본값 그대로 남아 있다.
+
+- `defaultScreenWidth: 1920`, `defaultScreenHeight: 1080` (46번째 줄 근방) — 가로(landscape) 해상도가 기본값 그대로다.
+- `allowedAutorotateToPortrait: 1`, `allowedAutorotateToPortraitUpsideDown: 1`, `allowedAutorotateToLandscapeRight: 1`, `allowedAutorotateToLandscapeLeft: 1` (62~65번째 줄 근방) — 네 방향 모두 1로 켜져 있어 Auto Rotation 상태이며, Portrait 고정이 전혀 되어 있지 않다.
+- `androidDefaultWindowWidth: 1920`, `androidDefaultWindowHeight: 1080` (76~77번째 줄 근방) — 안드로이드 기본 창 크기도 가로 기준이다.
+
+### Background 에셋 현황
+
+`Assets/_Project/Sprites/` 전체를 확인한 결과 `Assets/_Project/Sprites/Background/Background_1_Stage.png`가 프로젝트 내 유일한 배경 에셋이다. 다른 배경 관련 파일은 없다.
+
+- `.meta`(`Background_1_Stage.png.meta`) 기준: 텍스처 크기 2048x2048 정사각형, `spriteMode: 2`(Single), `spritePixelsToUnits: 100`, `sRGBTexture: 1`, `spriteBorder: {x:0, y:0, z:0, w:0}`(9-slice 미설정), `DrawMode Simple`.
+- 픽셀 샘플링 결과, 이미지 가장자리(모서리 4곳 + 상하좌우 중앙)는 전부 RGB (9~16, 12~16, 12~17) 대역, alpha 255의 거의 검정에 가까운 완전 불투명 색상이었다. 반면 중앙은 (79, 113, 97) 정도의 이끼색이다. 즉 이미지 자체에 비네트(가장자리로 갈수록 어두워지는) 효과가 이미 구워져 있으며, 가장자리는 형태 없는 단색 페이드에 가깝다.
+
+### 씬 배치 상태 (`Assets/Scenes/SampleScene.unity`)
+
+- Background 오브젝트(`GameObject 468452997`, SpriteRenderer `468452998`, Transform `468452999`)
+  - `m_LocalPosition: {x: 0, y: 0, z: 1}`, `m_LocalScale: {x: 1, y: 1, z: 1}` — 스케일 조정 없이 원본 크기(2048px ÷ 100 PPU = 20.48 x 20.48 월드 유닛) 그대로 배치되어 있다 (`m_Size: {x: 20.48, y: 20.48}`, 892번째 줄).
+- Main Camera(`GameObject 519420028`, Camera `519420031`, Transform 1276번째 줄)
+  - `m_LocalPosition: {x: 0, y: 0, z: -10}` (1276번째 줄)
+  - `orthographic: 1`, `orthographic size: 10` (1250~1251번째 줄)
+  - `m_ClearFlags: 2`(Solid Color), `m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}` (1225~1226번째 줄) — 푸르스름한 회색이다.
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`의 `Step4_PlaceBackground()` 메서드(344~368번째 줄)를 보면 Background 오브젝트를 생성하고 스프라이트를 할당(360~363번째 줄)만 할 뿐, 카메라 뷰포트에 맞춘 스케일 조정 로직이 전혀 없다.
+
+### 레퍼런스 이미지 비교
+
+`Assets/_Project/Docs/targetUI/` 폴더에 신규 추가된 `KakaoTalk_20260703_115951058_01/02/03.jpg`(실제 원본 게임 스테이지 1 "깊은 숲" 플레이 화면, 해상도 1080x2340)와 비교한 결과는 다음과 같다.
+
+- 배경 아트 테마(짙은 이끼색, 뿌리/덩굴 장식)는 프로젝트의 `Background_1_Stage.png`와 일치한다. 잘못된 에셋을 쓰고 있는 것은 아니다.
+- 다만 레퍼런스에서는 배경이 화면 상하좌우 끝까지(HUD 영역, 캐릭터 영역까지) 전부 숲 테마로 꽉 채워져 있고, 밝은 격자 플레이필드는 화면 중간 부분만 차지한다.
+- 반면 프로젝트의 `Background_1_Stage.png`는 딱 그 격자 플레이필드 부분 + 최소 테두리만 담은 정사각형 크롭으로, 화면 전체를 채우는 확장 배경 아트가 아니다. 즉 제공된 리소스 자체가 "격자 텍스처" 하나만 주어진 것으로 판단된다.
+
+## 관련 파일 및 의존성
+
+| 파일 | 역할 |
+|---|---|
+| `ProjectSettings/ProjectSettings.asset` | Player Settings. 화면 방향/기본 해상도 값이 정의되어 있음 |
+| `Assets/_Project/Sprites/Background/Background_1_Stage.png` | 프로젝트 내 유일한 배경 스프라이트 에셋 (2048x2048) |
+| `Assets/_Project/Sprites/Background/Background_1_Stage.png.meta` | 스프라이트 임포트 설정 (PPU=100, Simple 모드 등) |
+| `Assets/Scenes/SampleScene.unity` | Background/Main Camera 오브젝트가 배치된 씬 |
+| `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` | 씬 자동 구성 에디터 스크립트. `Step4_PlaceBackground()`가 Background 배치를 담당하나 스케일 로직 없음 |
+| `Assets/_Project/Docs/targetUI/` | 원본 게임 레퍼런스 스크린샷 (배경 아트 범위 비교 기준) |
+| `PurpleCow_클라이언트_채용과제.pdf` | 공식 요구사항 스펙. 타겟 플랫폼을 Android로만 명시하고 특정 해상도는 못박지 않음 |
+
+## 문제점 / 구현 대상 파악
+
+### 문제 1 — Player Settings 화면 방향 미고정
+
+PDF 스펙은 타겟 플랫폼을 Android로만 명시할 뿐 특정 해상도를 못박지 않는다. 즉 다양한 Android 기기 종횡비에서 원본 게임과 비슷하게 보여야 한다. 그런데 현재 Player Settings는 Auto Rotation 상태(가로/세로 4방향 모두 허용)이며 기본 해상도도 가로(1920x1080) 기준으로 남아 있다. 세로 모바일 핀볼 게임임에도 Portrait 고정이 되어 있지 않아, 아래 문제 2의 해결 방향(카메라 뷰포트 계산 기반 배경 스케일링)이 항상 성립하려면 이 부분이 선행되어야 한다.
+
+### 문제 2 — Background 스프라이트가 화면 전체를 채우는 구조가 아님
+
+정투영(orthographic) 카메라 특성상 카메라 뷰포트는 다음과 같이 계산된다.
+
+- 세로 방향 뷰포트 크기는 기기와 무관하게 항상 고정 = `orthographicSize × 2` = 20 유닛 (현재 설정 기준)
+- 가로 방향 뷰포트 크기만 기기 종횡비(aspect)에 따라 가변 = `orthographicSize × 2 × aspect`
+  - 예: 1080x1920 세로 기준 aspect=0.5625 → 가로 11.25 유닛
+  - 더 좁고 긴 최신 기기(예: 1080x2340, aspect≈0.4615)는 가로 약 9.2 유닛로 더 좁아짐
+- 즉 "기기별 해상도 대응" 문제는 사실상 가로 폭 하나만 신경 쓰면 되는 1차원 문제다.
+
+현재 배경(20.48 x 20.48 정사각형, 스케일 없음)은 세로 방향으로는 카메라 뷰(20유닛) 대비 상하 각 0.24유닛의 타이트한 여유만 있고, 가로 방향은 정사각형이라 표준 세로 기기에서는 넉넉하지만, 스케일 조정 로직이 없어 기기 종횡비가 달라지면(특히 더 좁고 긴 기기) 대응이 안 된다. 배경이 고정 크기로 배치되어 있기 때문이다.
+
+### 사용자가 제시한 요구사항 (해결 방향의 제약조건)
+
+논의 과정에서 사용자가 명시적으로 확인해준 조건은 다음과 같다.
+
+1. 기기별로 해상도가 다르기 때문에 그에 맞게 조절되어야 한다.
+2. 화면상에 비어있는 여백이 있으면 안 된다 (실제 게임 이미지에는 그런 부분이 보이지 않는다).
+3. 보유 중인 에셋이 잘리는 현상도 없어야 한다 (실제 게임 이미지는 상하좌우 잘리는 부분이 없는 것으로 보인다).
+4. 새 에셋 제작은 이번 범위에서 제외한다. 현재 보유한 에셋만 사용한다.
+
+### 범위에서 제외한 사항
+
+스크린샷에서 발견된 화면 중앙의 작은 검은 사각형 UI 글리치(텍스트/이미지 참조 누락으로 추정)는 배경/해상도 문제와 원인이 다를 가능성이 높다. 사용자와 논의 결과 이번 task 범위에서 제외하고 별도 이슈로 남기기로 했다.
+
+## 결론
+
+원인은 크게 두 가지로 정리된다.
+
+1. Player Settings가 Auto Rotation 상태로 남아 있어 Portrait 고정이 되어 있지 않다. 이 때문에 카메라 뷰포트 계산이 항상 세로 기준으로 성립한다고 보장할 수 없다.
+2. Background 스프라이트가 카메라 뷰포트 크기에 맞춰 스케일되는 로직 없이 원본 크기(20.48 x 20.48, 스케일 1)로 고정 배치되어 있어, 기기 종횡비가 표준 세로 비율을 벗어나면(특히 더 좁고 긴 화면) 배경이 화면을 다 덮지 못하고 여백이 생길 수 있다.
+
+논의를 통해 사용자와 합의된 해결 방향의 큰 틀은 다음과 같다 (구체적인 구현 방식은 이 문서에서 확정하지 않고 plan.md에서 다룬다).
+
+- 정투영 카메라의 세로 고정 특성을 활용해, 런타임에 카메라의 실제 뷰포트 크기(가로 = `orthoSize × 2 × aspect`, 세로 = `orthoSize × 2`)를 계산하고, 배경 스프라이트를 "Cover" 방식(`scale = max(뷰포트가로 / 이미지가로, 뷰포트세로 / 이미지세로)`)으로 스케일해서 항상 화면을 완전히 덮도록 한다.
+- 잘리는 부분은 항상 이미지 가장자리의 형태 없는 단색 비네트 영역뿐이므로(위 픽셀 샘플링 결과 근거), 실제로는 "잘린 티"가 나지 않을 것으로 예상된다.
+- 카메라 배경색을 현재 푸른 회색(0.192, 0.302, 0.475)에서 이미지 가장자리 실측 색상과 가까운 거의 검정(약 0.05, 0.06, 0.06)으로 변경해 혹시 모를 여백 노출에 대한 안전망을 확보한다.
+- Player Settings를 Portrait로 고정해야 위 Cover-Fit 계산이 항상 성립한다. 가로 모드가 되면 정사각 이미지로는 화면을 커버할 수 없기 때문이다.
+
+이 세 가지(Cover-Fit 스케일 로직 + 카메라 배경색 보정 + Player Settings Portrait 고정)를 이번 task의 대략적인 해결 방향으로 삼고, 구체적인 구현 대상(어떤 스크립트에 넣을지, 언제 재계산할지 등)은 plan.md에서 다룬다.
