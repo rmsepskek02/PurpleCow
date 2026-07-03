@@ -641,3 +641,21 @@
 - `GameplayMechanics.md`/`UIRules.md`도 갱신하지 않음: 천장 벽은 별도 게임플레이 메커닉이나 UI 규칙이 아니라 단순 씬 경계 콜라이더 설정이라 두 문서의 성격과 맞지 않는다고 판단
 - `AGENTS.md`도 갱신하지 않음: 기존 정책(개별 task 폴더는 별도 인덱싱하지 않음, "Task 문서" 섹션에 명시)에 따라 이번 task 폴더도 별도 등록 불필요로 판단
 - 코드(`SceneSetupEditor.cs`)와 씬(`SampleScene.unity`)은 이미 수정/반영 완료된 상태이므로 이번 작업에서는 전혀 건드리지 않고 Read하지도 않음(요청 문서 내용 그대로 신뢰해 반영)
+
+---
+
+### 작업 내용 (추가)
+- 배경/해상도 대응 task research.md/plan.md를 "최종 확정 설계"로 갱신 — 이전 논의(Cover→Contain→Stretch 전환, CameraFitter 도입)는 삭제하지 않고 그대로 유지한 채, 그 뒤를 잇는 신규 섹션들로 최종 결론을 정리
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/research.md`, `.../plan.md`
+- 작성 전 `TaskRules.md`(구조 규칙), 두 문서 현재 전문, 실제 코드(`BackgroundFitter.cs` — 이미 `Start()`에서 비균등 Stretch로 구현되어 있음 확인, `CameraFitter.cs` — `Awake()`에서 `Mathf.Max(base, requiredHalfWidth/aspect)` 그대로 존재, `SceneSetupEditor.cs` — `Step6_SetupCameraFitter()`가 실제로 연동되어 있음)를 Read로 재확인
+
+### 결과
+- research.md: "레퍼런스 이미지 비교" 다음에 "배경 이미지 격자 경계 실측(Python PIL 픽셀 스캔)" 신규 소제목 추가(가로 x=420~1613→월드 -6.04~+5.89, 세로 y=469~1557→월드 +5.55~-5.33, 기존 Wall 좌표(x=±5.5, Ground y=-10, Wall_Top y=8)가 실측 격자 경계와 불일치, 특히 Ground/Wall_Top이 장식 영역에 위치했음을 확인). "문제점" 섹션에 "문제 4 — Wall 좌표와 배경 격자 그림 경계 불일치", "배경 Stretch 방식과 Wall 좌표의 연동 문제", "CameraFitter가 불필요해짐(수학적으로 도출된 결론 — Wall/카메라 절반폭 비율이 orthographic size와 무관하게 항상 일정, 가로 약 0.29·세로 약 0.54로 항상 화면 안)", "참고 — 레퍼런스 이미지 비율 정밀 비교는 보류" 4개 신규 소제목 추가. "결론"에 "이후 논의로 도출된 최종 결론" 신규 문단 추가 — 최종 확정 설계 5가지(CameraFitter 삭제, orthographic size 10 고정 유지, BackgroundFitter 코드 변경 없이 유지, 신규 WallFitter 작성, SceneSetupEditor 갱신)를 요약하고 상세 스펙은 plan.md로 위임
+- plan.md: 서두/구현 목표에 최종 확정 목표 문단 추가. 기존 "5단계 — CameraFitter 신규 작성 및 연동"은 삭제하지 않고 제목에 "(폐기됨)" 표시 + 폐기 사유 설명 문단만 추가, 내용은 시행착오 기록으로 보존. 신규 "6단계 — WallFitter 신규 작성 및 연동(최종 확정 설계)" 추가 — `Assets/_Project/Scripts/Core/WallFitter.cs`(필드 `_targetCamera`/`_backgroundSpriteRenderer`/`_wallLeft`/`_wallRight`/`_wallTop`/`_ground`/`_nativeLeftX=-6.04f`/`_nativeRightX=5.89f`/`_nativeTopY=5.55f`/`_nativeBottomY=-5.33f`, `Start()`에서 camSize/spriteSize로 scaleX·scaleY 계산 후 `SetX`/`SetY` 헬퍼로 4개 Transform 재배치, null 방어), `SceneSetupEditor.cs` 연동(`Step6_SetupCameraFitter()` → `Step6_SetupWallFitter()` 교체, `GameObject.Find`로 Background/Wall_Left/Wall_Right/Wall_Top/Ground 탐색해 참조 연결, `ConnectBackgroundFitterRefs()`와 동일한 SerializedObject 패턴 재사용). "예상 변경/생성 파일 목록" 갱신(`CameraFitter.cs` 삭제+.meta, `WallFitter.cs` 신규, `BackgroundFitter.cs`는 변경 없음으로 정정, `SceneSetupEditor.cs`/`SampleScene.unity` 수정). "주의사항"에 CameraFitter 순서 보장 항목을 "(폐기됨)"으로 표시하고 WallFitter는 BackgroundFitter와 실행 순서 의존성이 없음을 명시하는 항목, 레퍼런스 정밀 비교 보류 및 실측값 4개 미세조정 가능성 항목 추가
+
+### 주요 결정사항
+- "이전 논의는 시행착오 과정이므로 지우지 말고 그 뒤에 최종 확정 설계로 이어지는 흐름으로 정리"라는 사용자 지시에 따라, 기존 Cover-Fit/CameraFitter 관련 서술은 문구 하나도 삭제하지 않고 전부 유지한 채 새 소제목/문단만 순서대로 추가하는 방식으로 편집
+- CameraFitter가 실제로는 아직 코드/씬에 남아 있는 상태(Read로 확인)이므로, plan.md "예상 변경/생성 파일 목록"에서 `CameraFitter.cs`를 "삭제" 대상으로, `SampleScene.unity`를 "Main Camera에서 CameraFitter 컴포넌트 제거 + orthographic size 10 확인/유지" 대상으로 명시해 향후 dev 에이전트가 실제로 무엇을 지워야 하는지 헷갈리지 않도록 구체화
+- BackgroundFitter.cs는 실제 코드가 이미 Stretch(비균등 scaleX/scaleY) 방식으로 구현되어 있음을 확인했으므로, plan.md 파일 목록에서 기존 "수정(Awake→Start 변경)" 문구를 "변경 없음 — 최종 설계에서 그대로 유지"로 정정
+- 이번 작업은 문서만 다루며 실제 코드/씬 파일(`CameraFitter.cs` 삭제, `WallFitter.cs` 생성 등)은 건드리지 않음 — TaskRules.md 절차상 plan.md는 사용자의 명시적 승인 전까지 구현으로 이어지지 않음
+- AGENTS.md는 개별 task 폴더를 별도 인덱싱하지 않는 기존 방침이라 이번에도 갱신하지 않음
