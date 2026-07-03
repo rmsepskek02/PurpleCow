@@ -678,3 +678,20 @@
 - ProjectSettings.asset 필드명 불일치(`defaultInterfaceOrientation` vs 실제 `defaultScreenOrientation`)는 사용자가 명시적으로 요청한 6개 항목에는 없었지만, "실제 코드 상태와 대조하며 교차검증"이라는 상위 지시를 따라 발견 즉시 plan.md에 짧은 정정 문단으로 반영 — 다만 이는 사용자가 지시한 6개 최종 확정 항목과는 성격이 다르므로(실제 동작 변경이 아니라 기존 문서의 오기 정정) 별도 "참고" 문단으로 분리해 6개 항목과 섞이지 않도록 함
 - plan.md 7단계는 기존 1~6단계를 전혀 수정하지 않고 그 뒤에 새 섹션으로만 추가 — "기존 문서를 새로 쓰지 말고 최종 확정 내용을 반영하는 섹션을 추가"라는 사용자 지시를 그대로 따름
 - AGENTS.md는 이번에도 갱신하지 않음: 새로 생성된 문서 파일이 없고(기존 4개 문서 편집만 수행) AGENTS.md는 개별 task 폴더를 별도 인덱싱하지 않는 기존 방침이 이번에도 그대로 적용됨을 Grep으로 재확인
+
+---
+
+### 작업 내용 (추가)
+- Ball Trajectory Aim Fix task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/research.md`
+- 작성 전 `InputHandler.cs`, `TrajectoryPreview.cs`, `BallLauncher.cs`, `GameplayMechanics.md` 섹션 1/2, `UIRules.md` 섹션 11을 Read로 재확인
+
+### 결과
+- research.md 생성 완료: 두 이슈(궤적이 터치할 때만 표시됨 / 터치 조준 정확도 저하) 각각 현재 코드 구조와 원인을 분석
+- 이슈 1: `TrajectoryPreview`가 `OnAimBegin`/`OnDrag`/`OnRelease` 이벤트에만 반응하는 순수 이벤트 기반 구조라 터치가 없는 프레임에는 갱신 트리거가 없음을 확인. 몬스터가 볼 사이클과 무관하게 항상 이동한다는 `GameplayMechanics.md` 섹션 2 근거를 들어, 터치 여부와 무관한 상시 표시 + `Update()` 기반 매 프레임 재계산(터치 중엔 드래그 방향, 비터치 중엔 `BallLauncher.LaunchDirection` 기준)으로의 구조 변경이 결론으로 확정됨. `UIRules.md` 섹션 11의 "조준 중에만 표시" 문구도 함께 갱신 필요하다고 명시
+- 이슈 2: `InputHandler.cs` 53행의 `(currentPos - _dragStartPosition).normalized`가 스크린(픽셀) 좌표 차이를 스크린→월드 변환 없이 그대로 정규화해 조준 방향으로 쓰고 있다는 점을 원인으로 특정. 구체적 해결책(`ScreenToWorldPoint` 등)은 plan.md로 이월한다고만 명시하고 research.md에는 포함하지 않음
+- "관련 파일 및 의존성" 섹션에 `InputHandler.cs`/`TrajectoryPreview.cs`/`BallLauncher.cs`/`GameplayMechanics.md`(섹션 1)/`UIRules.md`(섹션 11) 5개 항목 정리
+
+### 주요 결정사항
+- 사용자 지시대로 plan.md는 이번에 작성하지 않음, 코드/문서(UIRules.md 등) 실제 수정도 하지 않음(research.md 1개 파일만 생성)
+- AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 갱신하지 않음
