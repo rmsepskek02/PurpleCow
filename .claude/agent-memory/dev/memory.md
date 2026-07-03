@@ -809,3 +809,32 @@
 **주요 결정사항:**
 - `_zoomFactor`는 요청 범위 외이므로 변경하지 않음
 - 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: WallFitter에 LaunchPoint(볼 발사 지점) 위치 관리 추가
+
+**작업 내용:**
+- 사용자 명시적 승인에 따라 별도 plan.md 없이 바로 구현
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/WallFitter.cs`
+  - `[SerializeField] private Transform _launchPoint;` 필드 추가 (`_ground` 다음)
+  - `[SerializeField] private float _nativeLaunchPointY = -6.0f;` 필드 추가 (`_nativeBottomY` 다음)
+  - `Apply()`에 `SetY(_launchPoint, _nativeLaunchPointY * scaleY);` 추가 (`SetY(_ground, ...)` 다음 줄)
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `Step6_SetupWallFitter()`에 `Transform launchPoint = FindTransformOrWarn("LaunchPoint");` 추가, `SerializedObject`로 `_launchPoint`(Transform) / `_nativeLaunchPointY`(-6.0f) 연결
+  - `SetupScene()`의 호출 순서 변경: `Step6_SetupWallFitter()`를 `Step8_ConnectBallLauncherRefs(ballPrefab)` **다음**으로 이동 (기존에는 `Step5_PlaceWallsAndGround()` 직후였음)
+
+**배경 및 실행 순서 문제 해결 방법:**
+- `LaunchPoint`는 `BallLauncher`의 자식으로 `Step8_ConnectBallLauncherRefs()`에서 최초 생성됨. 기존 호출 순서(`Step6` → `Step7` → `Step8`)대로면 `Step6_SetupWallFitter()` 실행 시점에 `LaunchPoint`가 아직 씬에 없어 `_launchPoint` 참조 연결이 항상 실패(경고 로그 후 null)하는 문제가 있었음
+- Step 함수 이름/번호는 그대로 유지하고 (요청 범위 외 리네이밍 방지), `SetupScene()` 내부의 **호출 순서만** `Step6_SetupWallFitter()`를 `Step8_ConnectBallLauncherRefs()` 뒤로 옮겨 해결. 코드에는 순서 변경 이유를 설명하는 주석 추가
+- `Step6_SetupWallFitter()`는 기존 `FindTransformOrWarn()` 패턴을 그대로 재사용해 `GameObject.Find("LaunchPoint")` 방식으로 참조를 찾으므로, 씬 재실행(이미 `LaunchPoint`가 존재하는 케이스)에서도 정상 동작함
+
+**주요 결정사항:**
+- `SetY`/`SetX` 헬퍼가 이미 null 방어 처리되어 있어 재사용만 함 (신규 로직 없음)
+- 요청받지 않은 다른 필드(`_nativeLeftX` 등)는 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)

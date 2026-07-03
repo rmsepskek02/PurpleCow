@@ -16,9 +16,10 @@ public static class SceneSetupEditor
         Step3_CreateBlockPrefabs();
         Step4_PlaceBackground();
         Step5_PlaceWallsAndGround();
-        Step6_SetupWallFitter();
         Step7_PlaceManagers();
         Step8_ConnectBallLauncherRefs(ballPrefab);
+        // WallFitter는 Step8에서 생성되는 LaunchPoint를 참조해야 하므로 Step8 이후에 실행한다.
+        Step6_SetupWallFitter();
         Step9_ConnectBallPrefabRefs();
         Step10_ConnectWaveManagerRefs();
 
@@ -439,6 +440,7 @@ public static class SceneSetupEditor
         Transform wallRight = FindTransformOrWarn("Wall_Right");
         Transform wallTop = FindTransformOrWarn("Wall_Top");
         Transform ground = FindTransformOrWarn("Ground");
+        Transform launchPoint = FindTransformOrWarn("LaunchPoint");
 
         SerializedObject so = new SerializedObject(fitter);
         so.FindProperty("_targetCamera").objectReferenceValue = mainCamera;
@@ -447,10 +449,12 @@ public static class SceneSetupEditor
         so.FindProperty("_wallRight").objectReferenceValue = wallRight;
         so.FindProperty("_wallTop").objectReferenceValue = wallTop;
         so.FindProperty("_ground").objectReferenceValue = ground;
+        so.FindProperty("_launchPoint").objectReferenceValue = launchPoint;
         so.FindProperty("_nativeLeftX").floatValue = -6.5f;
         so.FindProperty("_nativeRightX").floatValue = 6.3f;
         so.FindProperty("_nativeTopY").floatValue = 6.0f;
         so.FindProperty("_nativeBottomY").floatValue = -6.5f;
+        so.FindProperty("_nativeLaunchPointY").floatValue = -6.0f;
         so.FindProperty("_zoomFactor").floatValue = 1.3f;
         so.ApplyModifiedPropertiesWithoutUndo();
 
