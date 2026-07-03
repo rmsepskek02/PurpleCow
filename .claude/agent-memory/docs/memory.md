@@ -545,6 +545,25 @@
 ---
 
 ### 작업 내용 (추가)
+- Ball Ceiling Wall Fix task plan.md 신규 생성 (기존 research.md 기반)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-48_ball-ceiling-wall-fix/plan.md`
+- 작성 전 research.md, TaskRules.md, `SceneSetupEditor.cs`(374~398번 줄), 기존 plan.md 예시(`2026-07-01/21-15_ball-launch-mechanics/plan.md`)를 Read로 확인해 문서 스타일/구조 일관성 유지
+
+### 결과
+- plan.md 생성 완료: 구현 목표(3개), 단계별 작업 계획(1단계 코드 수정, 2단계 좌표 겹침 사전 계산, 3단계 씬 반영 옵션 A/B, 4단계 QA 검증), 예상 변경/생성 파일 목록(`SceneSetupEditor.cs`, `SampleScene.unity` 2개), 주의사항(씬 반영 방식 사용자 확인 필요, 범위 제외 2건, 좌표 계산 한계, plan.md만 완료된 상태) 구조로 작성
+- `Wall_Top` 좌표/크기(`new Vector3(0f, 8f, 0f), new Vector2(12f, 0.2f)`, 태그 `"Wall"`)를 research.md 근거(AIFailures.md 플레이 영역 y:+8, Ground와 동일 크기 재사용)와 함께 명시
+- 좌우 벽(x: ±5.5, size 0.2×20)과 천장 벽(y: 8, size 12×0.2) 좌표를 직접 계산해 네 모서리 부근에서 겹치는 영역이 존재함(갭 없음)을 확인, 다만 이는 좌표상 사전 판단이며 4단계 QA에서 실제 물리 동작 재확인이 필요하다고 명시
+- 씬 반영 방법을 옵션 A(로컬 Unity 에디터에서 `PurpleCow/Setup/Scene Setup` 메뉴 재실행, 권장)와 옵션 B(`SampleScene.unity` YAML 직접 편집, dev 에이전트가 즉시 처리 가능하나 형식 위험 있음) 두 가지로 제시하고 최종 선택은 사용자 확인이 필요하다고 "주의사항"에 명시
+- `physicsMaterial2D` Wall/Ground 미연결, `CollisionDetectionMode2D.Continuous` 터널링 가능성 2건은 research.md와 동일하게 이번 작업 범위에서 제외한다고만 짧게 언급(단계별 계획에는 미포함)
+
+### 주요 결정사항
+- 코드(`SceneSetupEditor.cs`) 수정은 옵션 A/B 어느 쪽을 택하든 공통으로 필요하다고 판단 — 향후 씬 재생성 시에도 천장 벽이 항상 생성되도록 보장하기 위함
+- 이번 요청은 "plan.md 작성"만 포함되며 실제 코드/씬 파일 수정은 진행하지 않음(TaskRules.md 절차 준수, 사용자의 명시적 승인 대기)
+- AGENTS.md는 개별 task 폴더를 별도로 인덱싱하지 않는 기존 정책(56~57번 줄, "개별 task 폴더 목록은 이 문서에서 별도로 관리하지 않으며, 필요할 때 해당 경로를 직접 탐색")을 확인했으므로 이번 plan.md 생성에 대해서는 AGENTS.md 갱신 불필요로 판단
+
+---
+
+### 작업 내용 (추가)
 - dev 에이전트가 task 문서 없이 예외 진행한 "WaveData 20개 개별 asset → WaveTableData 단일 테이블 SO" 리팩토링(main 커밋 `9c188a8`, 이미 완료됨)에 대한 사후 문서 갱신
 - 수정 파일: `Assets/_Project/Docs/DevRules.md`, `Assets/_Project/Docs/ProjectStatus.md`, `Assets/_Project/Docs/ProjectHistory.md` (코드는 건드리지 않음)
 
@@ -606,3 +625,19 @@
 - 사용자가 제공한 원인 분석(콜라이더 바깥쪽 끝 ±5.6, aspect 조건식, CameraFitter 필드/로직, Awake/Start 순서 보장 근거)은 이미 코드 Read로 교차검증했으므로 그대로 반영하고 임의 추가 조사는 하지 않음
 - CameraFitter 연동 Step 위치는 사용자가 "판단은 plan.md 작성 시 자유롭게 정리"라고 위임한 부분이라, Wall 배치 로직(Step5) 직후 신규 Step으로 분리하고 기존 `ConnectBackgroundFitterRefs()` 패턴을 재사용하는 것으로 구체화
 - AGENTS.md는 "Task 문서" 섹션이 개별 폴더 목록을 관리하지 않는 기존 방침이라 이번에도 인덱스 갱신 없이 완료
+
+---
+
+### 작업 내용 (추가)
+- 볼 천장 이탈 버그 수정(`_Task/2026-07-03/12-48_ball-ceiling-wall-fix`, research.md → plan.md → dev 구현 커밋 `345ae29` → 사용자 로컬 Scene Setup 재실행 → 실 플레이 검증까지 전 과정 완료) 결과를 프로젝트 문서에 반영
+- 수정 파일: `Assets/_Project/Docs/ProjectStatus.md`, `Assets/_Project/Docs/ProjectHistory.md` 2개 (코드/씬 파일은 이미 수정 완료된 상태라 건드리지 않음)
+
+### 결과
+- `ProjectStatus.md`: "완료된 작업" 체크리스트에 이번 항목 신규 추가 — 버그 발견 → research.md 원인 특정(`SceneSetupEditor.Step5_PlaceWallsAndGround()`에 상단 벽 생성 코드 누락) → plan.md 승인 → dev 에이전트 `Wall_Top` 콜라이더 1줄 추가(커밋 `345ae29`) → 사용자 로컬 `PurpleCow/Setup/Scene Setup` 재실행 → 실 플레이 검증 완료까지 기존 항목들과 동일한 한 문장 서술 스타일로 작성. "현재 상태"/"다음 작업 순서"는 기존 서술이 이미 이 흐름과 자연스럽게 이어져 지시대로 손대지 않음
+- `ProjectHistory.md`: 이미 있는 "## 2026-07-03" 섹션 맨 하단(WaveData→WaveTableData 리팩토링 다음)에 "### 볼 천장 이탈 버그 수정" 소제목 신규 추가 — 배경/원인(`SceneSetupEditor.cs` 좌/우/아래 3면만 생성, 상단 누락)/수정(`Wall_Top` 1줄, 커밋 `345ae29`, 브랜치 `claude/ball-ceiling-wall-fix`, 좌표 근거)/검증(사용자 로컬 Scene Setup 메뉴 재실행 후 실 플레이 확인) 순서로 기존 섹션들과 동일한 서술 형식 유지
+
+### 주요 결정사항
+- `AIFailures.md`는 갱신하지 않음: 이번 버그는 이번 세션이 새로 저지른 실수가 아니라 과거 세션부터 존재하던 씬 설정 누락을 정상적인 research→plan→구현 절차로 발견/수정한 사례라 "AI 실패 사례" 성격과 다르다고 판단
+- `GameplayMechanics.md`/`UIRules.md`도 갱신하지 않음: 천장 벽은 별도 게임플레이 메커닉이나 UI 규칙이 아니라 단순 씬 경계 콜라이더 설정이라 두 문서의 성격과 맞지 않는다고 판단
+- `AGENTS.md`도 갱신하지 않음: 기존 정책(개별 task 폴더는 별도 인덱싱하지 않음, "Task 문서" 섹션에 명시)에 따라 이번 task 폴더도 별도 등록 불필요로 판단
+- 코드(`SceneSetupEditor.cs`)와 씬(`SampleScene.unity`)은 이미 수정/반영 완료된 상태이므로 이번 작업에서는 전혀 건드리지 않고 Read하지도 않음(요청 문서 내용 그대로 신뢰해 반영)
