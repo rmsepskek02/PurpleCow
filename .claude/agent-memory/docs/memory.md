@@ -589,3 +589,20 @@
 - `TrajectoryPreview` GameObject가 같은 커밋에 씬에 추가된 것은 `SceneSetupEditor.cs`의 기존 "Scene Setup" 메뉴가 여러 시스템을 한 번에 처리하는 과정에서 발생한 정상적인 부수 효과로, 이번 WaveData 작업과 무관하다고 판단하여 문서에 별도 기록하지 않음
 - DevRules.md/ProjectHistory.md/AGENTS.md는 지시대로 이번 세션에서 전혀 수정하지 않음
 - 커밋/푸시는 진행하지 않고 파일 수정까지만 수행
+
+---
+
+### 작업 내용 (추가)
+- 배경/해상도 대응 task research.md/plan.md에 실기기 빌드 스크린샷에서 발견된 신규 원인(카메라 시야/Wall 가시성 기기별 대응 안 됨) 보강
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/research.md`, `.../plan.md`
+- 수정 전 `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`(Step5_PlaceWallsAndGround, 385~390번째 줄)와 `Assets/_Project/Scripts/Core/BackgroundFitter.cs`(현재 `Awake()`로 구현되어 있는 상태) 실제 코드를 Read로 재확인 후 문서에 반영
+- research.md: "문제점 / 구현 대상 파악" 섹션에 "문제 3 — 카메라 시야(Wall 가시성) 기기별 대응 안 됨" 신규 소제목 추가(Wall x=±5.5, 콜라이더 폭 0.2로 바깥쪽 끝 ±5.6, orthographicSize=10 고정, aspect≥0.56 조건에서만 성립, 최신 기기 종횡비는 대부분 이보다 낮음, 코드베이스 전체에서 카메라 크기 의존 로직이 BackgroundFitter/SceneSetupEditor 외 없음을 확인해 부작용 없음 근거 포함), "결론"을 기존 원인 2가지에서 3가지로 갱신하고 해결 방향에 "카메라 시야 동적 확장" 항목 추가. 기존 문제 1/2번 서술은 건드리지 않음
+- plan.md: 기존 4단계 뒤에 "5단계 — CameraFitter 신규 작성 및 연동" 추가(`Assets/_Project/Scripts/Core/CameraFitter.cs` 신규, `_targetCamera`/`_baseOrthographicSize=10`/`_requiredHalfWidth=5.6` 필드, `Awake()`에서 `Mathf.Max(base, requiredHalfWidth/aspect)` 계산, `SceneSetupEditor.cs`에 신규 Step으로 연동 — `Camera.main` 참조 + 기존 `ConnectBackgroundFitterRefs()`와 동일한 SerializedObject 패턴 재사용), 2단계(BackgroundFitter)에 "실행 순서 보장을 위해 Awake()→Start() 변경 필요" 보강 문단 추가, "예상 변경/생성 파일 목록"에서 `BackgroundFitter.cs`를 신규 생성에서 수정 대상으로 정정(이미 구현되어 있음을 명시)하고 `CameraFitter.cs` 신규 생성 추가, "주의사항"에 "CameraFitter가 BackgroundFitter보다 먼저 실행되어야 함(Awake vs Start로 순서 보장)" 항목 추가
+
+### 결과
+- research.md, plan.md 두 문서 모두 갱신 완료 (완전히 새로 쓰지 않고 기존 구조에 소제목/단락 추가 방식)
+
+### 주요 결정사항
+- 사용자가 제공한 원인 분석(콜라이더 바깥쪽 끝 ±5.6, aspect 조건식, CameraFitter 필드/로직, Awake/Start 순서 보장 근거)은 이미 코드 Read로 교차검증했으므로 그대로 반영하고 임의 추가 조사는 하지 않음
+- CameraFitter 연동 Step 위치는 사용자가 "판단은 plan.md 작성 시 자유롭게 정리"라고 위임한 부분이라, Wall 배치 로직(Step5) 직후 신규 Step으로 분리하고 기존 `ConnectBackgroundFitterRefs()` 패턴을 재사용하는 것으로 구체화
+- AGENTS.md는 "Task 문서" 섹션이 개별 폴더 목록을 관리하지 않는 기존 방침이라 이번에도 인덱스 갱신 없이 완료
