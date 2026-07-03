@@ -593,3 +593,20 @@
 - `GameplayMechanics.md`/`UIRules.md`도 갱신하지 않음: 천장 벽은 별도 게임플레이 메커닉이나 UI 규칙이 아니라 단순 씬 경계 콜라이더 설정이라 두 문서의 성격과 맞지 않는다고 판단
 - `AGENTS.md`도 갱신하지 않음: 기존 정책(개별 task 폴더는 별도 인덱싱하지 않음, "Task 문서" 섹션에 명시)에 따라 이번 task 폴더도 별도 등록 불필요로 판단
 - 코드(`SceneSetupEditor.cs`)와 씬(`SampleScene.unity`)은 이미 수정/반영 완료된 상태이므로 이번 작업에서는 전혀 건드리지 않고 Read하지도 않음(요청 문서 내용 그대로 신뢰해 반영)
+
+---
+
+### 작업 내용 (추가)
+- Ball Trajectory Aim Fix task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/research.md`
+- 작성 전 `InputHandler.cs`, `TrajectoryPreview.cs`, `BallLauncher.cs`, `GameplayMechanics.md` 섹션 1/2, `UIRules.md` 섹션 11을 Read로 재확인
+
+### 결과
+- research.md 생성 완료: 두 이슈(궤적이 터치할 때만 표시됨 / 터치 조준 정확도 저하) 각각 현재 코드 구조와 원인을 분석
+- 이슈 1: `TrajectoryPreview`가 `OnAimBegin`/`OnDrag`/`OnRelease` 이벤트에만 반응하는 순수 이벤트 기반 구조라 터치가 없는 프레임에는 갱신 트리거가 없음을 확인. 몬스터가 볼 사이클과 무관하게 항상 이동한다는 `GameplayMechanics.md` 섹션 2 근거를 들어, 터치 여부와 무관한 상시 표시 + `Update()` 기반 매 프레임 재계산(터치 중엔 드래그 방향, 비터치 중엔 `BallLauncher.LaunchDirection` 기준)으로의 구조 변경이 결론으로 확정됨. `UIRules.md` 섹션 11의 "조준 중에만 표시" 문구도 함께 갱신 필요하다고 명시
+- 이슈 2: `InputHandler.cs` 53행의 `(currentPos - _dragStartPosition).normalized`가 스크린(픽셀) 좌표 차이를 스크린→월드 변환 없이 그대로 정규화해 조준 방향으로 쓰고 있다는 점을 원인으로 특정. 구체적 해결책(`ScreenToWorldPoint` 등)은 plan.md로 이월한다고만 명시하고 research.md에는 포함하지 않음
+- "관련 파일 및 의존성" 섹션에 `InputHandler.cs`/`TrajectoryPreview.cs`/`BallLauncher.cs`/`GameplayMechanics.md`(섹션 1)/`UIRules.md`(섹션 11) 5개 항목 정리
+
+### 주요 결정사항
+- 사용자 지시대로 plan.md는 이번에 작성하지 않음, 코드/문서(UIRules.md 등) 실제 수정도 하지 않음(research.md 1개 파일만 생성)
+- AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 갱신하지 않음
