@@ -200,9 +200,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrajectoryPreview
   _lineWidth: 0.05
-  _lineColor: {r: 1, g: 1, b: 1, a: 1}
-  _hitColor: {r: 1, g: 0, b: 0, a: 1}
-  _dotRadius: 0.08
+  _lineColor: {r: 0.88235295, g: 0.88235295, b: 0.8627451, a: 1}
+  _hitColor: {r: 0.80784315, g: 0.3529412, b: 0.32156864, a: 1}
+  _ringColor: {r: 0.88235295, g: 0.88235295, b: 0.8627451, a: 1}
+  _dotRadius: 0.05
   _ringRadius: 0.3
 --- !u!4 &71915424
 Transform:

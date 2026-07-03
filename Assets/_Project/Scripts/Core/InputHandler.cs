@@ -8,8 +8,17 @@ public class InputHandler : Singleton<InputHandler>
     public static event Action<Vector2> OnDrag;
     public static event Action OnRelease;
 
+    private Camera _mainCamera;
+
+    // 스크린(픽셀) 좌표가 아닌 월드 좌표를 저장한다(스크린→월드 변환 후 값).
     private Vector2 _dragStartPosition;
     private bool _isDragging;
+
+    protected override void Awake()
+    {
+        base.Awake();
+        _mainCamera = Camera.main;
+    }
 
     private void Update()
     {
@@ -43,14 +52,15 @@ public class InputHandler : Singleton<InputHandler>
 
         if (pressedPos.HasValue)
         {
-            _dragStartPosition = pressedPos.Value;
+            _dragStartPosition = _mainCamera.ScreenToWorldPoint(pressedPos.Value);
             _isDragging = true;
             OnAimBegin?.Invoke();
         }
 
         if (currentPos.HasValue && _isDragging)
         {
-            Vector2 direction = (currentPos.Value - _dragStartPosition).normalized;
+            Vector2 currentWorldPos = _mainCamera.ScreenToWorldPoint(currentPos.Value);
+            Vector2 direction = (currentWorldPos - _dragStartPosition).normalized;
             OnDrag?.Invoke(direction);
         }
 
