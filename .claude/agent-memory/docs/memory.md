@@ -530,6 +530,21 @@
 ---
 
 ### 작업 내용 (추가)
+- 배경/해상도 대응 task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/research.md`
+- 사용자가 대화 중 이미 확정한 조사 내용(ProjectSettings.asset Player Settings 값, Background_1_Stage.png/.meta, SampleScene.unity Background/Main Camera 상태, SceneSetupEditor.cs Step4_PlaceBackground, targetUI 레퍼런스 비교, 정투영 카메라 뷰포트 계산, 사용자 확정 제약조건 3+1가지, Cover-Fit 합의 방향)을 TaskRules.md 구조(현재 상태/관련 파일 및 의존성/문제점 구현 대상 파악/결론)에 맞게 정리. 새로운 조사는 추가하지 않고, 언급된 파일들(ProjectSettings.asset 46/62-65/76-77번째 줄, Background_1_Stage.png.meta, SampleScene.unity Background Transform 906-907번째 줄·Main Camera Transform 1276번째 줄·Camera 1225-1226/1250-1251번째 줄, SceneSetupEditor.cs 344-368번째 줄)을 직접 Read로 재확인하여 라인 번호를 정확히 인용
+
+### 결과
+- research.md 생성 완료: Player Settings 미고정(Auto Rotation 4방향, 가로 기본 해상도) + Background 스프라이트 고정 크기 배치(스케일 조정 로직 없음) 2대 원인 정리, 정투영 카메라 뷰포트 공식(세로 고정=orthoSize×2, 가로 가변=orthoSize×2×aspect) 및 Cover-Fit 해결 방향(구체 구현은 plan.md로 이월)까지 포함
+- AGENTS.md는 "Task 문서" 섹션이 이미 "개별 task 폴더 목록을 별도로 관리하지 않음" 방침으로 되어 있어 이번에는 인덱스 추가 작업 없이 완료
+
+### 주요 결정사항
+- 사용자가 이미 대화로 확정한 사실관계만 반영하고 추가 조사는 하지 않되, 정확성을 위해 언급된 파일들은 직접 Read로 재확인하여 라인 번호를 검증 후 인용
+- Cover-Fit 스케일 로직 + 카메라 배경색 보정 + Player Settings Portrait 고정, 이 세 가지의 "구체적 구현 방식"은 research.md에서 확정하지 않고 plan.md 단계로 명시적으로 이월
+
+---
+
+### 작업 내용 (추가)
 - Ball Ceiling Wall Fix task plan.md 신규 생성 (기존 research.md 기반)
 - 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-48_ball-ceiling-wall-fix/plan.md`
 - 작성 전 research.md, TaskRules.md, `SceneSetupEditor.cs`(374~398번 줄), 기존 plan.md 예시(`2026-07-01/21-15_ball-launch-mechanics/plan.md`)를 Read로 확인해 문서 스타일/구조 일관성 유지
@@ -565,6 +580,22 @@
 ---
 
 ### 작업 내용 (추가)
+- 배경/해상도 대응 task research.md "범위에서 제외한 사항" 문단 갱신 + plan.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/research.md`, `.../plan.md`
+- research.md 수정: 검은 사각형 UI 글리치는 사용자가 Play 모드로 직접 재확인한 결과 재현되지 않음 → `UIRules.md` 4번(패널은 항상 `SetActive(true)`, `CanvasGroup`으로만 표시/숨김 제어) 규칙상 에디트 모드 캡처 시점에는 `Awake()`/`Start()` 런타임 초기화 전 빈 상태가 노출됐을 가능성이 높다는 원인 추정으로 대체, "실제 버그 아님 / 별도 조치 불필요 / 향후 재조사 불필요"로 결론
+- plan.md 신규 작성: TaskRules.md 구조(서두 요약/구현 목표/단계별 작업 계획/예상 변경·생성 파일 목록/주의사항) 준수, 사용자가 이미 방향성을 확정한 구현 계획(1단계 Player Settings Portrait 고정, 2단계 BackgroundFitter.cs 신규 작성, 3단계 SceneSetupEditor.cs Step4_PlaceBackground 연동, 4단계 SampleScene.unity Main Camera 배경색 보정)을 그대로 문서화, 새로운 설계 판단은 추가하지 않음
+- AGENTS.md는 "Task 문서" 섹션이 개별 폴더 목록을 관리하지 않는 방침이라 이번에도 인덱스 갱신 없이 완료
+
+### 결과
+- research.md, plan.md 두 문서 모두 갱신/생성 완료
+
+### 주요 결정사항
+- research.md "범위에서 제외한 사항"은 완전히 새로 쓰지 않고 기존 문단 톤/구조를 유지하며 사실관계만 갱신 (사용자 지시 준수)
+- plan.md는 사용자가 이미 논의를 마친 구체적 구현 계획을 정리만 하는 문서로 작성 — plan.md 하단 주의사항에 "사용자의 명시적 승인 전에는 구현으로 이어지지 않는다"를 명시하여 TaskRules.md 절차(plan.md 작성 후 승인 필요) 재확인
+
+---
+
+### 작업 내용 (추가)
 - WaveData → WaveTableData 리팩토링 후속: 사용자가 로컬 Unity에서 `Monster System Setup` → `Scene Setup`을 실행해 `WaveTableData.asset` 생성 및 `SampleScene.unity`의 `WaveManager._waveTable` 참조 재연결 완료(커밋 `ceeb9e2`)한 것을 오케스트레이터가 직접 검증한 결과를 문서에 반영
 - 수정 파일: `Assets/_Project/Docs/ProjectStatus.md` 1개만 (다른 문서는 이미 정확하다는 지시에 따라 건드리지 않음)
 
@@ -577,6 +608,23 @@
 - `TrajectoryPreview` GameObject가 같은 커밋에 씬에 추가된 것은 `SceneSetupEditor.cs`의 기존 "Scene Setup" 메뉴가 여러 시스템을 한 번에 처리하는 과정에서 발생한 정상적인 부수 효과로, 이번 WaveData 작업과 무관하다고 판단하여 문서에 별도 기록하지 않음
 - DevRules.md/ProjectHistory.md/AGENTS.md는 지시대로 이번 세션에서 전혀 수정하지 않음
 - 커밋/푸시는 진행하지 않고 파일 수정까지만 수행
+
+---
+
+### 작업 내용 (추가)
+- 배경/해상도 대응 task research.md/plan.md에 실기기 빌드 스크린샷에서 발견된 신규 원인(카메라 시야/Wall 가시성 기기별 대응 안 됨) 보강
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/research.md`, `.../plan.md`
+- 수정 전 `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`(Step5_PlaceWallsAndGround, 385~390번째 줄)와 `Assets/_Project/Scripts/Core/BackgroundFitter.cs`(현재 `Awake()`로 구현되어 있는 상태) 실제 코드를 Read로 재확인 후 문서에 반영
+- research.md: "문제점 / 구현 대상 파악" 섹션에 "문제 3 — 카메라 시야(Wall 가시성) 기기별 대응 안 됨" 신규 소제목 추가(Wall x=±5.5, 콜라이더 폭 0.2로 바깥쪽 끝 ±5.6, orthographicSize=10 고정, aspect≥0.56 조건에서만 성립, 최신 기기 종횡비는 대부분 이보다 낮음, 코드베이스 전체에서 카메라 크기 의존 로직이 BackgroundFitter/SceneSetupEditor 외 없음을 확인해 부작용 없음 근거 포함), "결론"을 기존 원인 2가지에서 3가지로 갱신하고 해결 방향에 "카메라 시야 동적 확장" 항목 추가. 기존 문제 1/2번 서술은 건드리지 않음
+- plan.md: 기존 4단계 뒤에 "5단계 — CameraFitter 신규 작성 및 연동" 추가(`Assets/_Project/Scripts/Core/CameraFitter.cs` 신규, `_targetCamera`/`_baseOrthographicSize=10`/`_requiredHalfWidth=5.6` 필드, `Awake()`에서 `Mathf.Max(base, requiredHalfWidth/aspect)` 계산, `SceneSetupEditor.cs`에 신규 Step으로 연동 — `Camera.main` 참조 + 기존 `ConnectBackgroundFitterRefs()`와 동일한 SerializedObject 패턴 재사용), 2단계(BackgroundFitter)에 "실행 순서 보장을 위해 Awake()→Start() 변경 필요" 보강 문단 추가, "예상 변경/생성 파일 목록"에서 `BackgroundFitter.cs`를 신규 생성에서 수정 대상으로 정정(이미 구현되어 있음을 명시)하고 `CameraFitter.cs` 신규 생성 추가, "주의사항"에 "CameraFitter가 BackgroundFitter보다 먼저 실행되어야 함(Awake vs Start로 순서 보장)" 항목 추가
+
+### 결과
+- research.md, plan.md 두 문서 모두 갱신 완료 (완전히 새로 쓰지 않고 기존 구조에 소제목/단락 추가 방식)
+
+### 주요 결정사항
+- 사용자가 제공한 원인 분석(콜라이더 바깥쪽 끝 ±5.6, aspect 조건식, CameraFitter 필드/로직, Awake/Start 순서 보장 근거)은 이미 코드 Read로 교차검증했으므로 그대로 반영하고 임의 추가 조사는 하지 않음
+- CameraFitter 연동 Step 위치는 사용자가 "판단은 plan.md 작성 시 자유롭게 정리"라고 위임한 부분이라, Wall 배치 로직(Step5) 직후 신규 Step으로 분리하고 기존 `ConnectBackgroundFitterRefs()` 패턴을 재사용하는 것으로 구체화
+- AGENTS.md는 "Task 문서" 섹션이 개별 폴더 목록을 관리하지 않는 기존 방침이라 이번에도 인덱스 갱신 없이 완료
 
 ---
 
@@ -632,3 +680,40 @@
 - research.md에서 열린 이슈로 남겼던 반전-회전 부호 충돌 문제는 오케스트레이터가 사용자와 논의를 마치고 확정한 사항이므로, plan.md에는 "열린 이슈"가 아니라 "확정 사항"으로 명확히 구분해 서술(구현 목표 섹션에 굵게 표시)
 - 이번 요청은 문서 작성만 포함되며 코드/에셋 파일은 전혀 수정하지 않음(Read만 수행), 실제 구현은 사용자의 명시적 승인 이후 dev/design/qa 에이전트가 진행 예정 (TaskRules.md 절차 준수)
 - AGENTS.md는 기존 정책(개별 task 폴더 비인덱싱)에 따라 이번에도 갱신하지 않음
+
+---
+
+### 작업 내용 (추가)
+- 배경/해상도 대응 task research.md/plan.md를 "최종 확정 설계"로 갱신 — 이전 논의(Cover→Contain→Stretch 전환, CameraFitter 도입)는 삭제하지 않고 그대로 유지한 채, 그 뒤를 잇는 신규 섹션들로 최종 결론을 정리
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/research.md`, `.../plan.md`
+- 작성 전 `TaskRules.md`(구조 규칙), 두 문서 현재 전문, 실제 코드(`BackgroundFitter.cs` — 이미 `Start()`에서 비균등 Stretch로 구현되어 있음 확인, `CameraFitter.cs` — `Awake()`에서 `Mathf.Max(base, requiredHalfWidth/aspect)` 그대로 존재, `SceneSetupEditor.cs` — `Step6_SetupCameraFitter()`가 실제로 연동되어 있음)를 Read로 재확인
+
+### 결과
+- research.md: "레퍼런스 이미지 비교" 다음에 "배경 이미지 격자 경계 실측(Python PIL 픽셀 스캔)" 신규 소제목 추가(가로 x=420~1613→월드 -6.04~+5.89, 세로 y=469~1557→월드 +5.55~-5.33, 기존 Wall 좌표(x=±5.5, Ground y=-10, Wall_Top y=8)가 실측 격자 경계와 불일치, 특히 Ground/Wall_Top이 장식 영역에 위치했음을 확인). "문제점" 섹션에 "문제 4 — Wall 좌표와 배경 격자 그림 경계 불일치", "배경 Stretch 방식과 Wall 좌표의 연동 문제", "CameraFitter가 불필요해짐(수학적으로 도출된 결론 — Wall/카메라 절반폭 비율이 orthographic size와 무관하게 항상 일정, 가로 약 0.29·세로 약 0.54로 항상 화면 안)", "참고 — 레퍼런스 이미지 비율 정밀 비교는 보류" 4개 신규 소제목 추가. "결론"에 "이후 논의로 도출된 최종 결론" 신규 문단 추가 — 최종 확정 설계 5가지(CameraFitter 삭제, orthographic size 10 고정 유지, BackgroundFitter 코드 변경 없이 유지, 신규 WallFitter 작성, SceneSetupEditor 갱신)를 요약하고 상세 스펙은 plan.md로 위임
+- plan.md: 서두/구현 목표에 최종 확정 목표 문단 추가. 기존 "5단계 — CameraFitter 신규 작성 및 연동"은 삭제하지 않고 제목에 "(폐기됨)" 표시 + 폐기 사유 설명 문단만 추가, 내용은 시행착오 기록으로 보존. 신규 "6단계 — WallFitter 신규 작성 및 연동(최종 확정 설계)" 추가 — `Assets/_Project/Scripts/Core/WallFitter.cs`(필드 `_targetCamera`/`_backgroundSpriteRenderer`/`_wallLeft`/`_wallRight`/`_wallTop`/`_ground`/`_nativeLeftX=-6.04f`/`_nativeRightX=5.89f`/`_nativeTopY=5.55f`/`_nativeBottomY=-5.33f`, `Start()`에서 camSize/spriteSize로 scaleX·scaleY 계산 후 `SetX`/`SetY` 헬퍼로 4개 Transform 재배치, null 방어), `SceneSetupEditor.cs` 연동(`Step6_SetupCameraFitter()` → `Step6_SetupWallFitter()` 교체, `GameObject.Find`로 Background/Wall_Left/Wall_Right/Wall_Top/Ground 탐색해 참조 연결, `ConnectBackgroundFitterRefs()`와 동일한 SerializedObject 패턴 재사용). "예상 변경/생성 파일 목록" 갱신(`CameraFitter.cs` 삭제+.meta, `WallFitter.cs` 신규, `BackgroundFitter.cs`는 변경 없음으로 정정, `SceneSetupEditor.cs`/`SampleScene.unity` 수정). "주의사항"에 CameraFitter 순서 보장 항목을 "(폐기됨)"으로 표시하고 WallFitter는 BackgroundFitter와 실행 순서 의존성이 없음을 명시하는 항목, 레퍼런스 정밀 비교 보류 및 실측값 4개 미세조정 가능성 항목 추가
+
+### 주요 결정사항
+- "이전 논의는 시행착오 과정이므로 지우지 말고 그 뒤에 최종 확정 설계로 이어지는 흐름으로 정리"라는 사용자 지시에 따라, 기존 Cover-Fit/CameraFitter 관련 서술은 문구 하나도 삭제하지 않고 전부 유지한 채 새 소제목/문단만 순서대로 추가하는 방식으로 편집
+- CameraFitter가 실제로는 아직 코드/씬에 남아 있는 상태(Read로 확인)이므로, plan.md "예상 변경/생성 파일 목록"에서 `CameraFitter.cs`를 "삭제" 대상으로, `SampleScene.unity`를 "Main Camera에서 CameraFitter 컴포넌트 제거 + orthographic size 10 확인/유지" 대상으로 명시해 향후 dev 에이전트가 실제로 무엇을 지워야 하는지 헷갈리지 않도록 구체화
+- BackgroundFitter.cs는 실제 코드가 이미 Stretch(비균등 scaleX/scaleY) 방식으로 구현되어 있음을 확인했으므로, plan.md 파일 목록에서 기존 "수정(Awake→Start 변경)" 문구를 "변경 없음 — 최종 설계에서 그대로 유지"로 정정
+- 이번 작업은 문서만 다루며 실제 코드/씬 파일(`CameraFitter.cs` 삭제, `WallFitter.cs` 생성 등)은 건드리지 않음 — TaskRules.md 절차상 plan.md는 사용자의 명시적 승인 전까지 구현으로 이어지지 않음
+- AGENTS.md는 개별 task 폴더를 별도 인덱싱하지 않는 기존 방침이라 이번에도 갱신하지 않음
+
+---
+
+### 작업 내용 (추가)
+- 배경/해상도 대응 task가 실기기 테스트까지 완료되어, 관련 문서 전체를 "최종 구현 상태"로 갱신
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/plan.md`, `.../research.md`, `Assets/_Project/Docs/ProjectStatus.md`, `Assets/_Project/Docs/ProjectHistory.md`
+- 작성 전 `TaskRules.md`(구조 규칙) + 실제 코드 4종을 Read로 전량 재확인: `BackgroundFitter.cs`(Stretch 방식, `_zoomFactor=1.3f`, `[ExecuteAlways]`+`Apply()`/`OnValidate()` 확인), `WallFitter.cs`(`_launchPoint`/`_nativeLaunchPointY=-6.0f` 포함 6개 Transform 대상, `_nativeLeftX/-Right/-Top/-Bottom = -6.5/6.3/6.0/-6.5`, `_zoomFactor=1.3f`, 동일한 `[ExecuteAlways]` 구조 확인), `SceneSetupEditor.cs`(`Step6_SetupWallFitter()` 호출이 `Step8_ConnectBallLauncherRefs()` 이후로 재배치되어 있고 그 이유가 주석으로 명시됨, `ConnectBackgroundFitterRefs`/`Step6_SetupWallFitter` 모두 사용자가 알려준 최종값과 일치 확인), `ProjectSettings/ProjectSettings.asset`(Portrait 관련 필드 전부 최종 반영 확인하되, plan.md 1단계가 추정했던 필드명 `defaultInterfaceOrientation`은 실제로 존재하지 않고 `defaultScreenOrientation`(값 `0`=Portrait)이 실제 적용 필드임을 Grep으로 교차검증). `CameraFitter.cs`는 Glob 결과 파일 자체가 더 이상 존재하지 않아 삭제 완료 확인
+
+### 결과
+- `plan.md`: 기존 6단계 뒤에 "### 7단계 — 실기기 테스트 반영 최종 조정" 신규 섹션 추가 — (1) BackgroundFitter Cover→Contain(실기기에서 원인 불명 사방 여백 발생해 폐기)→Stretch 최종 확정, (2) `_zoomFactor=1.3f` 양쪽 공통 도입, (3) WallFitter 벽 기준값 실기기 조정 과정(`_nativeBottomY`: -5.33→-10→-7.5→-6.5 등 단계별 값과 사유) 전부 기록, (4) CameraFitter 삭제 최종 확정, (5) WallFitter에 LaunchPoint 편입 및 `Step6`/`Step8` 호출 순서 재배치, (6) `[ExecuteAlways]`+`Apply()`/`OnValidate()` Inspector 실시간 반영 추가— 6개 항목을 사용자가 준 문구에 상세 근거(코드 스니펫, 좌우 비대칭 2.5% 사유 등)를 덧붙여 작성. 추가로 코드 교차검증 중 발견한 "ProjectSettings.asset 필드명 정정"(`defaultInterfaceOrientation`→실제는 `defaultScreenOrientation`) 참고 문단을 별도로 덧붙임(사용자가 명시적으로 요청한 6개 항목 외 추가지만, "직접 코드를 Read해서 문서 서술이 정확한지 교차검증" 지시에 따른 것). "예상 변경/생성 파일 목록" 절 전체를 최종 상태(CameraFitter.cs 삭제 완료, 나머지는 전부 "최종 구현 완료"로 표시)로 갱신
+- `research.md`: "결론" 섹션 맨 끝에 "### 최종 구현 및 실기기 검증 완료" 짧은 문단 신규 추가 — plan.md 7단계 내용이 실제로 구현되고 실기기 테스트로 사용자가 확인/만족했다는 사실만 간결히 기록, 상세는 plan.md 링크로 위임
+- `ProjectStatus.md`: "완료된 작업" 체크리스트에 "배경/해상도 대응(`_Task/2026-07-03/12-30_background-resolution-fix`)" 항목 신규 추가 — Cover→Contain→Stretch 시행착오, CameraFitter 도입 후 수학적으로 불필요함이 밝혀져 폐기, WallFitter 도입으로 벽을 배경 격자에 비례 연동, zoomFactor/Inspector 실시간 반영 추가, 실기기 테스트로 최종 수치 확정까지 한 문장으로 요약. "다음 작업 순서"는 지시대로 손대지 않음
+- `ProjectHistory.md`: 기존 "## 2026-07-03" 섹션 맨 하단(볼 천장 이탈 버그 수정 다음)에 "### 배경/해상도 대응" 소제목 신규 추가 — 배경(다양한 Android 기기 종횡비 대응 필요성)/원인(Player Settings 미고정, 배경 텍스처 정사각 크롭이라 화면 전체 못 채움, Wall 좌표가 배경 격자와 불일치)/해결 과정(시행착오 포함 6개 항목을 순서대로 상세 서술)/최종 결과(실기기 테스트 완료, 문서 링크) 순서로 기존 섹션들과 동일한 서술 형식 유지
+
+### 주요 결정사항
+- 사용자가 준 6개 확정 항목은 문구를 그대로 살리되, plan.md/ProjectHistory.md에는 code 스니펫·구체적 수치 변화 과정(예: `_nativeBottomY`가 4단계를 거쳐 -6.5로 수렴한 과정)을 원문 그대로 전부 나열해 향후 "왜 이 값인지" 재질문이 나와도 문서만으로 추적 가능하게 함
+- ProjectSettings.asset 필드명 불일치(`defaultInterfaceOrientation` vs 실제 `defaultScreenOrientation`)는 사용자가 명시적으로 요청한 6개 항목에는 없었지만, "실제 코드 상태와 대조하며 교차검증"이라는 상위 지시를 따라 발견 즉시 plan.md에 짧은 정정 문단으로 반영 — 다만 이는 사용자가 지시한 6개 최종 확정 항목과는 성격이 다르므로(실제 동작 변경이 아니라 기존 문서의 오기 정정) 별도 "참고" 문단으로 분리해 6개 항목과 섞이지 않도록 함
+- plan.md 7단계는 기존 1~6단계를 전혀 수정하지 않고 그 뒤에 새 섹션으로만 추가 — "기존 문서를 새로 쓰지 말고 최종 확정 내용을 반영하는 섹션을 추가"라는 사용자 지시를 그대로 따름
+- AGENTS.md는 이번에도 갱신하지 않음: 새로 생성된 문서 파일이 없고(기존 4개 문서 편집만 수행) AGENTS.md는 개별 task 폴더를 별도 인덱싱하지 않는 기존 방침이 이번에도 그대로 적용됨을 Grep으로 재확인

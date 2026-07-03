@@ -709,3 +709,201 @@
 - `CreateCharacterPart()`의 멱등성 패턴(기존 sprite/sortingOrder처럼 재실행 시 항상 재적용)을 `localPosition`에도 동일하게 적용
 - 위치 미러링 로직은 `Start()`에서 1회 캐싱 + `Update()`에서 매 프레임 부호만 재계산하는 방식으로 구현(회전 로직과 필드/타이밍 분리로 충돌 방지)
 - 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리)
+
+---
+
+## 2026-07-03
+
+### 작업: 배경/해상도 대응 5단계 — CameraFitter 신규 작성 + BackgroundFitter 실행 순서 보강
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/plan.md` (5단계) + 2단계 보강분(BackgroundFitter Awake→Start)
+- 신규 파일 1개 생성 + 기존 파일 2개 수정
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Core/CameraFitter.cs` — MonoBehaviour, `_targetCamera`/`_baseOrthographicSize(10f)`/`_requiredHalfWidth(5.6f)` SerializeField, `Awake()`에서 `requiredSize = _requiredHalfWidth / aspect`와 `_baseOrthographicSize` 중 큰 값을 `orthographicSize`에 1회 적용. null 방어 처리 포함.
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/BackgroundFitter.cs` — 계산 메서드를 `Awake()` → `Start()`로 이름만 변경 (내부 로직 동일). Unity가 모든 오브젝트의 Awake()를 끝낸 뒤 Start()를 호출하는 것을 이용해, `CameraFitter.Awake()`가 카메라 orthographicSize를 먼저 확정한 뒤 `BackgroundFitter.Start()`가 그 값을 읽도록 순서 보장.
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `SetupScene()`에 `Step5_PlaceWallsAndGround();` 다음 줄로 `Step6_SetupCameraFitter();` 호출 추가
+  - `Step5_PlaceWallsAndGround()`와 기존 `Step6_PlaceManagers()` 사이에 신규 `Step6_SetupCameraFitter()` 메서드 추가 — `Camera.main`으로 Main Camera를 찾아 `CameraFitter` 컴포넌트를 부착(이미 있으면 재부착 없이 참조만 갱신)하고, `SerializedObject`/`FindProperty`/`ApplyModifiedPropertiesWithoutUndo` 패턴(기존 `ConnectBackgroundFitterRefs()`와 동일)으로 `_targetCamera`=자기 자신, `_baseOrthographicSize`=10, `_requiredHalfWidth`=5.6을 연결.
+
+**주요 결정사항:**
+- 신규 메서드명은 요청받은 대로 `Step6_SetupCameraFitter`를 그대로 사용. 기존에 이미 `Step6_PlaceManagers`(및 뒤이은 Step7/8/9)가 존재해 호출 순서상 두 개의 "Step6"이 연달아 호출되고 이후 Step7~9의 번호가 실제 호출 순서(8~10번째)와 어긋나는 번호 불일치가 발생하지만, 이는 CLAUDE.md의 외과적 변경 원칙(요청된 파일/함수만 수정) 및 요청에 명시된 정확한 메서드명을 우선해 그대로 두었고 다른 Step들의 번호를 리네이밍하지 않음. 필요 시 별도 후속 정리 작업으로 진행 권장.
+- CameraFitter는 plan.md 원안 그대로 구현 (Awake 1회 계산, Mathf.Max로 base와 required 중 큰 값 채택).
+- 신규 아트 에셋 제작 없음. git 변경 명령어(add/commit) 실행하지 않음.
+
+---
+
+## 2026-07-03
+
+### 작업: SceneSetupEditor.cs Step 번호 정리 (순수 리네이밍)
+
+**작업 내용:**
+- 위 항목(배경/해상도 대응 5단계)에서 예고했던 후속 정리 작업. `Step6_SetupCameraFitter()`가 `Step5_PlaceWallsAndGround()` 직후에 추가되며 발생한 `Step6` 중복 및 이후 번호 불일치를 실제 호출 순서(1~10)와 메서드 이름이 일치하도록 리네이밍만 수행 (로직 변경 없음)
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `Step6_PlaceManagers` → `Step7_PlaceManagers` (정의부 + `SetupScene()` 호출부 + 섹션 구분 주석 `// Step 6. Manager 오브젝트 씬 배치` → `// Step 7. ...`)
+  - `Step7_ConnectBallLauncherRefs` → `Step8_ConnectBallLauncherRefs` (정의부 + 호출부 + 주석 `// Step 7. BallLauncher 참조 연결` → `// Step 8. ...`)
+  - `Step8_ConnectBallPrefabRefs` → `Step9_ConnectBallPrefabRefs` (정의부 + 호출부 + 주석 `// Step 8. Ball.prefab 참조 연결` → `// Step 9. ...`, `[MenuItem("PurpleCow/Setup/Connect Ball Prefab Refs")]` 메뉴 문자열은 그대로 유지)
+  - `Step9_ConnectWaveManagerRefs` → `Step10_ConnectWaveManagerRefs` (정의부 + 호출부 + 주석 `// Step 9. WaveManager 참조 연결` → `// Step 10. ...`)
+
+**주요 결정사항:**
+- Grep으로 `Assets/_Project/Scripts/Editor/` 전체를 확인해 이 4개 메서드를 참조하는 다른 파일이 없음을 사전 확인 후 진행 (SceneSetupEditor.cs 내부 참조만 존재)
+- `[MenuItem]` 어트리뷰트 문자열(메뉴 표시명)은 변경 대상에서 제외 — C# 메서드 식별자만 리네이밍
+- 리네이밍 후 `SetupScene()` 호출 순서와 메서드 번호가 Step1~Step10으로 완전히 일치함을 재확인
+- 로직/동작 변경 없음, 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: BackgroundFitter.cs Contain → Stretch 방식 전환
+
+**작업 내용:**
+- 실기기 테스트에서 Contain 방식(`Mathf.Min` 기반 비율 유지 스케일)이 사방 여백 문제를 일으켜, 논의 끝에 Stretch 방식(가로/세로 각각 독립적으로 카메라 뷰포트에 맞춤, 비율 왜곡 감수)으로 전환
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/BackgroundFitter.cs` — `Start()` 내부에서 `float scale = Mathf.Min(camSize.x / spriteSize.x, camSize.y / spriteSize.y); transform.localScale = new Vector3(scale, scale, 1f);` 2줄을 `transform.localScale = new Vector3(camSize.x / spriteSize.x, camSize.y / spriteSize.y, 1f);` 1줄로 교체. `scale` 지역 변수 및 `Mathf.Min` 비교 로직 제거. `Start()` 진입부의 null 방어 처리 등 다른 로직은 변경하지 않음.
+
+**주요 결정사항:**
+- 요청 범위를 정확히 준수해 스케일 계산 로직 2줄만 교체, 그 외 파일 내용(주석 없음, null 체크 등) 일절 손대지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: WallFitter._nativeBottomY 기준값 수정 (-5.33f → -10f)
+
+**작업 내용:**
+- `Ground`(하단 벽)는 다른 벽들(`Wall_Left`/`Wall_Right`/`Wall_Top`)과 달리 배경 격자 경계가 아니라 그 아래 캐릭터/볼 발사 위치까지 포함하는 더 아래쪽 지점에 있어야 함이 확인됨
+- 원래(변경 전) `Ground` 값이 `y=-10`이었고 배경 텍스처 맨 아래 끝 계산값(`y≈-10.24`)과 거의 일치하므로, 격자 경계값(-5.33) 대신 원래 값(-10)으로 되돌림
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/WallFitter.cs` — `_nativeBottomY` 필드 기본값 `-5.33f` → `-10f`
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step6_SetupWallFitter()` 내 `so.FindProperty("_nativeBottomY").floatValue` `-5.33f` → `-10f`
+
+**주요 결정사항:**
+- `_nativeLeftX`(-6.04) / `_nativeRightX`(5.89) / `_nativeTopY`(5.55)는 요청 범위 밖이므로 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: 배경/벽 크기 계산에 확대 배율(zoomFactor) 추가
+
+**작업 내용:**
+- 실기기 테스트에서 격자가 화면에서 차지하는 비중이 작다는 피드백에 따라, 배경 전체를 1.3배 확대해 격자가 화면을 더 크게 채우고 바깥 테두리 장식은 화면 밖으로 잘려나가도록 함
+- `BackgroundFitter`와 `WallFitter`가 동일한 배율(`_zoomFactor = 1.3f`)을 사용해야 벽이 계속 배경 격자와 맞음
+- 기존 파일 3개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/BackgroundFitter.cs` — `[SerializeField] private float _zoomFactor = 1.3f;` 필드 추가, `Start()` 내 `transform.localScale` 계산 시 `camSize.x / spriteSize.x`, `camSize.y / spriteSize.y` 각각에 `_zoomFactor`를 곱하도록 수정
+- `Assets/_Project/Scripts/Core/WallFitter.cs` — `[SerializeField] private float _zoomFactor = 1.3f;` 필드 추가, `Start()` 내 `scaleX`/`scaleY` 계산 시 각각 `_zoomFactor`를 곱하도록 수정
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `ConnectBackgroundFitterRefs()`에 `so.FindProperty("_zoomFactor").floatValue = 1.3f;` 추가, `Step6_SetupWallFitter()`에 동일하게 `so.FindProperty("_zoomFactor").floatValue = 1.3f;` 추가 (기존 SerializedObject/FindProperty/ApplyModifiedPropertiesWithoutUndo 패턴 재사용)
+
+**주요 결정사항:**
+- 다른 로직(native 좌표값, 스케일 계산 외 부분)은 일절 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: BackgroundFitter/WallFitter Inspector 실시간 반영 (ExecuteAlways + OnValidate)
+
+**작업 내용:**
+- `_zoomFactor` 등 값을 Inspector에서 조정할 때 Play 모드 진입 없이 씬에 즉시 반영되도록 개선
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/BackgroundFitter.cs` — 클래스에 `[ExecuteAlways]` 추가, 기존 `Start()` 본문을 `private void Apply()`로 이동, `Start()`는 `Apply()` 호출만 수행, `OnValidate()` 신규 추가해 `Apply()` 호출
+- `Assets/_Project/Scripts/Core/WallFitter.cs` — 동일 패턴 적용: `[ExecuteAlways]` 추가, `Start()` 본문을 `Apply()`로 이동, `Start()`는 `Apply()` 호출만, `OnValidate()` 신규 추가해 `Apply()` 호출. `SetX`/`SetY` 헬퍼와 필드는 변경 없음
+
+**주요 결정사항:**
+- 이번 작업은 진행 중인 `2026-07-03/12-30_background-resolution-fix` task의 연장선상의 작은 에디터 편의 기능으로 판단해 별도 plan.md 문서 작성 없이 진행 (오케스트레이터 판단)
+- 다른 필드/로직은 일절 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: WallFitter `_nativeBottomY` 기본값 수정 (-10f → -7.5f)
+
+**작업 내용:**
+- 사용자 명시적 승인에 따라 별도 plan.md 없이 바로 구현
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/WallFitter.cs` — `_nativeBottomY` 필드 기본값 `-10f` → `-7.5f`
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step6_SetupWallFitter()` 내 `so.FindProperty("_nativeBottomY").floatValue` 설정값 `-10f` → `-7.5f`
+
+**배경:**
+- `_zoomFactor`(1.3)가 배경뿐 아니라 벽 위치에도 곱해지는 구조에서, 기존 `_nativeBottomY`(-10)가 카메라 시야 경계(-10)에 거의 딱 붙어 있어 `-10 × 1.3 ≈ -12.7`로 카메라 시야(±10) 밖으로 나가는 문제가 실기기 테스트에서 확인됨
+- 격자 아래 덩쿨 장식 위치를 감안해 `-7.5`로 조정
+
+**주요 결정사항:**
+- `_nativeLeftX`/`_nativeRightX`/`_nativeTopY`/`_zoomFactor`는 요청 범위 외이므로 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: WallFitter 벽 기준값 4개 재조정 (좌/우/상단 바깥으로, 하단 안으로)
+
+**작업 내용:**
+- 사용자 명시적 승인에 따라 별도 plan.md 없이 바로 구현
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/WallFitter.cs`
+  - `_nativeLeftX` 기본값 `-6.04f` → `-6.5f`
+  - `_nativeRightX` 기본값 `5.89f` → `6.3f`
+  - `_nativeTopY` 기본값 `5.55f` → `6.0f`
+  - `_nativeBottomY` 기본값 `-7.5f` → `-6.5f`
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step6_SetupWallFitter()` 내 동일 4개 `so.FindProperty(...).floatValue` 설정값을 위와 동일하게 변경
+
+**배경:**
+- 실기기 테스트 결과 좌우/상단 벽은 카메라 시야 기준 조금 더 바깥으로, 하단(Ground)은 조금 더 안쪽으로 배치되도록 조정 필요성이 확인됨
+
+**주요 결정사항:**
+- `_zoomFactor`는 요청 범위 외이므로 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: WallFitter에 LaunchPoint(볼 발사 지점) 위치 관리 추가
+
+**작업 내용:**
+- 사용자 명시적 승인에 따라 별도 plan.md 없이 바로 구현
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/WallFitter.cs`
+  - `[SerializeField] private Transform _launchPoint;` 필드 추가 (`_ground` 다음)
+  - `[SerializeField] private float _nativeLaunchPointY = -6.0f;` 필드 추가 (`_nativeBottomY` 다음)
+  - `Apply()`에 `SetY(_launchPoint, _nativeLaunchPointY * scaleY);` 추가 (`SetY(_ground, ...)` 다음 줄)
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `Step6_SetupWallFitter()`에 `Transform launchPoint = FindTransformOrWarn("LaunchPoint");` 추가, `SerializedObject`로 `_launchPoint`(Transform) / `_nativeLaunchPointY`(-6.0f) 연결
+  - `SetupScene()`의 호출 순서 변경: `Step6_SetupWallFitter()`를 `Step8_ConnectBallLauncherRefs(ballPrefab)` **다음**으로 이동 (기존에는 `Step5_PlaceWallsAndGround()` 직후였음)
+
+**배경 및 실행 순서 문제 해결 방법:**
+- `LaunchPoint`는 `BallLauncher`의 자식으로 `Step8_ConnectBallLauncherRefs()`에서 최초 생성됨. 기존 호출 순서(`Step6` → `Step7` → `Step8`)대로면 `Step6_SetupWallFitter()` 실행 시점에 `LaunchPoint`가 아직 씬에 없어 `_launchPoint` 참조 연결이 항상 실패(경고 로그 후 null)하는 문제가 있었음
+- Step 함수 이름/번호는 그대로 유지하고 (요청 범위 외 리네이밍 방지), `SetupScene()` 내부의 **호출 순서만** `Step6_SetupWallFitter()`를 `Step8_ConnectBallLauncherRefs()` 뒤로 옮겨 해결. 코드에는 순서 변경 이유를 설명하는 주석 추가
+- `Step6_SetupWallFitter()`는 기존 `FindTransformOrWarn()` 패턴을 그대로 재사용해 `GameObject.Find("LaunchPoint")` 방식으로 참조를 찾으므로, 씬 재실행(이미 `LaunchPoint`가 존재하는 케이스)에서도 정상 동작함
+
+**주요 결정사항:**
+- `SetY`/`SetX` 헬퍼가 이미 null 방어 처리되어 있어 재사용만 함 (신규 로직 없음)
+- 요청받지 않은 다른 필드(`_nativeLeftX` 등)는 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)

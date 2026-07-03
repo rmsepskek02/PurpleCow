@@ -168,6 +168,21 @@ Assets/_Project/Scripts/
 - **수정**: `Step5_PlaceWallsAndGround()`에 `PlaceColliderObject("Wall_Top", "Wall", new Vector3(0f, 8f, 0f), new Vector2(12f, 0.2f));` 1줄 추가 (`plan.md` 사용자 승인 후 dev 에이전트 구현, 커밋 `345ae29`, 브랜치 `claude/ball-ceiling-wall-fix`). y=8은 `AIFailures.md`에 문서화된 실제 플레이 영역(`x: ±5.5, y: -10 ~ +8`) 상단 값, size(12, 0.2)는 `Ground`와 동일한 크기를 재사용해 좌우 벽과의 경계에 빈틈이 없도록 하였다.
 - **검증**: 코드 수정만으로는 이미 커밋된 `Assets/Scenes/SampleScene.unity`에 자동 반영되지 않는 구조라, 사용자가 로컬 Unity 에디터에서 `PurpleCow/Setup/Scene Setup` 메뉴를 재실행해 `Wall_Top`을 씬에 반영하였다. 이후 사용자가 실제 플레이 테스트로 천장 반사가 정상 동작함을 확인하였다.
 
+### 배경/해상도 대응 (`_Task/2026-07-03/12-30_background-resolution-fix`)
+
+다양한 Android 기기 종횡비에서 배경/플레이 영역이 여백 없이, 잘리지 않고 표시되도록 대응하는 작업을 진행하였다.
+
+- **배경**: 이 프로젝트는 특정 해상도를 못박지 않은 Android 타겟이라, 기기마다 다른 화면 종횡비에서도 원본 게임과 비슷하게 보여야 했다. 그런데 사용자가 보내준 실기기 빌드 스크린샷에서 배경 여백과 화면 좌우 잘림 현상이 함께 확인되며 이번 task가 시작되었다.
+- **원인**: (1) Player Settings가 Auto Rotation 상태로 남아 있어 Portrait 고정이 되어 있지 않았고, (2) 배경 스프라이트(`Background_1_Stage.png`)가 정사각형 크롭 에셋이라 카메라 뷰포트에 맞춰 스케일되는 로직 없이 원본 크기로 고정 배치돼 있어 기기 종횡비가 표준을 벗어나면 여백이 생길 수 있었으며, (3) Python PIL로 배경 텍스처를 픽셀 단위로 실측한 결과 Wall_Left/Right/Top/Ground 좌표가 배경 이미지 속 격자 그림 경계와 애초에 일치하지 않는다는 사실도 추가로 드러났다.
+- **해결 과정 (시행착오 포함)**:
+  1. `BackgroundFitter.cs` 신규 작성 — 카메라 뷰포트에 맞춰 배경을 스케일하는 방식을 Cover(`max(가로비,세로비)`) → Contain(`min(가로비,세로비)`, 실기기에서 원인 불명의 사방 여백 발생해 폐기) 순으로 시도한 끝에, 가로/세로를 독립적으로 늘리는 Stretch 방식으로 최종 확정하였다.
+  2. Wall 좌표가 배경 격자 그림과 어긋나는 문제를 해결하기 위해, 처음에는 카메라 시야(`orthographic size`)를 기기별로 동적으로 넓히는 `CameraFitter.cs`를 도입하려 했으나, "Wall 좌표 = 실측값 × 배경 배율"로 계산하면 Wall이 화면에서 차지하는 상대적 비율이 `orthographic size`와 무관하게 항상 일정함이 수학적으로 도출되어(가로 약 0.29, 세로 약 0.54, 항상 화면 안) 불필요함이 밝혀졌다. 이에 따라 `CameraFitter.cs`는 삭제하고 `orthographic size`는 원래 설계값 10으로 고정 유지하기로 하였다.
+  3. 대신 `WallFitter.cs`를 신규 작성하여 `Wall_Left`/`Wall_Right`/`Wall_Top`/`Ground`를 "배경 이미지 실측 격자 경계값 × 그 순간 배경 배율"로 계산해 배치하도록 하였다. `SceneSetupEditor.cs`도 `CameraFitter` 연동 코드를 제거하고 `WallFitter` 연동 코드(`Step6_SetupWallFitter()`)로 대체하였다.
+  4. 실기기 테스트 결과 격자가 화면에서 차지하는 비중이 작다는 피드백에 따라, `BackgroundFitter`/`WallFitter` 양쪽에 공통 확대 배율 `_zoomFactor = 1.3f`를 추가하였다(두 스크립트가 반드시 같은 배율을 써야 벽-격자 정렬이 유지됨).
+  5. Unity 에디터에서 Play 모드 진입 없이 Inspector 값을 바꾸면 씬 뷰에 즉시 반영되도록, `BackgroundFitter`/`WallFitter` 둘 다 `[ExecuteAlways]`를 추가하고 기존 `Start()` 로직을 `Apply()` 메서드로 분리해 `Start()`와 신규 `OnValidate()` 둘 다 호출하도록 리팩터링하였다. 이후의 세부 수치 조정은 이 기능으로 사용자가 직접 진행하였다.
+  6. 위 Inspector 실시간 반영 기능을 활용해 여러 차례 실기기 테스트를 거치며 `WallFitter`의 벽 기준값을 최종 조정하였다: `_nativeBottomY`는 -5.33(격자 실측값) → -10(원래 설계값) → -7.5(줌 배율 적용 후 카메라 시야 밖으로 나가는 문제 발견) → -6.5(최종, 격자 아래 덩쿨 장식 사이 캐릭터 위치 감안), `_nativeLeftX`는 -6.04 → -6.5(최종), `_nativeRightX`는 5.89 → 6.3(최종), `_nativeTopY`는 5.55 → 6.0(최종)로 조정하였다. 좌우 절대값이 다른 것은 배경 텍스처 자체의 미세한 비대칭(약 2.5%)이 실측값에 그대로 반영된 것이며, 사용자 확인 후 대칭으로 보정하지 않고 실측 기반으로 유지하기로 하였다. 또한 볼 발사 지점(`LaunchPoint`)도 `WallFitter`에 `_nativeLaunchPointY = -6.0f`로 편입해 같은 배율로 연동하였다 — `LaunchPoint`가 `SceneSetupEditor.Step8_ConnectBallLauncherRefs()`에서 생성되므로, `Step6_SetupWallFitter()` 호출 순서를 `Step8` 이후로 재배치하여 실행 순서 문제를 해결하였다.
+- **최종 결과**: 위 과정을 거쳐 완성된 배경/벽 연동 방식을 실기기에서 최종 테스트하였고, 사용자가 결과를 확인해 만족하며 task를 완료하였다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/research.md`, `plan.md` 참고.
+
 ---
 
 ## 2026-07-04
@@ -189,7 +204,7 @@ Assets/_Project/Scripts/
 **dev 에이전트 (커밋 `1cf5ab5`)**
 - 신규 `CharacterAimController.cs`(`Assets/_Project/Scripts/Character/`) 작성 — `BallLauncher.LaunchDirection`을 매 프레임 읽어 Weapon은 조준 방향을 거의 그대로 따라가는 회전, Head는 감쇠된 약한 회전, Body는 회전 없이 flipX만 적용
 - 좌우 반전은 `localScale` 반전이 아닌 `SpriteRenderer.flipX`만 사용해 반전-회전 부호 충돌을 원천 차단(plan.md에서 확정한 방향대로 구현)
-- `SceneSetupEditor.cs`에 `Step10_SetupCharacterVisual()` 신규 추가 — `Character` 오브젝트를 `LaunchPoint`와 동일 위치(BallLauncher의 형제 오브젝트)에 생성하고 Body/Head/Weapon 자식 3개를 자동 배치
+- `SceneSetupEditor.cs`에 `Step10_SetupCharacterVisual()`(이후 main과 병합하며 `Step11_SetupCharacterVisual()`로 재번호 부여) 신규 추가 — `Character` 오브젝트를 `LaunchPoint`와 동일 위치(BallLauncher의 형제 오브젝트)에 생성하고 Body/Head/Weapon 자식 3개를 자동 배치
 
 **qa 에이전트 검토 및 오케스트레이터 수정 (커밋 `794713d`)**
 - 1차 구현 검토에서 Major 2건 발견: (1) Body/Head/Weapon이 모두 Character 원점(0,0,0)에 겹쳐 배치되어 캐릭터 형태로 보이지 않는 문제, (2) design 에이전트가 작성한 agent-memory 파일에 툴 호출 잔재 텍스트(`</content>`)가 잘못 섞여 들어간 문제
@@ -199,3 +214,10 @@ Assets/_Project/Scripts/
 **범위 및 미완료 사항**
 - `CharacterManager.cs`(HP/XP 로직), `BallLauncher.cs`/`Ball.cs`(볼 발사/귀환 로직)는 이번 작업에서 전혀 수정하지 않음 — 순수 시각 레이어 추가
 - 이 작업이 진행된 원격 환경에는 Unity 에디터가 없어, 코드/에셋 변경만으로는 이미 커밋된 `SampleScene.unity`에 자동 반영되지 않는다(기존 WaveTableData/Wall_Top 사례와 동일한 제약). 사용자가 로컬 Unity에서 `PurpleCow/Setup/Scene Setup` 메뉴를 재실행해야 씬에 `Character` 오브젝트(Body/Head/Weapon 포함)가 실제로 생성/갱신되며, 그 후 실제 플레이 테스트로 조준 반응(회전/반전)이 자연스러운지 확인이 필요하다
+
+### main 병합 후 발견: WallFitter-Character 위치 연동 누락
+
+캐릭터 비주얼 구현 작업 이후 main에 병합된 배경/해상도 대응(`WallFitter`) 작업과 통합하는 과정에서 새로운 문제가 드러났다.
+
+- `WallFitter.Apply()`(`[ExecuteAlways]`, `Start()`/`OnValidate()`에서 호출)가 기기 화면 비율에 맞춰 `LaunchPoint`의 월드 좌표(`_nativeLaunchPointY` 기준)를 런타임에 동적으로 재배치하는데, `Character`는 `Step11_SetupCharacterVisual()`에서 `LaunchPoint`의 `localPosition`을 에디터 설정 시점에 한 번만 복사한 형제 오브젝트로 만들어져 있어, `WallFitter`가 이후 `LaunchPoint`를 움직여도 `Character`는 따라가지 못하고 원래 위치에 남는다.
+- 캐릭터 비주얼 구현 당시에는 아직 `WallFitter`가 main에 없었기 때문에 예상하지 못한 상호작용이며, main과 병합하는 과정에서 오케스트레이터가 직접 발견하였다. 별도 후속 수정이 필요한 상태로 남겨두었다(`ProjectStatus.md` "다음 작업 순서" 참고).
