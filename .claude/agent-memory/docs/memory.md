@@ -610,3 +610,25 @@
 ### 주요 결정사항
 - 사용자 지시대로 plan.md는 이번에 작성하지 않음, 코드/문서(UIRules.md 등) 실제 수정도 하지 않음(research.md 1개 파일만 생성)
 - AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 갱신하지 않음
+
+---
+
+### 작업 내용 (추가)
+- Ball Trajectory Aim Fix task plan.md 신규 생성 (research.md 기반)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/plan.md`
+- research.md 재확인 결과 이슈가 실제로는 3개(궤적 상시 표시, 터치 조준 정확도, 궤적 프리뷰 색상/크기)임을 확인 — 직전 세션의 research.md 완료 기록에 "두 이슈"로만 요약된 것은 3번째 이슈(색상/크기) 서술이 누락된 것으로 판단, 이번 plan.md는 research.md 원문 그대로 세 이슈 전부를 대상으로 작성
+- 작성 전 `TrajectoryPreview.cs`, `InputHandler.cs`, `BallLauncher.cs`(`LaunchDirection`/`LaunchPoint` 정의부), `UIRules.md` 섹션 11, `DevRules.md`(네이밍/Awake 캐싱 규칙)를 Read로 재확인
+
+### 결과
+- plan.md 생성 완료: 구현 목표 4개, 단계별 작업 계획을 이슈 1(궤적 상시 표시)→이슈 2(스크린→월드 변환)→이슈 3(색상/크기 조정)→문서 갱신 순으로 구성
+- 이슈 1: `TrajectoryPreview`의 `OnEnable`/`OnDisable` 이벤트 구독 제거, `HandleAimBegin`/`HandleDrag`/`HandleRelease` 삭제, `Update()` 신규 추가(`BallLauncher.Instance.LaunchDirection` 매 프레임 사용), `Awake()`의 `SetVisible(false)` → `SetVisible(true)`로 변경
+- 이슈 2: `InputHandler`에 `Camera.main` 캐싱용 `_mainCamera` 필드 + `Awake()` 신규 추가, `_dragStartPosition`과 드래그 방향 계산을 `ScreenToWorldPoint` 변환 후 델타 계산 방식으로 전환, orthographic 카메라에서는 z값이 결과에 영향 없다는 점 참고 메모 포함
+- 이슈 3: `_hitRing`을 `_hitColor` 대신 신규 `_ringColor` 필드(회백색 계열) 참조로 분리, `_hitColor` 기본값을 `Color.red`에서 `new Color32(206, 90, 82, 255)`로 변경, `_dotRadius` `0.08f`→`0.05f` 예시, `DASH_WORLD_SIZE` `0.3f`→`0.15f` 예시, `_lineColor`를 `Color.white`에서 `new Color32(225, 225, 220, 255)`로 변경. 모두 예시값이며 실제 화면에서 재조정 가능하다고 명시
+- 예상 변경 파일: `TrajectoryPreview.cs`, `InputHandler.cs`, `UIRules.md`(섹션 11) 3개, 신규 생성 파일 없음을 명시
+- 주의사항에 (1) 색상/크기 수치는 예시값, (2) `[SerializeField]` 인스펙터 오버라이드 우선 적용 가능성, (3) `Camera.main` 사용을 위한 `MainCamera` 태그 확인 필요, (4) `DevRules.md` 네이밍/캐싱 컨벤션 준수 4가지 명시
+
+### 주요 결정사항
+- 사용자가 이슈별로 구체적 구현 방향(메서드/필드 단위)을 이미 확정해서 제공했으므로, plan.md는 그 지시를 그대로 단계별 작업 계획으로 구조화하는 데 집중하고 임의 해석/추가 설계를 하지 않음
+- research.md는 이번 세션에서 전혀 수정하지 않음(사용자 지시대로 plan.md만 신규 작성)
+- AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 갱신하지 않음
+- 코드(`TrajectoryPreview.cs`, `InputHandler.cs`) 및 `UIRules.md`는 계획 문서 성격상 실제로 수정하지 않고 Read만 수행
