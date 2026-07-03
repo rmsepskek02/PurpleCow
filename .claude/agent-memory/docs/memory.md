@@ -577,3 +577,19 @@
 - `TrajectoryPreview` GameObject가 같은 커밋에 씬에 추가된 것은 `SceneSetupEditor.cs`의 기존 "Scene Setup" 메뉴가 여러 시스템을 한 번에 처리하는 과정에서 발생한 정상적인 부수 효과로, 이번 WaveData 작업과 무관하다고 판단하여 문서에 별도 기록하지 않음
 - DevRules.md/ProjectHistory.md/AGENTS.md는 지시대로 이번 세션에서 전혀 수정하지 않음
 - 커밋/푸시는 진행하지 않고 파일 수정까지만 수행
+
+---
+
+### 작업 내용 (추가)
+- 볼 천장 이탈 버그 수정(`_Task/2026-07-03/12-48_ball-ceiling-wall-fix`, research.md → plan.md → dev 구현 커밋 `345ae29` → 사용자 로컬 Scene Setup 재실행 → 실 플레이 검증까지 전 과정 완료) 결과를 프로젝트 문서에 반영
+- 수정 파일: `Assets/_Project/Docs/ProjectStatus.md`, `Assets/_Project/Docs/ProjectHistory.md` 2개 (코드/씬 파일은 이미 수정 완료된 상태라 건드리지 않음)
+
+### 결과
+- `ProjectStatus.md`: "완료된 작업" 체크리스트에 이번 항목 신규 추가 — 버그 발견 → research.md 원인 특정(`SceneSetupEditor.Step5_PlaceWallsAndGround()`에 상단 벽 생성 코드 누락) → plan.md 승인 → dev 에이전트 `Wall_Top` 콜라이더 1줄 추가(커밋 `345ae29`) → 사용자 로컬 `PurpleCow/Setup/Scene Setup` 재실행 → 실 플레이 검증 완료까지 기존 항목들과 동일한 한 문장 서술 스타일로 작성. "현재 상태"/"다음 작업 순서"는 기존 서술이 이미 이 흐름과 자연스럽게 이어져 지시대로 손대지 않음
+- `ProjectHistory.md`: 이미 있는 "## 2026-07-03" 섹션 맨 하단(WaveData→WaveTableData 리팩토링 다음)에 "### 볼 천장 이탈 버그 수정" 소제목 신규 추가 — 배경/원인(`SceneSetupEditor.cs` 좌/우/아래 3면만 생성, 상단 누락)/수정(`Wall_Top` 1줄, 커밋 `345ae29`, 브랜치 `claude/ball-ceiling-wall-fix`, 좌표 근거)/검증(사용자 로컬 Scene Setup 메뉴 재실행 후 실 플레이 확인) 순서로 기존 섹션들과 동일한 서술 형식 유지
+
+### 주요 결정사항
+- `AIFailures.md`는 갱신하지 않음: 이번 버그는 이번 세션이 새로 저지른 실수가 아니라 과거 세션부터 존재하던 씬 설정 누락을 정상적인 research→plan→구현 절차로 발견/수정한 사례라 "AI 실패 사례" 성격과 다르다고 판단
+- `GameplayMechanics.md`/`UIRules.md`도 갱신하지 않음: 천장 벽은 별도 게임플레이 메커닉이나 UI 규칙이 아니라 단순 씬 경계 콜라이더 설정이라 두 문서의 성격과 맞지 않는다고 판단
+- `AGENTS.md`도 갱신하지 않음: 기존 정책(개별 task 폴더는 별도 인덱싱하지 않음, "Task 문서" 섹션에 명시)에 따라 이번 task 폴더도 별도 등록 불필요로 판단
+- 코드(`SceneSetupEditor.cs`)와 씬(`SampleScene.unity`)은 이미 수정/반영 완료된 상태이므로 이번 작업에서는 전혀 건드리지 않고 Read하지도 않음(요청 문서 내용 그대로 신뢰해 반영)

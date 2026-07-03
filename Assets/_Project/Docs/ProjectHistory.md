@@ -159,3 +159,11 @@ Assets/_Project/Scripts/
 - 신규: `Scripts/Data/WaveTableData.cs` — `WaveEntry`(WaveNumber, SpawnEntries) + `WaveTableData`(ScriptableObject, `_waves` List, `Waves`/`WaveCount` 프로퍼티), 기존 `MonsterSpawnEntry`(Data, GridPosition)는 그대로 이전
 - 수정: `WaveManager.cs`(`_waveDatas` 배열 → `_waveTable` 단일 필드로 교체), `MonsterSetupEditor.cs`(웨이브 생성/스폰 데이터 채우기 로직을 단일 테이블 asset 기준으로 변경, 계산 로직 자체는 변경 없음), `SceneSetupEditor.cs`(WaveManager 참조 연결 로직 단순화)
 - 미완료 사항: 이 작업이 진행된 원격 환경에는 Unity 에디터가 없어 새 `WaveTableData.asset` 생성과 `SampleScene.unity`의 `WaveManager._waveTable` 필드 재연결이 아직 되어 있지 않음. 사용자가 로컬 Unity에서 `PurpleCow/Setup/Monster System Setup` → `PurpleCow/Setup/Scene Setup`을 순서대로 재실행해야 완전히 동작하며, 그 전까지는 씬의 구 `_waveDatas` 직렬화 데이터가 고아 데이터로 남아 웨이브 스폰이 동작하지 않는 상태
+
+### 볼 천장 이탈 버그 수정 (`_Task/2026-07-03/12-48_ball-ceiling-wall-fix`)
+
+실제 플레이 테스트 중 볼이 맵 외곽에서 튕겨야 하는데 맵 밖(천장)으로 나가버리는 버그를 발견하였다.
+
+- **원인**: `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`의 `Step5_PlaceWallsAndGround()`가 `Wall_Left`/`Wall_Right`/`Ground` 3개 콜라이더만 생성하고 상단(천장) 벽을 생성하는 코드가 없었음. 좌/우/아래 3면만 막혀 있고 위쪽이 완전히 뚫려 있어, 몬스터가 없는 빈 레인 등으로 볼이 위쪽으로 진행할 경우 이를 막는 콜라이더가 전혀 없어 플레이 영역 밖으로 무한히 날아가는 구조였다(`research.md`).
+- **수정**: `Step5_PlaceWallsAndGround()`에 `PlaceColliderObject("Wall_Top", "Wall", new Vector3(0f, 8f, 0f), new Vector2(12f, 0.2f));` 1줄 추가 (`plan.md` 사용자 승인 후 dev 에이전트 구현, 커밋 `345ae29`, 브랜치 `claude/ball-ceiling-wall-fix`). y=8은 `AIFailures.md`에 문서화된 실제 플레이 영역(`x: ±5.5, y: -10 ~ +8`) 상단 값, size(12, 0.2)는 `Ground`와 동일한 크기를 재사용해 좌우 벽과의 경계에 빈틈이 없도록 하였다.
+- **검증**: 코드 수정만으로는 이미 커밋된 `Assets/Scenes/SampleScene.unity`에 자동 반영되지 않는 구조라, 사용자가 로컬 Unity 에디터에서 `PurpleCow/Setup/Scene Setup` 메뉴를 재실행해 `Wall_Top`을 씬에 반영하였다. 이후 사용자가 실제 플레이 테스트로 천장 반사가 정상 동작함을 확인하였다.
