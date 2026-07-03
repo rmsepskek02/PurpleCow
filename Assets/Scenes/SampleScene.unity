@@ -152,6 +152,8 @@ MonoBehaviour:
   _poolParent: {fileID: 1067195984}
   _initialPoolSize: 10
   _launchPoint: {fileID: 859741423}
+  _normalBallCount: 5
+  _rosterLaunchInterval: 0.1
 --- !u!4 &19688685
 Transform:
   m_ObjectHideFlags: 0
@@ -255,6 +257,10 @@ PrefabInstance:
     - target: {fileID: 3970311963035012352, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440975762941213956, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
       objectReference: {fileID: 0}
     - target: {fileID: 9200452053561158888, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
       propertyPath: m_Name
@@ -413,6 +419,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4440975762941213956, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 9200452053561158888, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
       propertyPath: m_Name
       value: SkillSlot
@@ -488,7 +498,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 302149355ecc17c4c8620aab87802758, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CharacterHpBar
-  _slider: {fileID: 0}
+  _slider: {fileID: 217245997}
   _hpText: {fileID: 518145046}
 --- !u!114 &217245997
 MonoBehaviour:
@@ -674,7 +684,6 @@ MonoBehaviour:
   _initialPoolSize: 20
   _spawnRoot: {fileID: 1067195984}
   _gridCellSize: 1
-  _monsterMoveDistance: 0
   _bottomBoundaryY: 0
   _killCountForSkill: 5
 --- !u!4 &295246077
@@ -779,6 +788,10 @@ PrefabInstance:
     - target: {fileID: 3970311963035012352, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440975762941213956, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
       objectReference: {fileID: 0}
     - target: {fileID: 9200452053561158888, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
       propertyPath: m_Name
@@ -1816,6 +1829,10 @@ PrefabInstance:
       propertyPath: m_TextStyleHashCode
       value: -1183493901
       objectReference: {fileID: 0}
+    - target: {fileID: 8048156472127987721, guid: 72aba723929c06749a827ff87b429a4a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 8370710165482835449, guid: 72aba723929c06749a827ff87b429a4a, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -2123,6 +2140,10 @@ PrefabInstance:
       value: -1183493901
       objectReference: {fileID: 0}
     - target: {fileID: 2216031564993980854, guid: 72aba723929c06749a827ff87b429a4a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 8048156472127987721, guid: 72aba723929c06749a827ff87b429a4a, type: 3}
       propertyPath: m_TextStyleHashCode
       value: -1183493901
       objectReference: {fileID: 0}
@@ -2922,6 +2943,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4440975762941213956, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 9200452053561158888, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
       propertyPath: m_Name
       value: SkillSlot
@@ -3080,6 +3105,10 @@ PrefabInstance:
     - target: {fileID: 3970311963035012352, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440975762941213956, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
       objectReference: {fileID: 0}
     - target: {fileID: 9200452053561158888, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
       propertyPath: m_Name
@@ -3380,8 +3409,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f9e8802b82f59f468d7852282afff93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CharacterXpBar
-  _slider: {fileID: 0}
-  _levelText: {fileID: 0}
+  _slider: {fileID: 1506981926}
+  _levelText: {fileID: 2087908203}
 --- !u!114 &1506981926
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3592,6 +3621,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4440975762941213956, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 9200452053561158888, guid: ac7af9a38e72bec43b00de2ad9f9fb1c, type: 3}
       propertyPath: m_Name
       value: SkillSlot
@@ -3685,6 +3718,10 @@ PrefabInstance:
       value: -1183493901
       objectReference: {fileID: 0}
     - target: {fileID: 2216031564993980854, guid: 72aba723929c06749a827ff87b429a4a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 8048156472127987721, guid: 72aba723929c06749a827ff87b429a4a, type: 3}
       propertyPath: m_TextStyleHashCode
       value: -1183493901
       objectReference: {fileID: 0}
