@@ -784,3 +784,28 @@
 **주요 결정사항:**
 - `_nativeLeftX`/`_nativeRightX`/`_nativeTopY`/`_zoomFactor`는 요청 범위 외이므로 변경하지 않음
 - 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: WallFitter 벽 기준값 4개 재조정 (좌/우/상단 바깥으로, 하단 안으로)
+
+**작업 내용:**
+- 사용자 명시적 승인에 따라 별도 plan.md 없이 바로 구현
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/WallFitter.cs`
+  - `_nativeLeftX` 기본값 `-6.04f` → `-6.5f`
+  - `_nativeRightX` 기본값 `5.89f` → `6.3f`
+  - `_nativeTopY` 기본값 `5.55f` → `6.0f`
+  - `_nativeBottomY` 기본값 `-7.5f` → `-6.5f`
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step6_SetupWallFitter()` 내 동일 4개 `so.FindProperty(...).floatValue` 설정값을 위와 동일하게 변경
+
+**배경:**
+- 실기기 테스트 결과 좌우/상단 벽은 카메라 시야 기준 조금 더 바깥으로, 하단(Ground)은 조금 더 안쪽으로 배치되도록 조정 필요성이 확인됨
+
+**주요 결정사항:**
+- `_zoomFactor`는 요청 범위 외이므로 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)

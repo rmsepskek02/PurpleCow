@@ -9,10 +9,10 @@ public class WallFitter : MonoBehaviour
     [SerializeField] private Transform _wallRight;
     [SerializeField] private Transform _wallTop;
     [SerializeField] private Transform _ground;
-    [SerializeField] private float _nativeLeftX = -6.04f;
-    [SerializeField] private float _nativeRightX = 5.89f;
-    [SerializeField] private float _nativeTopY = 5.55f;
-    [SerializeField] private float _nativeBottomY = -7.5f;
+    [SerializeField] private float _nativeLeftX = -6.5f;
+    [SerializeField] private float _nativeRightX = 6.3f;
+    [SerializeField] private float _nativeTopY = 6.0f;
+    [SerializeField] private float _nativeBottomY = -6.5f;
     [SerializeField] private float _zoomFactor = 1.3f;
 
     private void Start()
