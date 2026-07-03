@@ -450,7 +450,7 @@ public static class SceneSetupEditor
         so.FindProperty("_nativeLeftX").floatValue = -6.04f;
         so.FindProperty("_nativeRightX").floatValue = 5.89f;
         so.FindProperty("_nativeTopY").floatValue = 5.55f;
-        so.FindProperty("_nativeBottomY").floatValue = -10f;
+        so.FindProperty("_nativeBottomY").floatValue = -7.5f;
         so.FindProperty("_zoomFactor").floatValue = 1.3f;
         so.ApplyModifiedPropertiesWithoutUndo();
 

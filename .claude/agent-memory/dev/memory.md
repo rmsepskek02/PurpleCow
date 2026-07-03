@@ -762,3 +762,25 @@
 - 이번 작업은 진행 중인 `2026-07-03/12-30_background-resolution-fix` task의 연장선상의 작은 에디터 편의 기능으로 판단해 별도 plan.md 문서 작성 없이 진행 (오케스트레이터 판단)
 - 다른 필드/로직은 일절 변경하지 않음
 - 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: WallFitter `_nativeBottomY` 기본값 수정 (-10f → -7.5f)
+
+**작업 내용:**
+- 사용자 명시적 승인에 따라 별도 plan.md 없이 바로 구현
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/WallFitter.cs` — `_nativeBottomY` 필드 기본값 `-10f` → `-7.5f`
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step6_SetupWallFitter()` 내 `so.FindProperty("_nativeBottomY").floatValue` 설정값 `-10f` → `-7.5f`
+
+**배경:**
+- `_zoomFactor`(1.3)가 배경뿐 아니라 벽 위치에도 곱해지는 구조에서, 기존 `_nativeBottomY`(-10)가 카메라 시야 경계(-10)에 거의 딱 붙어 있어 `-10 × 1.3 ≈ -12.7`로 카메라 시야(±10) 밖으로 나가는 문제가 실기기 테스트에서 확인됨
+- 격자 아래 덩쿨 장식 위치를 감안해 `-7.5`로 조정
+
+**주요 결정사항:**
+- `_nativeLeftX`/`_nativeRightX`/`_nativeTopY`/`_zoomFactor`는 요청 범위 외이므로 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
