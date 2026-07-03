@@ -16,7 +16,7 @@ public static class SceneSetupEditor
         Step3_CreateBlockPrefabs();
         Step4_PlaceBackground();
         Step5_PlaceWallsAndGround();
-        Step6_SetupCameraFitter();
+        Step6_SetupWallFitter();
         Step7_PlaceManagers();
         Step8_ConnectBallLauncherRefs(ballPrefab);
         Step9_ConnectBallPrefabRefs();
@@ -411,29 +411,59 @@ public static class SceneSetupEditor
     }
 
     // ──────────────────────────────────────────
-    //  Step 6. Main Camera CameraFitter 연동
+    //  Step 6. Main Camera WallFitter 연동
     // ──────────────────────────────────────────
 
-    private static void Step6_SetupCameraFitter()
+    private static void Step6_SetupWallFitter()
     {
         Camera mainCamera = Camera.main;
         if (mainCamera == null)
         {
-            Debug.LogWarning("[SceneSetupEditor] Main Camera를 찾을 수 없어 CameraFitter 연동을 건너뜁니다.");
+            Debug.LogWarning("[SceneSetupEditor] Main Camera를 찾을 수 없어 WallFitter 연동을 건너뜁니다.");
             return;
         }
 
-        CameraFitter fitter = mainCamera.GetComponent<CameraFitter>();
+        WallFitter fitter = mainCamera.GetComponent<WallFitter>();
         if (fitter == null)
-            fitter = mainCamera.gameObject.AddComponent<CameraFitter>();
+            fitter = mainCamera.gameObject.AddComponent<WallFitter>();
+
+        GameObject background = GameObject.Find("Background");
+        SpriteRenderer backgroundSr = null;
+        if (background != null)
+            backgroundSr = background.GetComponent<SpriteRenderer>();
+        else
+            Debug.LogWarning("[SceneSetupEditor] Background 오브젝트를 찾을 수 없어 WallFitter._backgroundSpriteRenderer 연결을 건너뜁니다.");
+
+        Transform wallLeft = FindTransformOrWarn("Wall_Left");
+        Transform wallRight = FindTransformOrWarn("Wall_Right");
+        Transform wallTop = FindTransformOrWarn("Wall_Top");
+        Transform ground = FindTransformOrWarn("Ground");
 
         SerializedObject so = new SerializedObject(fitter);
         so.FindProperty("_targetCamera").objectReferenceValue = mainCamera;
-        so.FindProperty("_baseOrthographicSize").floatValue   = 10f;
-        so.FindProperty("_requiredHalfWidth").floatValue      = 5.6f;
+        so.FindProperty("_backgroundSpriteRenderer").objectReferenceValue = backgroundSr;
+        so.FindProperty("_wallLeft").objectReferenceValue = wallLeft;
+        so.FindProperty("_wallRight").objectReferenceValue = wallRight;
+        so.FindProperty("_wallTop").objectReferenceValue = wallTop;
+        so.FindProperty("_ground").objectReferenceValue = ground;
+        so.FindProperty("_nativeLeftX").floatValue = -6.04f;
+        so.FindProperty("_nativeRightX").floatValue = 5.89f;
+        so.FindProperty("_nativeTopY").floatValue = 5.55f;
+        so.FindProperty("_nativeBottomY").floatValue = -5.33f;
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        Debug.Log("[SceneSetupEditor] CameraFitter 연동 완료.");
+        Debug.Log("[SceneSetupEditor] WallFitter 연동 완료.");
+    }
+
+    private static Transform FindTransformOrWarn(string objName)
+    {
+        GameObject go = GameObject.Find(objName);
+        if (go == null)
+        {
+            Debug.LogWarning($"[SceneSetupEditor] {objName} 오브젝트를 찾을 수 없어 WallFitter 참조 연결을 건너뜁니다.");
+            return null;
+        }
+        return go.transform;
     }
 
     // ──────────────────────────────────────────
