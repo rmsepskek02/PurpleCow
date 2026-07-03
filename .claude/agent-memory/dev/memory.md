@@ -547,3 +547,22 @@
 **주요 결정사항:**
 - 시간차는 마지막 볼 발사 후에는 대기하지 않도록 `i < _normalBallCount - 1` 조건으로 처리 — 불필요한 프레임 지연 방지
 - Grep으로 `InitializeRoster` 참조를 전수 확인해 BallLauncher.cs 내부(Start 호출부, 메서드 정의)만 존재함을 검증 후 안전하게 변경
+
+---
+
+## 2026-07-03
+
+### 작업: UISetupEditor HUD Canvas 참조 연결 누락 버그 수정 (CharacterHpBar/CharacterXpBar NullReferenceException)
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Editor/UISetupEditor.cs` 수정 (신규 파일 없음)
+- `Step2_SetupHUDCanvas()`에서 `CharacterHpBar`/`CharacterXpBar` 컴포넌트와 자식 `Slider`/`TMP_Text`를 생성만 하고 `SerializedObject`로 필드 연결을 하지 않아, 몬스터 처치(경험치 획득)나 몬스터 바닥 도달(HP 차감) 시 `_slider.value = ...`에서 NullReferenceException이 발생하던 버그 수정
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/UISetupEditor.cs`
+  - `hpBarSo` 블록에 `hpBarSo.FindProperty("_slider").objectReferenceValue = charHpObj.GetComponent<Slider>();` 라인 추가 (기존 `_hpText` 연결 라인 바로 위)
+  - `CharacterXpBar` 연결 코드 자체가 없어서 신규로 `SerializedObject xpBarSo` 블록 추가 — `_slider`(`charXpObj.GetComponent<Slider>()`)와 `_levelText`(`levelTextObj.GetComponent<TextMeshProUGUI>()`) 연결, `EnsureComponent<CharacterXpBar>(charXpObj)` 호출 직후에 배치
+
+**주요 결정사항:**
+- 기존 `_hpText` 연결 패턴(`SerializedObject` + `FindProperty(...).objectReferenceValue = ...` + `ApplyModifiedPropertiesWithoutUndo()`)을 그대로 따름
+- 이 수정은 Editor 스크립트 코드만 변경한 것이라 이미 저장된 씬(SampleScene.unity)의 기존 오브젝트에는 자동 반영되지 않음 — 사용자가 Unity 에디터에서 `PurpleCow > Setup > UI Setup` 메뉴를 다시 실행해야 씬에 실제로 반영됨을 사용자에게 안내함
