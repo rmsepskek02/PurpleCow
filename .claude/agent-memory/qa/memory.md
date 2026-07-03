@@ -170,3 +170,12 @@ plan.md/research.md(`Assets/_Project/Docs/_Task/2026-07-01/21-15_ball-launch-mec
 ### 주요 결정사항
 - 코드 수정 없이 자연어로 심각도(Critical/Major/Minor) 순 보고, ReportFindings 도구 미사용
 - BallData.asset의 _maxBounces 실제 값을 asset 파일까지 직접 열어 확인(에디터 스크립트 코드만으로 판단하지 않음)
+
+## 2026-07-03 (기록 누락분 추가 정리) — ball-launch-mechanics 후속 확정 사항
+
+### 배경
+위 2026-07-02 검토에서 지적한 Critical 2건(Wall 충돌 로스터 볼 영구 이탈, `BallData.asset._maxBounces` 데이터 오류) + Major 1건(GameState 게이팅 부재로 게임 종료 후에도 재발사 지속)은 dev 에이전트가 모두 수정 완료함(dev agent-memory 2026-07-02 "볼 발사 메커닉 재설계 QA 버그 4건 수정" 참고). 이후 사용자가 원본 게임 실제 플레이 기준으로 Wall 충돌 동작을 재확인하여, 최초 수정안(로스터 볼도 Wall 충돌 시 `ReturnToLaunchPoint()`로 귀환)을 "로스터 볼은 벽에서 반사 횟수와 무관하게 항상 순수 반사만 하고, 귀환은 오직 Ground 충돌에서만 일어난다"로 최종 정정하였음(`Ball.cs` 재수정, dev agent-memory에 뒤늦게 기록).
+
+### 참고
+- 이 정정 자체는 QA 에이전트가 별도로 재검토를 수행해 발견한 것이 아니라 사용자의 실제 플레이 재확인으로 결정된 사항이므로, 코드 리뷰 결과가 아닌 "설계 확정 변경"으로 분류
+- 궤적 프리뷰(4단계, `TrajectoryPreview.cs`)는 2026-07-02 검토 시점엔 Critical(미구현)으로 지적했으나 이후 별도로 구현 완료됨(dev agent-memory 2026-07-02 "궤적 프리뷰 신규 구현" 참고) — 이번 문서 정리 세션에서 재검토는 수행하지 않았으므로, 실제 구현이 plan.md/GameplayMechanics.md 스펙과 완전히 일치하는지는 아직 QA 에이전트가 코드 레벨로 재확인하지 않은 상태로 남아 있음(추후 필요 시 재검토 권장)

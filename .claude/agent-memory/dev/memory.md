@@ -566,3 +566,18 @@
 **주요 결정사항:**
 - 기존 `_hpText` 연결 패턴(`SerializedObject` + `FindProperty(...).objectReferenceValue = ...` + `ApplyModifiedPropertiesWithoutUndo()`)을 그대로 따름
 - 이 수정은 Editor 스크립트 코드만 변경한 것이라 이미 저장된 씬(SampleScene.unity)의 기존 오브젝트에는 자동 반영되지 않음 — 사용자가 Unity 에디터에서 `PurpleCow > Setup > UI Setup` 메뉴를 다시 실행해야 씬에 실제로 반영됨을 사용자에게 안내함
+
+---
+
+## 2026-07-02 (기록 누락분 추가 정리)
+
+### 작업: 로스터 볼 Wall 충돌 최종 정정 — "반사 횟수 무관 순수 반사, Ground 충돌에서만 귀환"
+
+**배경:** "볼 발사 메커닉 재설계 QA 버그 4건 수정"(위 항목)에서는 로스터 소속 볼의 Wall 분기를 `IsRosterMember(this)`면 `ReturnToLaunchPoint()`(귀환 후 재발사)로 처리했었음. 이후 사용자가 원본 게임 실제 플레이 기준으로 재확인한 결과 "로스터 볼은 벽에서 반사 횟수와 무관하게 항상 순수 반사만 하고, 귀환은 오직 Ground 충돌에서만 일어난다"로 최종 정정 지시가 있어 `Ball.cs`의 Wall 분기를 다시 수정함. 이 수정이 이번 세션 이전에 agent-memory에 기록되지 않아 뒤늦게 추가 기록.
+
+**변경 파일:**
+- `Assets/_Project/Scripts/Ball/Ball.cs` — `OnCollisionEnter2D`의 `"Wall"` 분기를 재수정. `_isReturning`(귀환 중) 볼은 기존대로 `ReturnToLaunchPoint()`로 방향 재조준. 그 다음 `BallLauncher.Instance.IsRosterMember(this)`이면 반사 카운트를 전혀 건드리지 않고 그냥 `return`(물리 반사만 자연스럽게 일어나도록 방치, `ReturnToLaunchPoint()` 호출 자체를 제거). 로스터 밖 볼(서브볼 등)만 기존처럼 `_remainingBounces--` 후 소진 시 `ReturnToPool()`. `"Ground"` 분기는 기존 그대로(`IsRosterMember`면 `ReturnToLaunchPoint()`, 아니면 `ReturnToPool()`) 유지
+
+**주요 결정사항:**
+- 로스터 볼에는 사실상 `_maxBounces`/`_remainingBounces` 개념이 완전히 무의미해짐(Wall 분기에서 아예 감소시키지 않음) — 다만 서브볼 등 로스터 밖 볼은 여전히 이 값을 사용하므로 필드 자체나 `BallData._maxBounces`는 제거하지 않고 그대로 둠
+- 귀환 트리거는 오직 `"Ground"` 태그 충돌 1곳으로 확정 — Wall에서는 어떤 경우에도 로스터 볼을 귀환시키지 않음

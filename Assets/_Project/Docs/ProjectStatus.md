@@ -4,9 +4,9 @@
 
 ---
 
-## 현재 상태 (2026-07-01 기준)
+## 현재 상태 (2026-07-03 기준)
 
-**단계**: Inspector 연결 자동화 및 런타임 버그 수정 완료 — 기본 플레이 가능 상태
+**단계**: 볼 발사 메커닉 재설계 완료 및 main 반영 — 실제 플레이 테스트 단계 진입
 
 **완료된 작업**
 - [x] 프로젝트 생성 (Unity 6000.3.10f1, Universal 2D URP, Android)
@@ -17,15 +17,14 @@
 - [x] Core 시스템 task 문서 작성 (research.md + plan.md)
 - [x] Inspector 연결 에디터 스크립트 자동화 완성 (LaunchPoint, SkillCard, HUD/Result/SkillSelection 패널, WaveData 스폰 데이터)
 - [x] 런타임 버그 수정: InputHandler (New Input System), GameManager 자동 시작, 카메라 orthographic size 조정
+- [x] 볼 발사 메커닉 재설계 (`2026-07-01/21-15_ball-launch-mechanics`): 터치 즉시 조준(`InputHandler.OnAimBegin`), 2단계 궤적 프리뷰(`TrajectoryPreview.cs`), 화면 하단 귀환 후 자동 재발사 사이클, 노말볼 5개+특수볼 최대 4종 로스터 모델(`BallLauncher`/`Ball`) 도입, 몬스터 하강을 볼 사이클에서 분리해 시간 연속 하강으로 재설계(`WaveManager`/`MonsterBase`), 냉동/슬로우 초 단위 전환. QA 검토로 발견된 Critical 2건(벽 반사 소진 시 로스터 볼 영구 이탈, `BallData.asset._maxBounces` 데이터 오류) + Major 1건(게임 종료 후 재발사 지속) 수정 완료, 이후 "로스터 볼은 벽 반사 횟수 무관하게 항상 순수 반사만 하고 Ground 충돌에서만 귀환"으로 최종 정정. PR #6으로 main 머지 완료
+- [x] `UISetupEditor` 버그 수정: `CharacterHpBar`/`CharacterXpBar`의 `_slider`/`_levelText` 참조 연결 누락으로 인한 몬스터 처치 시 `NullReferenceException` 수정, PR #7로 main 머지 완료
 
 **진행 중**
 없음
 
 **다음 작업 순서**
-1. TMP 한글 폰트 설정 (현재 LiberationSans SDF에 한글 없어 경고 발생)
-2. 게임 밸런스 조정 (WaveData 스폰 수, 몬스터 스탯, 볼 데이터)
-3. UI 비주얼 작업 (HUD 텍스트 폰트/레이아웃, 결과 화면)
-4. 게임 테스트 및 QA
+1. 실제 플레이 테스트를 진행하면서 발견되는 문제를 하나씩 수정해나가는 단계 (별도 큰 항목 사전 나열보다 테스트 중 발견되는 버그/밸런스/UI 이슈를 그때그때 task로 정리해 처리)
 
 ## 주요 기술 결정
 
