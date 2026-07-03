@@ -5,7 +5,7 @@ public class BackgroundFitter : MonoBehaviour
     [SerializeField] private SpriteRenderer _spriteRenderer;
     [SerializeField] private Camera _targetCamera;
 
-    private void Awake()
+    private void Start()
     {
         if (_spriteRenderer == null || _targetCamera == null) return;
 

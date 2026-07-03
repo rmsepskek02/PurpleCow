@@ -16,10 +16,11 @@ public static class SceneSetupEditor
         Step3_CreateBlockPrefabs();
         Step4_PlaceBackground();
         Step5_PlaceWallsAndGround();
-        Step6_PlaceManagers();
-        Step7_ConnectBallLauncherRefs(ballPrefab);
-        Step8_ConnectBallPrefabRefs();
-        Step9_ConnectWaveManagerRefs();
+        Step6_SetupCameraFitter();
+        Step7_PlaceManagers();
+        Step8_ConnectBallLauncherRefs(ballPrefab);
+        Step9_ConnectBallPrefabRefs();
+        Step10_ConnectWaveManagerRefs();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -197,11 +198,11 @@ public static class SceneSetupEditor
     }
 
     // ──────────────────────────────────────────
-    //  Step 8. Ball.prefab 참조 연결
+    //  Step 9. Ball.prefab 참조 연결
     // ──────────────────────────────────────────
 
     [MenuItem("PurpleCow/Setup/Connect Ball Prefab Refs")]
-    private static void Step8_ConnectBallPrefabRefs()
+    private static void Step9_ConnectBallPrefabRefs()
     {
         const string prefabPath  = "Assets/_Project/Prefabs/Ball/Ball.prefab";
         const string ballDataPath = "Assets/_Project/Data/BallData.asset";
@@ -245,10 +246,10 @@ public static class SceneSetupEditor
     }
 
     // ──────────────────────────────────────────
-    //  Step 9. WaveManager 참조 연결
+    //  Step 10. WaveManager 참조 연결
     // ──────────────────────────────────────────
 
-    private static void Step9_ConnectWaveManagerRefs()
+    private static void Step10_ConnectWaveManagerRefs()
     {
         GameObject waveManagerObj = GameObject.Find("WaveManager");
         if (waveManagerObj == null)
@@ -410,10 +411,36 @@ public static class SceneSetupEditor
     }
 
     // ──────────────────────────────────────────
-    //  Step 6. Manager 오브젝트 씬 배치
+    //  Step 6. Main Camera CameraFitter 연동
     // ──────────────────────────────────────────
 
-    private static void Step6_PlaceManagers()
+    private static void Step6_SetupCameraFitter()
+    {
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            Debug.LogWarning("[SceneSetupEditor] Main Camera를 찾을 수 없어 CameraFitter 연동을 건너뜁니다.");
+            return;
+        }
+
+        CameraFitter fitter = mainCamera.GetComponent<CameraFitter>();
+        if (fitter == null)
+            fitter = mainCamera.gameObject.AddComponent<CameraFitter>();
+
+        SerializedObject so = new SerializedObject(fitter);
+        so.FindProperty("_targetCamera").objectReferenceValue = mainCamera;
+        so.FindProperty("_baseOrthographicSize").floatValue   = 10f;
+        so.FindProperty("_requiredHalfWidth").floatValue      = 5.6f;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        Debug.Log("[SceneSetupEditor] CameraFitter 연동 완료.");
+    }
+
+    // ──────────────────────────────────────────
+    //  Step 7. Manager 오브젝트 씬 배치
+    // ──────────────────────────────────────────
+
+    private static void Step7_PlaceManagers()
     {
         PlaceManager<GameManager>("GameManager");
         PlaceManager<InputHandler>("InputHandler");
@@ -446,10 +473,10 @@ public static class SceneSetupEditor
     }
 
     // ──────────────────────────────────────────
-    //  Step 7. BallLauncher 참조 연결
+    //  Step 8. BallLauncher 참조 연결
     // ──────────────────────────────────────────
 
-    private static void Step7_ConnectBallLauncherRefs(Ball ballPrefab)
+    private static void Step8_ConnectBallLauncherRefs(Ball ballPrefab)
     {
         GameObject launcherObj = GameObject.Find("BallLauncher");
         if (launcherObj == null)

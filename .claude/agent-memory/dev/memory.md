@@ -640,3 +640,50 @@
 **주요 결정사항:**
 - 코드 변경은 정확히 plan.md에 명시된 1줄 추가로 한정, 다른 리팩토링/개선 없음
 - 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리)
+
+---
+
+## 2026-07-03
+
+### 작업: 배경/해상도 대응 5단계 — CameraFitter 신규 작성 + BackgroundFitter 실행 순서 보강
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/plan.md` (5단계) + 2단계 보강분(BackgroundFitter Awake→Start)
+- 신규 파일 1개 생성 + 기존 파일 2개 수정
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Core/CameraFitter.cs` — MonoBehaviour, `_targetCamera`/`_baseOrthographicSize(10f)`/`_requiredHalfWidth(5.6f)` SerializeField, `Awake()`에서 `requiredSize = _requiredHalfWidth / aspect`와 `_baseOrthographicSize` 중 큰 값을 `orthographicSize`에 1회 적용. null 방어 처리 포함.
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/BackgroundFitter.cs` — 계산 메서드를 `Awake()` → `Start()`로 이름만 변경 (내부 로직 동일). Unity가 모든 오브젝트의 Awake()를 끝낸 뒤 Start()를 호출하는 것을 이용해, `CameraFitter.Awake()`가 카메라 orthographicSize를 먼저 확정한 뒤 `BackgroundFitter.Start()`가 그 값을 읽도록 순서 보장.
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `SetupScene()`에 `Step5_PlaceWallsAndGround();` 다음 줄로 `Step6_SetupCameraFitter();` 호출 추가
+  - `Step5_PlaceWallsAndGround()`와 기존 `Step6_PlaceManagers()` 사이에 신규 `Step6_SetupCameraFitter()` 메서드 추가 — `Camera.main`으로 Main Camera를 찾아 `CameraFitter` 컴포넌트를 부착(이미 있으면 재부착 없이 참조만 갱신)하고, `SerializedObject`/`FindProperty`/`ApplyModifiedPropertiesWithoutUndo` 패턴(기존 `ConnectBackgroundFitterRefs()`와 동일)으로 `_targetCamera`=자기 자신, `_baseOrthographicSize`=10, `_requiredHalfWidth`=5.6을 연결.
+
+**주요 결정사항:**
+- 신규 메서드명은 요청받은 대로 `Step6_SetupCameraFitter`를 그대로 사용. 기존에 이미 `Step6_PlaceManagers`(및 뒤이은 Step7/8/9)가 존재해 호출 순서상 두 개의 "Step6"이 연달아 호출되고 이후 Step7~9의 번호가 실제 호출 순서(8~10번째)와 어긋나는 번호 불일치가 발생하지만, 이는 CLAUDE.md의 외과적 변경 원칙(요청된 파일/함수만 수정) 및 요청에 명시된 정확한 메서드명을 우선해 그대로 두었고 다른 Step들의 번호를 리네이밍하지 않음. 필요 시 별도 후속 정리 작업으로 진행 권장.
+- CameraFitter는 plan.md 원안 그대로 구현 (Awake 1회 계산, Mathf.Max로 base와 required 중 큰 값 채택).
+- 신규 아트 에셋 제작 없음. git 변경 명령어(add/commit) 실행하지 않음.
+
+---
+
+## 2026-07-03
+
+### 작업: SceneSetupEditor.cs Step 번호 정리 (순수 리네이밍)
+
+**작업 내용:**
+- 위 항목(배경/해상도 대응 5단계)에서 예고했던 후속 정리 작업. `Step6_SetupCameraFitter()`가 `Step5_PlaceWallsAndGround()` 직후에 추가되며 발생한 `Step6` 중복 및 이후 번호 불일치를 실제 호출 순서(1~10)와 메서드 이름이 일치하도록 리네이밍만 수행 (로직 변경 없음)
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `Step6_PlaceManagers` → `Step7_PlaceManagers` (정의부 + `SetupScene()` 호출부 + 섹션 구분 주석 `// Step 6. Manager 오브젝트 씬 배치` → `// Step 7. ...`)
+  - `Step7_ConnectBallLauncherRefs` → `Step8_ConnectBallLauncherRefs` (정의부 + 호출부 + 주석 `// Step 7. BallLauncher 참조 연결` → `// Step 8. ...`)
+  - `Step8_ConnectBallPrefabRefs` → `Step9_ConnectBallPrefabRefs` (정의부 + 호출부 + 주석 `// Step 8. Ball.prefab 참조 연결` → `// Step 9. ...`, `[MenuItem("PurpleCow/Setup/Connect Ball Prefab Refs")]` 메뉴 문자열은 그대로 유지)
+  - `Step9_ConnectWaveManagerRefs` → `Step10_ConnectWaveManagerRefs` (정의부 + 호출부 + 주석 `// Step 9. WaveManager 참조 연결` → `// Step 10. ...`)
+
+**주요 결정사항:**
+- Grep으로 `Assets/_Project/Scripts/Editor/` 전체를 확인해 이 4개 메서드를 참조하는 다른 파일이 없음을 사전 확인 후 진행 (SceneSetupEditor.cs 내부 참조만 존재)
+- `[MenuItem]` 어트리뷰트 문자열(메뉴 표시명)은 변경 대상에서 제외 — C# 메서드 식별자만 리네이밍
+- 리네이밍 후 `SetupScene()` 호출 순서와 메서드 번호가 Step1~Step10으로 완전히 일치함을 재확인
+- 로직/동작 변경 없음, 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
