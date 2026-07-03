@@ -526,3 +526,22 @@
 ### 주요 결정사항
 - GameplayMechanics.md 섹션 1(원본 스펙)과 실제 구현 코드가 이미 일치하는 상태였으므로, 신규 섹션은 "스펙 재서술"이 아니라 "구현 관점에서의 시각/Inspector 규칙"에 집중해서 작성 (GameplayMechanics.md 링크로 원본 스펙 참조 위임)
 - 기존 UIRules.md 섹션 8/9/10과 동일한 톤(담당 클래스 명시 → bullet 설명 → 구현 방식/표) 유지
+
+---
+
+### 작업 내용 (추가)
+- Ball Ceiling Wall Fix task plan.md 신규 생성 (기존 research.md 기반)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-48_ball-ceiling-wall-fix/plan.md`
+- 작성 전 research.md, TaskRules.md, `SceneSetupEditor.cs`(374~398번 줄), 기존 plan.md 예시(`2026-07-01/21-15_ball-launch-mechanics/plan.md`)를 Read로 확인해 문서 스타일/구조 일관성 유지
+
+### 결과
+- plan.md 생성 완료: 구현 목표(3개), 단계별 작업 계획(1단계 코드 수정, 2단계 좌표 겹침 사전 계산, 3단계 씬 반영 옵션 A/B, 4단계 QA 검증), 예상 변경/생성 파일 목록(`SceneSetupEditor.cs`, `SampleScene.unity` 2개), 주의사항(씬 반영 방식 사용자 확인 필요, 범위 제외 2건, 좌표 계산 한계, plan.md만 완료된 상태) 구조로 작성
+- `Wall_Top` 좌표/크기(`new Vector3(0f, 8f, 0f), new Vector2(12f, 0.2f)`, 태그 `"Wall"`)를 research.md 근거(AIFailures.md 플레이 영역 y:+8, Ground와 동일 크기 재사용)와 함께 명시
+- 좌우 벽(x: ±5.5, size 0.2×20)과 천장 벽(y: 8, size 12×0.2) 좌표를 직접 계산해 네 모서리 부근에서 겹치는 영역이 존재함(갭 없음)을 확인, 다만 이는 좌표상 사전 판단이며 4단계 QA에서 실제 물리 동작 재확인이 필요하다고 명시
+- 씬 반영 방법을 옵션 A(로컬 Unity 에디터에서 `PurpleCow/Setup/Scene Setup` 메뉴 재실행, 권장)와 옵션 B(`SampleScene.unity` YAML 직접 편집, dev 에이전트가 즉시 처리 가능하나 형식 위험 있음) 두 가지로 제시하고 최종 선택은 사용자 확인이 필요하다고 "주의사항"에 명시
+- `physicsMaterial2D` Wall/Ground 미연결, `CollisionDetectionMode2D.Continuous` 터널링 가능성 2건은 research.md와 동일하게 이번 작업 범위에서 제외한다고만 짧게 언급(단계별 계획에는 미포함)
+
+### 주요 결정사항
+- 코드(`SceneSetupEditor.cs`) 수정은 옵션 A/B 어느 쪽을 택하든 공통으로 필요하다고 판단 — 향후 씬 재생성 시에도 천장 벽이 항상 생성되도록 보장하기 위함
+- 이번 요청은 "plan.md 작성"만 포함되며 실제 코드/씬 파일 수정은 진행하지 않음(TaskRules.md 절차 준수, 사용자의 명시적 승인 대기)
+- AGENTS.md는 개별 task 폴더를 별도로 인덱싱하지 않는 기존 정책(56~57번 줄, "개별 task 폴더 목록은 이 문서에서 별도로 관리하지 않으며, 필요할 때 해당 경로를 직접 탐색")을 확인했으므로 이번 plan.md 생성에 대해서는 AGENTS.md 갱신 불필요로 판단
