@@ -167,3 +167,35 @@ Assets/_Project/Scripts/
 - **원인**: `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`의 `Step5_PlaceWallsAndGround()`가 `Wall_Left`/`Wall_Right`/`Ground` 3개 콜라이더만 생성하고 상단(천장) 벽을 생성하는 코드가 없었음. 좌/우/아래 3면만 막혀 있고 위쪽이 완전히 뚫려 있어, 몬스터가 없는 빈 레인 등으로 볼이 위쪽으로 진행할 경우 이를 막는 콜라이더가 전혀 없어 플레이 영역 밖으로 무한히 날아가는 구조였다(`research.md`).
 - **수정**: `Step5_PlaceWallsAndGround()`에 `PlaceColliderObject("Wall_Top", "Wall", new Vector3(0f, 8f, 0f), new Vector2(12f, 0.2f));` 1줄 추가 (`plan.md` 사용자 승인 후 dev 에이전트 구현, 커밋 `345ae29`, 브랜치 `claude/ball-ceiling-wall-fix`). y=8은 `AIFailures.md`에 문서화된 실제 플레이 영역(`x: ±5.5, y: -10 ~ +8`) 상단 값, size(12, 0.2)는 `Ground`와 동일한 크기를 재사용해 좌우 벽과의 경계에 빈틈이 없도록 하였다.
 - **검증**: 코드 수정만으로는 이미 커밋된 `Assets/Scenes/SampleScene.unity`에 자동 반영되지 않는 구조라, 사용자가 로컬 Unity 에디터에서 `PurpleCow/Setup/Scene Setup` 메뉴를 재실행해 `Wall_Top`을 씬에 반영하였다. 이후 사용자가 실제 플레이 테스트로 천장 반사가 정상 동작함을 확인하였다.
+
+---
+
+## 2026-07-04
+
+### 캐릭터 비주얼 구현 (`_Task/2026-07-04/01-38_character-visual-implementation`)
+
+사용자 요청("캐릭터 에셋을 사용해서 캐릭터를 구현할 것")에 따라, 그동안 씬에 전혀 존재하지 않던 캐릭터 시각 표현(Body/Head/Weapon 스프라이트)을 구현하였다. research.md/plan.md 작성 후 사용자 승인을 거쳐 진행하였다.
+
+**research.md 조사 결과**
+- `CharacterManager.cs`는 HP/XP/레벨 등 스탯 로직만 담당하며 `SpriteRenderer`, 회전 등 시각 요소가 전혀 없음을 확인
+- `SceneSetupEditor.cs`의 `Step7_ConnectBallLauncherRefs()`가 생성하는 `LaunchPoint`는 좌표 기준점 전용 빈 GameObject일 뿐 스프라이트가 붙어 있지 않음 — 씬 어디에도 캐릭터 모습을 렌더링하는 오브젝트가 없다는 점 확인
+- `Character_main_weapon.png`가 중앙 Pivot(0.5, 0.5)으로 임포트되어 있어 실제 그립(손잡이) 위치와 어긋나 있음을 확인
+- 좌우 반전과 자식 회전 각도의 부호 충돌 문제를 열린 이슈로 남기고, plan.md 단계에서 오케스트레이터가 사용자와 논의를 거쳐 `SpriteRenderer.flipX` 기반 처리 방식으로 확정
+
+**design 에이전트 (커밋 `1cf5ab5`)**
+- `Character_main_weapon.png.meta` 확인 결과, 무기 스프라이트가 `spriteMode: 2`(Multiple)라 최상위 `spritePivot`이 아닌 `spriteSheet.sprites[0]`의 `alignment`/`pivot` 값이 실제 Import에 적용됨을 확인
+- `alignment: 0`(Center) → `9`(Custom)로 변경하고 Pivot을 그립(손잡이) 위치(0.39, 0.43)로 재설정
+
+**dev 에이전트 (커밋 `1cf5ab5`)**
+- 신규 `CharacterAimController.cs`(`Assets/_Project/Scripts/Character/`) 작성 — `BallLauncher.LaunchDirection`을 매 프레임 읽어 Weapon은 조준 방향을 거의 그대로 따라가는 회전, Head는 감쇠된 약한 회전, Body는 회전 없이 flipX만 적용
+- 좌우 반전은 `localScale` 반전이 아닌 `SpriteRenderer.flipX`만 사용해 반전-회전 부호 충돌을 원천 차단(plan.md에서 확정한 방향대로 구현)
+- `SceneSetupEditor.cs`에 `Step10_SetupCharacterVisual()` 신규 추가 — `Character` 오브젝트를 `LaunchPoint`와 동일 위치(BallLauncher의 형제 오브젝트)에 생성하고 Body/Head/Weapon 자식 3개를 자동 배치
+
+**qa 에이전트 검토 및 오케스트레이터 수정 (커밋 `794713d`)**
+- 1차 구현 검토에서 Major 2건 발견: (1) Body/Head/Weapon이 모두 Character 원점(0,0,0)에 겹쳐 배치되어 캐릭터 형태로 보이지 않는 문제, (2) design 에이전트가 작성한 agent-memory 파일에 툴 호출 잔재 텍스트(`</content>`)가 잘못 섞여 들어간 문제
+- 오케스트레이터가 원본 합성 이미지(`Character_Main.png`, 파츠 미리보기)를 픽셀 템플릿 매칭으로 직접 분석해 Head/Body의 정확한 상대 위치(Head: 0.51,-0.23 / Body: 0.42,-0.75, Weapon 그립 기준)를 역산하고 시각적으로 검증한 뒤 dev 에이전트에게 수정 지시
+- 추가로 `SpriteRenderer.flipX`가 Transform 위치에는 영향을 주지 않아 좌우 반전 시 Head/Body 위치가 미러링되지 않던 버그도 함께 발견해 수정(정면 기준 위치를 캐싱한 뒤 반전 상태에 따라 X 부호를 반전하는 방식)
+
+**범위 및 미완료 사항**
+- `CharacterManager.cs`(HP/XP 로직), `BallLauncher.cs`/`Ball.cs`(볼 발사/귀환 로직)는 이번 작업에서 전혀 수정하지 않음 — 순수 시각 레이어 추가
+- 이 작업이 진행된 원격 환경에는 Unity 에디터가 없어, 코드/에셋 변경만으로는 이미 커밋된 `SampleScene.unity`에 자동 반영되지 않는다(기존 WaveTableData/Wall_Top 사례와 동일한 제약). 사용자가 로컬 Unity에서 `PurpleCow/Setup/Scene Setup` 메뉴를 재실행해야 씬에 `Character` 오브젝트(Body/Head/Weapon 포함)가 실제로 생성/갱신되며, 그 후 실제 플레이 테스트로 조준 반응(회전/반전)이 자연스러운지 확인이 필요하다
