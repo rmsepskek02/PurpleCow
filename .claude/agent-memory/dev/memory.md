@@ -640,3 +640,30 @@
 **주요 결정사항:**
 - 코드 변경은 정확히 plan.md에 명시된 1줄 추가로 한정, 다른 리팩토링/개선 없음
 - 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리)
+
+---
+
+## 2026-07-03
+
+### 작업: 볼 궤적 프리뷰 상시 표시 + 조준 정확도 + 색상/크기 수정
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/plan.md` (research.md 포함, 사용자 승인 완료)
+- 기존 파일 4개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs`
+  - 이슈1: `OnEnable`/`OnDisable`의 `InputHandler.OnAimBegin`/`OnDrag`/`OnRelease` 구독 제거, `HandleAimBegin`/`HandleDrag`/`HandleRelease` 삭제, `Update()` 신규 추가(`UpdateTrajectory(BallLauncher.Instance.LaunchDirection)` 매 프레임 호출), `Awake()`의 `SetVisible(false)` → `SetVisible(true)`
+  - 이슈3: `_hitRing`이 새 필드 `_ringColor`(기본값 `Color32(225,225,220,255)`)를 참조하도록 분리, `_hitColor` 기본값 `Color32(206,90,82,255)`로 톤다운, `_dotRadius` `0.08f`→`0.05f`, `DASH_WORLD_SIZE` `0.3f`→`0.15f`, `_lineColor` 기본값 `Color32(225,225,220,255)`로 변경
+  - 클래스 상단 주석도 `OnAimBegin~OnRelease` 언급을 "터치 여부와 무관하게 매 프레임" 문구로 함께 수정 (plan.md에 직접 명시되지 않았으나 방금 제거한 로직을 그대로 서술하던 주석이라 부정확해져 함께 수정 — 관련 있는 범위로 판단)
+- `Assets/_Project/Scripts/Core/InputHandler.cs`
+  - 이슈2: `private Camera _mainCamera;` 필드 추가, `protected override void Awake() { base.Awake(); _mainCamera = Camera.main; }` 추가(단순 `private void Awake()`가 아니라 `Singleton<InputHandler>.Awake()`를 오버라이드+`base.Awake()` 호출하는 형태로 구현 — plan.md는 단순 `Awake()` 추가라고만 적었지만, `InputHandler`가 `Singleton<T>`를 상속하므로 `base.Awake()`를 호출하지 않으면 `Instance` 할당이 씹히는 문제를 방지하기 위한 필수 보정)
+  - `_dragStartPosition` 저장을 `_mainCamera.ScreenToWorldPoint(pressedPos.Value)`로, `OnDrag` 방향 계산을 `(ScreenToWorldPoint(currentPos.Value) - _dragStartPosition).normalized`로 변경
+- `Assets/_Project/Docs/UIRules.md` 섹션 11 — "조준 중에만 표시" 문구를 "터치 여부와 무관하게 항상 표시, 매 프레임 갱신" 취지로 수정, Inspector 조절 값 표에 `_ringColor` 행 추가(`_hitColor` 설명도 "레드닷/원형 궤적선 색상"→"레드닷 색상"으로 정정)
+- `Assets/Scenes/SampleScene.unity` — **plan.md의 예상 변경 파일 목록에는 없었으나 "주의사항" 섹션에서 명시적으로 요구한 사항**: `TrajectoryPreview` 컴포넌트의 기존 인스펙터 오버라이드 값(`_lineColor` white, `_hitColor` red, `_dotRadius` 0.08)이 코드 기본값 변경을 그대로 덮어써 화면에 반영되지 않는 것을 확인하고, YAML을 새 기본값과 동일하게 직접 갱신(`_ringColor` 필드도 새로 추가). 코드 기본값과 씬의 실제 값을 일치시키지 않으면 이슈3 변경이 시각적으로 전혀 반영되지 않기 때문.
+
+**주요 결정사항:**
+- `InputHandler.Awake()`는 `private`이 아닌 `protected override` + `base.Awake()`로 구현 — `Singleton<T>` 상속 클래스에서 `Awake()`를 새로 정의할 때 `base.Awake()` 누락 시 `Instance`가 설정되지 않는 문제를 다른 클래스(`BallLauncher` 등)와 동일한 패턴으로 방지
+- 씬 파일(`SampleScene.unity`)의 `TrajectoryPreview` 인스펙터 오버라이드 값을 코드 기본값과 동일하게 직접 갱신 — plan.md 예상 파일 목록에는 없었지만 "주의사항" 섹션의 명시적 지시(오버라이드 확인 후 필요 시 리셋/재적용)에 따른 조치. 이전 작업(볼 천장 이탈 버그 수정)과 달리 이번엔 plan.md가 씬 값 확인/재적용을 직접 요구했으므로 직접 편집함
+- `TrajectoryPreview.cs` 클래스 상단 주석 수정은 plan.md에 명시되지 않았지만, 방금 제거한 이벤트 기반 로직을 그대로 서술하던 부정확한 주석이라 같은 변경 범위로 판단해 함께 수정
+- git 커밋/푸시는 수행하지 않음 (사용자가 별도 처리 예정)
