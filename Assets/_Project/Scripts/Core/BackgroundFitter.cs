@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[ExecuteAlways]
 public class BackgroundFitter : MonoBehaviour
 {
     [SerializeField] private SpriteRenderer _spriteRenderer;
@@ -7,6 +8,16 @@ public class BackgroundFitter : MonoBehaviour
     [SerializeField] private float _zoomFactor = 1.3f;
 
     private void Start()
+    {
+        Apply();
+    }
+
+    private void OnValidate()
+    {
+        Apply();
+    }
+
+    private void Apply()
     {
         if (_spriteRenderer == null || _targetCamera == null) return;
 

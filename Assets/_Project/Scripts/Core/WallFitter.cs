@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[ExecuteAlways]
 public class WallFitter : MonoBehaviour
 {
     [SerializeField] private Camera _targetCamera;
@@ -15,6 +16,16 @@ public class WallFitter : MonoBehaviour
     [SerializeField] private float _zoomFactor = 1.3f;
 
     private void Start()
+    {
+        Apply();
+    }
+
+    private void OnValidate()
+    {
+        Apply();
+    }
+
+    private void Apply()
     {
         if (_targetCamera == null || _backgroundSpriteRenderer == null) return;
 

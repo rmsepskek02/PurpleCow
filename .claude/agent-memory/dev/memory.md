@@ -743,3 +743,22 @@
 **주요 결정사항:**
 - 다른 로직(native 좌표값, 스케일 계산 외 부분)은 일절 변경하지 않음
 - 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: BackgroundFitter/WallFitter Inspector 실시간 반영 (ExecuteAlways + OnValidate)
+
+**작업 내용:**
+- `_zoomFactor` 등 값을 Inspector에서 조정할 때 Play 모드 진입 없이 씬에 즉시 반영되도록 개선
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/BackgroundFitter.cs` — 클래스에 `[ExecuteAlways]` 추가, 기존 `Start()` 본문을 `private void Apply()`로 이동, `Start()`는 `Apply()` 호출만 수행, `OnValidate()` 신규 추가해 `Apply()` 호출
+- `Assets/_Project/Scripts/Core/WallFitter.cs` — 동일 패턴 적용: `[ExecuteAlways]` 추가, `Start()` 본문을 `Apply()`로 이동, `Start()`는 `Apply()` 호출만, `OnValidate()` 신규 추가해 `Apply()` 호출. `SetX`/`SetY` 헬퍼와 필드는 변경 없음
+
+**주요 결정사항:**
+- 이번 작업은 진행 중인 `2026-07-03/12-30_background-resolution-fix` task의 연장선상의 작은 에디터 편의 기능으로 판단해 별도 plan.md 문서 작성 없이 진행 (오케스트레이터 판단)
+- 다른 필드/로직은 일절 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
