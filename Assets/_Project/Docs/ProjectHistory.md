@@ -150,3 +150,12 @@ Assets/_Project/Scripts/
 ### 문서 정리
 
 - `ProjectStatus.md` / `AIFailures.md` 갱신, agent-memory 보강, `AGENTS.md` Task 문서 인덱스에 `2026-07-01` 섹션(`18-41_ui-hud-gap-fill`, `21-15_ball-launch-mechanics`) 추가
+
+### WaveData → WaveTableData 리팩토링
+
+`Assets/_Project/Data/`에 asset이 지나치게 많다는(웨이브 1개당 asset 1개, 총 20개) 지적에 따라 웨이브 데이터 구조를 단일 테이블 asset으로 축약하였다. task 문서(research.md/plan.md) 없이 예외적으로 바로 구현을 진행하였고, main 브랜치에 직접 커밋(`9c188a8`)/푸시하였다.
+
+- 삭제: `Scripts/Data/WaveData.cs`, `Data/WaveData_Wave1.asset` ~ `WaveData_Wave20.asset`(20개 + 각 .meta)
+- 신규: `Scripts/Data/WaveTableData.cs` — `WaveEntry`(WaveNumber, SpawnEntries) + `WaveTableData`(ScriptableObject, `_waves` List, `Waves`/`WaveCount` 프로퍼티), 기존 `MonsterSpawnEntry`(Data, GridPosition)는 그대로 이전
+- 수정: `WaveManager.cs`(`_waveDatas` 배열 → `_waveTable` 단일 필드로 교체), `MonsterSetupEditor.cs`(웨이브 생성/스폰 데이터 채우기 로직을 단일 테이블 asset 기준으로 변경, 계산 로직 자체는 변경 없음), `SceneSetupEditor.cs`(WaveManager 참조 연결 로직 단순화)
+- 미완료 사항: 이 작업이 진행된 원격 환경에는 Unity 에디터가 없어 새 `WaveTableData.asset` 생성과 `SampleScene.unity`의 `WaveManager._waveTable` 필드 재연결이 아직 되어 있지 않음. 사용자가 로컬 Unity에서 `PurpleCow/Setup/Monster System Setup` → `PurpleCow/Setup/Scene Setup`을 순서대로 재실행해야 완전히 동작하며, 그 전까지는 씬의 구 `_waveDatas` 직렬화 데이터가 고아 데이터로 남아 웨이브 스폰이 동작하지 않는 상태

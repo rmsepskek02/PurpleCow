@@ -114,7 +114,7 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 | SO 파일 | 담는 데이터 |
 |---------|------------|
 | `SkillData` | 스킬명, 레벨별 수치, 볼 데미지, 아이콘 |
-| `WaveData` | 웨이브별 몬스터 구성, 처치 조건 |
+| `WaveTableData` | 웨이브 20개의 몬스터 구성/처치 조건을 한 asset에 테이블로 관리 |
 | `MonsterData` | 몬스터 HP, 이동속도, 크기 |
 | `BallData` | 기본 데미지, 치명타 확률/데미지율 |
 

@@ -526,3 +526,19 @@
 ### 주요 결정사항
 - GameplayMechanics.md 섹션 1(원본 스펙)과 실제 구현 코드가 이미 일치하는 상태였으므로, 신규 섹션은 "스펙 재서술"이 아니라 "구현 관점에서의 시각/Inspector 규칙"에 집중해서 작성 (GameplayMechanics.md 링크로 원본 스펙 참조 위임)
 - 기존 UIRules.md 섹션 8/9/10과 동일한 톤(담당 클래스 명시 → bullet 설명 → 구현 방식/표) 유지
+
+---
+
+### 작업 내용 (추가)
+- dev 에이전트가 task 문서 없이 예외 진행한 "WaveData 20개 개별 asset → WaveTableData 단일 테이블 SO" 리팩토링(main 커밋 `9c188a8`, 이미 완료됨)에 대한 사후 문서 갱신
+- 수정 파일: `Assets/_Project/Docs/DevRules.md`, `Assets/_Project/Docs/ProjectStatus.md`, `Assets/_Project/Docs/ProjectHistory.md` (코드는 건드리지 않음)
+
+### 결과
+- `DevRules.md`: "ScriptableObject 사용 범위" 표에서 `WaveData | 웨이브별 몬스터 구성, 처치 조건` 행을 `WaveTableData | 웨이브 20개의 몬스터 구성/처치 조건을 한 asset에 테이블로 관리`로 교체 (해당 행만 수정)
+- `ProjectStatus.md`: "완료된 작업"에 WaveTableData 리팩토링 항목 추가(task 문서 없이 예외 진행, main 직접 커밋 `9c188a8` 명시), "다음 작업 순서"에 1번 항목으로 "사용자가 로컬 Unity에서 Monster System Setup → Scene Setup 재실행하여 WaveTableData.asset 생성 및 WaveManager 참조 재연결 필요(안 하면 웨이브 스폰 불가)"를 추가하고 기존 플레이 테스트 항목을 2번으로 밀어냄
+- `ProjectHistory.md`: 2026-07-03 날짜 섹션 하단에 "WaveData → WaveTableData 리팩토링" 소제목 신규 추가 — 배경(asset 과다), 삭제/신규/수정 파일 목록, 원격 환경에 Unity 에디터가 없어 asset 생성/씬 재연결이 미완료 상태임을 기존 항목들과 같은 서술 형식(무엇을/왜/어떻게)으로 기록
+
+### 주요 결정사항
+- AGENTS.md는 이번 갱신으로 인덱스 변경 사항이 없어 건드리지 않음(사용자 지시대로)
+- 코드 파일(WaveManager.cs, MonsterSetupEditor.cs, SceneSetupEditor.cs, WaveTableData.cs 등)은 이미 커밋된 상태이므로 문서 3개만 수정하고 Read 외 접근하지 않음
+- 커밋/푸시는 진행하지 않고 파일 수정까지만 수행(오케스트레이터/사용자 판단에 위임)
