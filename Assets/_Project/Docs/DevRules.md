@@ -154,3 +154,4 @@ ObjectPool<Ball>.Return(ball);
 - 커밋은 사용자가 명시적으로 요청한 경우에만 생성한다
 - 커밋 메시지 형식: `[타입] 설명` (예: `[feat] 볼 발사 로직 구현`, `[fix] 충돌 데미지 계산 오류 수정`)
 - 타입 종류: `feat`, `fix`, `refactor`, `docs`, `chore`
+- 머지된 브랜치를 재구성(`git checkout -B <branch> origin/<default>`)하기 전에는 반드시 해당 브랜치 자체를 `git fetch origin <branch>`로 먼저 최신화하고, `git log <branch>..origin/<branch>`로 로컬이 모르는 원격 커밋이 있는지 확인한 뒤 진행한다. `--force-with-lease`는 로컬이 마지막으로 fetch한 시점의 원격 상태를 기준으로 안전장치가 작동하므로, fetch 없이 오래된 로컬 정보로 force push하면 그 사이 원격에 추가된 커밋(예: 사용자가 직접 푸시한 커밋)을 덮어쓸 위험이 있다

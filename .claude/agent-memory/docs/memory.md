@@ -486,3 +486,43 @@
 ### 주요 결정사항
 - 작업 범위를 GameplayMechanics.md 1개 파일로 한정, AGENTS.md 등 다른 문서는 이번 요청에서 변경하지 않음(이미 인덱스에 등록되어 있는 기존 문서의 섹션 추가이므로 인덱스 갱신 불필요)
 - 기존 섹션 1과 동일한 구조(제목 레벨 `##`/`###`, `---` 구분선, TaskRules.md 안내 문구)를 그대로 재사용하여 문서 스타일 일관성 유지
+
+---
+
+## 2026-07-03
+
+### 작업 내용
+- 볼 발사 메커닉 재설계(`_Task/2026-07-01/21-15_ball-launch-mechanics`) + 후속 UISetupEditor 버그 수정(PR #6, #7) 완료에 따른 프로젝트 문서 정리
+- `ProjectStatus.md`, `ProjectHistory.md`, `AIFailures.md`, `AGENTS.md` 갱신 + dev/qa agent-memory 보강 검토
+
+### 결과
+- `ProjectStatus.md`: 현재 상태 날짜 2026-07-03으로 갱신, 완료된 작업에 볼 발사 메커닉 재설계 + UISetupEditor 수정 2건 추가, "다음 작업 순서"를 구체적 항목 나열에서 "실제 플레이 테스트를 진행하며 발견되는 문제를 하나씩 수정" 방향성 위주로 교체
+- `ProjectHistory.md`: 2026-07-03 섹션 신규 추가 — 볼 발사 메커닉 재설계 요약(2단계 궤적 프리뷰, 로스터 모델, 몬스터 시간 연속 하강), QA 검토 결과 및 최종 정정, UISetupEditor 버그 수정, 문서 정리 순으로 기록
+- `AIFailures.md`: 2026-07-03 섹션 신규 추가 — (1) 머지된 브랜치 강제 재구성 중 fetch 누락으로 사용자의 원격 커밋을 놓칠 뻔한 사고, (2) `BallData.asset._maxBounces`가 에디터 스크립트 수정에도 반복적으로 0으로 방치되는 패턴(QA가 3회 이상 동일 지적), (3) `UISetupEditor`가 신규 UI 컴포넌트의 SerializeField 연결을 반복적으로 누락하는 패턴, 총 3건 기록
+- `AGENTS.md`: Task 문서 인덱스에 "2026-07-01" 섹션 신규 추가(`18-41_ui-hud-gap-fill`, `21-15_ball-launch-mechanics` 등록)
+- dev agent-memory: 로스터 볼 Wall 충돌 최종 정정("반사 횟수 무관 순수 반사, Ground 충돌에서만 귀환")이 기록 누락되어 있던 것을 확인하고 추가 기록
+- qa agent-memory: 위 최종 정정이 QA 재검토가 아닌 사용자 실제 플레이 재확인에 의한 설계 확정 변경임을 명확히 하는 후속 메모 추가, 궤적 프리뷰 구현이 QA 코드 레벨 재검토를 아직 거치지 않았음을 남김
+
+### 주요 결정사항
+- `Assets/_Project/Docs/` 전체 문서(GameplayMechanics.md, UIRules.md, DevRules.md 등) 검토 결과 기존 문서 갱신은 위 항목으로 충분하다고 판단, 신규 문서 작성은 하지 않음(범위 확대 방지)
+- 검토 중 두 가지 잠재적 신규 문서 필요성을 발견했으나 직접 작성하지 않고 오케스트레이터를 통해 사용자에게 보고만 하기로 결정: (1) `DevRules.md` "6. Git 규칙"에 "머지된 브랜치 재구성 전 반드시 fetch 선행" 컨벤션 추가 여부, (2) `UIRules.md`에 `TrajectoryPreview.cs`가 도입한 조준선 시각 규칙(점선 렌더링 방식, 레드닷/원형 궤적선, RaycastAll 태그 필터링 등)을 섹션 8/9/10과 같은 형식의 신규 섹션으로 문서화할지 여부
+- 코드(Ball.cs, BallLauncher.cs 등)는 전혀 수정하지 않음 — 이번 세션은 문서/agent-memory만 다룸
+
+---
+
+### 작업 내용 (추가)
+- 위 기록에서 보고만 하기로 했던 두 항목이 사용자 승인을 받아 실제 문서 반영으로 진행됨
+- `DevRules.md` "6. Git 규칙" 섹션에 신규 bullet 추가: 머지된 브랜치 재구성 전 `git fetch origin <branch>` 선행 + `git log <branch>..origin/<branch>` 확인 의무화, `--force-with-lease`가 fetch 시점 기준으로만 안전장치가 작동한다는 근거 포함 (경로: `Assets/_Project/Docs/DevRules.md`)
+- `UIRules.md`에 "11. 궤적 프리뷰 시각 규칙" 신규 섹션 추가, 기존 섹션 11(리소스 참고 사항)은 12번으로 재번호 (경로: `Assets/_Project/Docs/UIRules.md`)
+  - `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs`를 Read로 재확인 후 실제 구현 기준으로 작성: 조준 중에만 표시, 2단계 점선 궤적(1차/2차 충돌), 2차 지점 레드닷+원형 궤적선, RaycastAll+Wall/Ground/Monster 태그 화이트리스트 필터링
+  - 구현 방식 서술: LineRenderer 기반, 점선은 런타임 생성 4x1 텍스처 + textureMode=Tile, 레드닷/원형 궤적선도 스프라이트 없이 LineRenderer 원형 점열로 구현
+  - Inspector 조절 값 5개(`_lineWidth`, `_lineColor`, `_hitColor`, `_dotRadius`, `_ringRadius`) 표로 정리
+- `AGENTS.md`의 UIRules.md 설명 문구에 "궤적 프리뷰 시각 규칙" 추가하여 신규 섹션 반영
+
+### 결과
+- `Assets/_Project/Docs/DevRules.md`, `Assets/_Project/Docs/UIRules.md`, `/home/user/PurpleCow/AGENTS.md` 3개 파일 수정 완료
+- 코드는 건드리지 않음(Read만 수행, TrajectoryPreview.cs 자체는 미수정)
+
+### 주요 결정사항
+- GameplayMechanics.md 섹션 1(원본 스펙)과 실제 구현 코드가 이미 일치하는 상태였으므로, 신규 섹션은 "스펙 재서술"이 아니라 "구현 관점에서의 시각/Inspector 규칙"에 집중해서 작성 (GameplayMechanics.md 링크로 원본 스펙 참조 위임)
+- 기존 UIRules.md 섹션 8/9/10과 동일한 톤(담당 클래스 명시 → bullet 설명 → 구현 방식/표) 유지

@@ -51,3 +51,25 @@
 - **실패 내용**: 기본값 5로 방치 → 플레이 영역(x:±5.5, y:-10~+8)의 약 1/4만 보임, 배경만 표시되는 것처럼 보이는 문제 발생
 - **원인**: 에디터 스크립트가 카메라 설정을 포함하지 않았고, 플레이 영역 좌표 검토 시 카메라 시야 범위를 함께 확인하지 않음
 - **재발 방지**: SceneSetupEditor 실행 시 카메라 orthographic size를 플레이 영역에 맞게 설정 (현재 프로젝트: 1080x1920, 플레이 영역 width 11 → orthographic size = 10)
+
+---
+
+## 2026-07-03
+
+### 머지된 브랜치 강제 재구성 중 사용자의 원격 커밋을 놓칠 뻔함
+- **상황**: `claude/gameplay-mechanics-docs-2brrqc` 브랜치가 PR로 이미 main에 스쿼시 머지된 후, 같은 브랜치명으로 후속 작업을 이어가면서 "머지된 브랜치는 main 기준으로 재구성해야 한다"는 지침에 따라 `git checkout -B <branch> origin/main` 후 새 커밋을 cherry-pick하고 `git push --force-with-lease`로 푸시함
+- **실패 내용**: 그 사이 사용자가 Unity 에디터를 직접 실행해 자동 생성된 `.meta` 파일들을 커밋하고 같은 브랜치에 직접 푸시해둔 내용이 있었는데, force-with-lease 푸시 시점에 원격 fetch를 먼저 하지 않아 이 커밋을 놓치고 덮어쓸 뻔함 (다행히 로컬 git 오브젝트에 해당 커밋이 남아있어 `git cherry-pick`으로 즉시 복구, 실제 유실은 없었으나 위험한 상황이었음)
+- **원인**: `--force-with-lease`는 "로컬이 마지막으로 알고 있던 원격 상태"와 실제 원격 상태가 다르면 푸시를 막아주는 안전장치이지만, 오래되어 최신화되지 않은 로컬 정보(과거 fetch 시점)를 그대로 신뢰한 채 진행하면 그 시점 이후의 원격 변경 사항은 감지되지 않는다. `checkout -B <branch> origin/<default>`로 브랜치를 재구성하기 전에 해당 브랜치 자체를 최신 fetch하지 않은 것이 근본 원인
+- **재발 방지**: 머지된 브랜치를 재구성(`checkout -B <branch> origin/<default>`)하기 전에 반드시 해당 브랜치를 `git fetch origin <branch>`로 먼저 최신화하고, `git log <branch>..origin/<branch>`로 로컬이 모르는 원격 커밋이 있는지 확인한 뒤 진행한다. `--force-with-lease`만으로는 로컬이 그 시점의 원격 상태를 정확히 알고 있어야 안전장치가 작동하므로, fetch 없이 오래된 로컬 정보로 force push하면 안전장치가 무력화될 수 있음을 항상 유의한다
+
+### BallData.asset._maxBounces가 반복적으로 0으로 방치되는 문제
+- **상황**: `BallSetupEditor.cs`의 `CreateBallDataAsset()`이 `_maxBounces` 기본값을 설정하도록 여러 차례 수정되었음에도, 실제 커밋된 `Assets/_Project/Data/BallData.asset` 파일의 값은 이후에도 다시 0으로 확인되는 일이 QA 검토마다 반복됨 (2026-06-30 에디터 점검 2회, 2026-07-02 볼 발사 메커닉 QA 검토까지 총 3회 이상 동일 지적)
+- **실패 내용**: 에디터 스크립트(생성 로직) 코드만 고치고 이미 생성되어 저장소에 커밋된 `.asset` 파일 자체는 갱신하지 않아, 코드상으로는 고쳐진 것처럼 보여도 실제 게임 동작(첫 벽 충돌 즉시 볼 소멸)은 계속 버그 상태였음
+- **원인**: Unity ScriptableObject 에셋은 최초 생성 시 1회만 에디터 스크립트가 값을 채우고, 이미 존재하는 에셋에 대해서는 재실행 시 스킵(멱등성 보장 로직)하는 경우가 많아 "생성 코드 수정"과 "기존 에셋 값 갱신"이 별개의 작업이라는 점이 매번 간과됨
+- **재발 방지**: ScriptableObject 데이터 값과 관련된 버그를 고칠 때는 (1) 에디터 생성 코드 수정, (2) 이미 커밋된 `.asset` 파일 자체의 실제 값 확인 및 직접 수정, 두 가지를 항상 함께 처리한다. QA는 코드만이 아니라 `.asset` 파일을 직접 열어 값을 대조하는 절차를 유지한다
+
+### UISetupEditor가 신규 UI 컴포넌트의 SerializeField 연결을 반복적으로 누락하는 패턴
+- **상황**: `UISetupEditor.cs`에 새 UI 컴포넌트(HpBar, XpBar 등)를 위한 자식 오브젝트 생성 코드를 추가할 때, 자식 오브젝트(`Slider`, `TMP_Text` 등) 생성까지는 매번 수행하지만 해당 컴포넌트의 `[SerializeField]` 참조(`SerializedObject.FindProperty(...).objectReferenceValue`)를 연결하는 코드가 종종 함께 빠짐 (이번 세션에서 `CharacterHpBar._slider`, `CharacterXpBar._slider`/`_levelText` 연결 누락으로 `NullReferenceException` 발생 — 과거 `DamageTextManager._poolParent` 미연결도 같은 유형)
+- **실패 내용**: 컴포넌트/자식 오브젝트가 씬에 보이므로 구현이 끝난 것처럼 보이지만, 실제 참조 연결이 없어 런타임에 해당 필드가 null인 채로 남아 특정 이벤트(경험치 획득, 데미지 텍스트 등) 발생 시점에만 예외가 터져 발견이 늦어짐
+- **원인**: 새 UI Step 함수를 작성할 때 "오브젝트 생성"과 "참조 연결"을 한 번에 처리하지 못하고 오브젝트 생성 코드만 먼저 작성한 뒤 연결 코드 추가를 빠뜨리는 실수가 반복됨
+- **재발 방지**: `UISetupEditor.cs`에 새 Step 함수를 추가/수정할 때는 자식 오브젝트를 생성하는 즉시 그 자리에서 관련 컴포넌트의 모든 `[SerializeField]` 필드를 `SerializedObject`로 연결하는 것까지 한 세트로 작성한다. 작업 완료 후에는 해당 컴포넌트의 필드 목록을 다시 열어 연결 코드가 하나도 빠지지 않았는지 대조 확인한다
