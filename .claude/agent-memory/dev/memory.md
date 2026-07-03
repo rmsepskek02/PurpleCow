@@ -687,3 +687,20 @@
 - `[MenuItem]` 어트리뷰트 문자열(메뉴 표시명)은 변경 대상에서 제외 — C# 메서드 식별자만 리네이밍
 - 리네이밍 후 `SetupScene()` 호출 순서와 메서드 번호가 Step1~Step10으로 완전히 일치함을 재확인
 - 로직/동작 변경 없음, 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: BackgroundFitter.cs Contain → Stretch 방식 전환
+
+**작업 내용:**
+- 실기기 테스트에서 Contain 방식(`Mathf.Min` 기반 비율 유지 스케일)이 사방 여백 문제를 일으켜, 논의 끝에 Stretch 방식(가로/세로 각각 독립적으로 카메라 뷰포트에 맞춤, 비율 왜곡 감수)으로 전환
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/BackgroundFitter.cs` — `Start()` 내부에서 `float scale = Mathf.Min(camSize.x / spriteSize.x, camSize.y / spriteSize.y); transform.localScale = new Vector3(scale, scale, 1f);` 2줄을 `transform.localScale = new Vector3(camSize.x / spriteSize.x, camSize.y / spriteSize.y, 1f);` 1줄로 교체. `scale` 지역 변수 및 `Mathf.Min` 비교 로직 제거. `Start()` 진입부의 null 방어 처리 등 다른 로직은 변경하지 않음.
+
+**주요 결정사항:**
+- 요청 범위를 정확히 준수해 스케일 계산 로직 2줄만 교체, 그 외 파일 내용(주석 없음, null 체크 등) 일절 손대지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
