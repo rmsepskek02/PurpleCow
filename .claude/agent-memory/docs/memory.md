@@ -541,3 +541,19 @@
 ### 주요 결정사항
 - 사용자가 이미 대화로 확정한 사실관계만 반영하고 추가 조사는 하지 않되, 정확성을 위해 언급된 파일들은 직접 Read로 재확인하여 라인 번호를 검증 후 인용
 - Cover-Fit 스케일 로직 + 카메라 배경색 보정 + Player Settings Portrait 고정, 이 세 가지의 "구체적 구현 방식"은 research.md에서 확정하지 않고 plan.md 단계로 명시적으로 이월
+
+---
+
+### 작업 내용 (추가)
+- 배경/해상도 대응 task research.md "범위에서 제외한 사항" 문단 갱신 + plan.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-30_background-resolution-fix/research.md`, `.../plan.md`
+- research.md 수정: 검은 사각형 UI 글리치는 사용자가 Play 모드로 직접 재확인한 결과 재현되지 않음 → `UIRules.md` 4번(패널은 항상 `SetActive(true)`, `CanvasGroup`으로만 표시/숨김 제어) 규칙상 에디트 모드 캡처 시점에는 `Awake()`/`Start()` 런타임 초기화 전 빈 상태가 노출됐을 가능성이 높다는 원인 추정으로 대체, "실제 버그 아님 / 별도 조치 불필요 / 향후 재조사 불필요"로 결론
+- plan.md 신규 작성: TaskRules.md 구조(서두 요약/구현 목표/단계별 작업 계획/예상 변경·생성 파일 목록/주의사항) 준수, 사용자가 이미 방향성을 확정한 구현 계획(1단계 Player Settings Portrait 고정, 2단계 BackgroundFitter.cs 신규 작성, 3단계 SceneSetupEditor.cs Step4_PlaceBackground 연동, 4단계 SampleScene.unity Main Camera 배경색 보정)을 그대로 문서화, 새로운 설계 판단은 추가하지 않음
+- AGENTS.md는 "Task 문서" 섹션이 개별 폴더 목록을 관리하지 않는 방침이라 이번에도 인덱스 갱신 없이 완료
+
+### 결과
+- research.md, plan.md 두 문서 모두 갱신/생성 완료
+
+### 주요 결정사항
+- research.md "범위에서 제외한 사항"은 완전히 새로 쓰지 않고 기존 문단 톤/구조를 유지하며 사실관계만 갱신 (사용자 지시 준수)
+- plan.md는 사용자가 이미 논의를 마친 구체적 구현 계획을 정리만 하는 문서로 작성 — plan.md 하단 주의사항에 "사용자의 명시적 승인 전에는 구현으로 이어지지 않는다"를 명시하여 TaskRules.md 절차(plan.md 작성 후 승인 필요) 재확인
