@@ -593,3 +593,23 @@
 - `GameplayMechanics.md`/`UIRules.md`도 갱신하지 않음: 천장 벽은 별도 게임플레이 메커닉이나 UI 규칙이 아니라 단순 씬 경계 콜라이더 설정이라 두 문서의 성격과 맞지 않는다고 판단
 - `AGENTS.md`도 갱신하지 않음: 기존 정책(개별 task 폴더는 별도 인덱싱하지 않음, "Task 문서" 섹션에 명시)에 따라 이번 task 폴더도 별도 등록 불필요로 판단
 - 코드(`SceneSetupEditor.cs`)와 씬(`SampleScene.unity`)은 이미 수정/반영 완료된 상태이므로 이번 작업에서는 전혀 건드리지 않고 Read하지도 않음(요청 문서 내용 그대로 신뢰해 반영)
+
+---
+
+## 2026-07-04
+
+### 작업 내용
+- Character Visual Implementation task research.md 신규 생성 (plan.md는 사용자 확인 후 별도 요청 예정이라 이번엔 미작성)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/01-38_character-visual-implementation/research.md`
+- 작성 전 `TaskRules.md`, 기존 research.md 예시(`2026-07-01/21-15_ball-launch-mechanics/research.md`), `CharacterManager.cs`, `BallLauncher.cs`(전체), `SceneSetupEditor.cs`(LaunchPoint 생성부/`Step6_PlaceManagers`), 캐릭터 스프라이트 4종 PNG 및 `Character_main_weapon.png.meta`, 레퍼런스 스크린샷(`targetUI/KakaoTalk_20260701_190324151.jpg`)을 직접 Read로 확인
+
+### 결과
+- "현재 상태": 스프라이트 4종 실제 이미지 확인 결과(Character_Main 178x218 합성 미리보기, head 132x92, body 48x48, weapon 파일 64x116/스프라이트 사각형 59x116) 기록, `Character_main_weapon.png.meta`에서 현재 Pivot이 중앙(0.5, 0.5)으로 임포트되어 있음을 직접 확인(오케스트레이터가 제공한 그립 위치 추정치 약 0.36/0.43과 대조), `CharacterManager.cs`가 HP/XP/레벨 전용이고 시각 요소가 전혀 없음을 코드로 재확인, `SceneSetupEditor.cs`의 `LaunchPoint` 생성부(473~482행, `localPosition (0,-8,0)`, SpriteRenderer 없음)와 `Step6_PlaceManagers`(408행, CharacterManager는 BoxCollider2D만 붙는 매니저 배치)를 라인 번호와 함께 인용, `BallLauncher.LaunchDirection`(25행)/`LaunchPoint`(24행) 프로퍼티 노출 확인 + 참고로 `BallLauncher.cs`가 최근 로스터 구조(`BallRosterEntry`)로 이미 재설계되어 있음을 발견해 기록(이번 task와 무관하나 조사 과정에서 확인된 사실)
+- "관련 파일 및 의존성": 스프라이트 4종, CharacterManager.cs, SceneSetupEditor.cs, BallLauncher.cs, InputHandler.cs, 레퍼런스 스크린샷, PDF 총 8개 항목 표로 정리
+- "문제점 / 구현 대상 파악": 시각 오브젝트 부재, 무기 Pivot 불일치, 파츠별 차등 회전 로직 부재, **[열린 이슈]로 명시**한 좌우 반전-자식 회전 각도 부호 충돌 문제(결정된 사항 아님을 굵게 표시), 캐릭터 배치 위치/계층 미확정, 씬 자동화 Step 부재 총 6개 항목
+- "결론": 사용자 확정 방향(Body 반전만/Head 반전+약한 감쇠 회전/Weapon 반전+강한 회전)은 그대로 목표로 이어가되, 반전-회전 부호 문제는 plan.md에서 dev 에이전트와 구체화 필요함을 명시. 제안 구조(LaunchPoint 위치에 Character GameObject, 자식 Body/Head/Weapon, 신규 `CharacterAimController.cs`/`WeaponAimController.cs`)는 "제안 수준"이라고 명확히 하고 확정처럼 서술하지 않음
+
+### 주요 결정사항
+- plan.md는 이번 요청 범위에 포함하지 않음 — 사용자가 research.md 확인 후 별도로 작성 요청할 예정 (TaskRules.md 절차 준수)
+- AGENTS.md는 갱신하지 않음 — 기존 정책(56~57행, 개별 task 폴더는 별도 인덱싱하지 않음)에 따라 이번 신규 task 폴더도 등록 대상 아님
+- 코드/에셋 파일은 전혀 수정하지 않고 Read만 수행 (Pivot 재설정 등 실제 변경은 plan.md/구현 단계로 이월)
