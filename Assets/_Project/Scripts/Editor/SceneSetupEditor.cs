@@ -332,9 +332,9 @@ public static class SceneSetupEditor
             characterObj = characterTransform.gameObject;
         }
 
-        SpriteRenderer bodyRenderer   = CreateCharacterPart(characterObj.transform, "Body",   "Assets/_Project/Sprites/Character/Character_Main_body.png",  0);
-        SpriteRenderer headRenderer   = CreateCharacterPart(characterObj.transform, "Head",   "Assets/_Project/Sprites/Character/Character_Main_head.png",  1);
-        SpriteRenderer weaponRenderer = CreateCharacterPart(characterObj.transform, "Weapon", "Assets/_Project/Sprites/Character/Character_main_weapon.png", 2);
+        SpriteRenderer bodyRenderer   = CreateCharacterPart(characterObj.transform, "Body",   "Assets/_Project/Sprites/Character/Character_Main_body.png",  0, new Vector3(0.42f, -0.75f, 0f));
+        SpriteRenderer headRenderer   = CreateCharacterPart(characterObj.transform, "Head",   "Assets/_Project/Sprites/Character/Character_Main_head.png",  1, new Vector3(0.51f, -0.23f, 0f));
+        SpriteRenderer weaponRenderer = CreateCharacterPart(characterObj.transform, "Weapon", "Assets/_Project/Sprites/Character/Character_main_weapon.png", 2, Vector3.zero);
 
         CharacterAimController aimController = characterObj.GetComponent<CharacterAimController>();
         if (aimController == null)
@@ -349,12 +349,14 @@ public static class SceneSetupEditor
         Debug.Log("[SceneSetupEditor] Character 시각 오브젝트 배치 완료.");
     }
 
-    private static SpriteRenderer CreateCharacterPart(Transform parent, string partName, string spritePath, int sortingOrder)
+    private static SpriteRenderer CreateCharacterPart(Transform parent, string partName, string spritePath, int sortingOrder, Vector3 localPosition)
     {
         Transform existing = parent.Find(partName);
         GameObject partObj = existing != null ? existing.gameObject : new GameObject(partName);
         if (existing == null)
             partObj.transform.SetParent(parent, false);
+
+        partObj.transform.localPosition = localPosition;
 
         SpriteRenderer sr = partObj.GetComponent<SpriteRenderer>();
         if (sr == null)

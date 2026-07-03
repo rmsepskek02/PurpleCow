@@ -13,6 +13,17 @@ public class CharacterAimController : MonoBehaviour
 
     private bool _facingRight = true;
 
+    private Vector3 _headBasePosition;
+    private Vector3 _bodyBasePosition;
+    private Vector3 _weaponBasePosition;
+
+    private void Start()
+    {
+        _headBasePosition   = _headRenderer.transform.localPosition;
+        _bodyBasePosition   = _bodyRenderer.transform.localPosition;
+        _weaponBasePosition = _weaponRenderer.transform.localPosition;
+    }
+
     private void Update()
     {
         Vector2 direction = BallLauncher.Instance.LaunchDirection;
@@ -28,6 +39,13 @@ public class CharacterAimController : MonoBehaviour
             _facingRight = false;
 
         _bodyRenderer.flipX = _headRenderer.flipX = _weaponRenderer.flipX = !_facingRight;
+
+        // flipX는 스프라이트 비트맵만 반전시킬 뿐 Transform.localPosition에는 영향을 주지 않으므로,
+        // 정면 기준 위치에서 벗어난 파츠(Head/Body)는 좌우 반전 시 X 좌표 부호도 함께 뒤집어야 한다.
+        float sign = _facingRight ? 1f : -1f;
+        _headRenderer.transform.localPosition   = new Vector3(_headBasePosition.x * sign, _headBasePosition.y, _headBasePosition.z);
+        _bodyRenderer.transform.localPosition   = new Vector3(_bodyBasePosition.x * sign, _bodyBasePosition.y, _bodyBasePosition.z);
+        _weaponRenderer.transform.localPosition = new Vector3(_weaponBasePosition.x * sign, _weaponBasePosition.y, _weaponBasePosition.z);
 
         // Weapon: 감쇠 없이 조준 방향을 거의 그대로 따라간다.
         _weaponRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, aimAngle);

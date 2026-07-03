@@ -674,3 +674,38 @@
 - `BallLauncher.Instance`에 대한 null 방어 코드는 추가하지 않음 — 기존 코드베이스(다른 매니저 참조 코드) 관례를 그대로 따름
 - Step 번호는 `SceneSetupEditor.cs` 파일 내 기존 최대 번호(9) 기준으로 다음 번호(10)를 사용 (다른 *SetupEditor.cs 파일들의 Step 번호는 별개 네임스페이스이므로 고려하지 않음)
 - 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리)
+
+---
+
+## 2026-07-03
+
+### 작업: QA Major 버그 수정 (캐릭터 파츠 겹침 + 좌우 반전 시 위치 미러링 누락)
+
+**작업 내용:**
+- qa 에이전트가 캐릭터 비주얼 기능 코드 리뷰 중 Major 버그 1건 발견 → 오케스트레이터가 `Character_Main.png` 픽셀 재분석으로 정확한 localPosition 수치 산출, 그 값 그대로 반영
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `CreateCharacterPart()`에 `Vector3 localPosition` 파라미터 추가, `partObj.transform.localPosition = localPosition;`을 SetParent 직후(sprite/sortingOrder 재적용과 동일하게 매 실행마다 갱신, 멱등성 유지)에 추가
+  - `Step10_SetupCharacterVisual()`의 3개 호출부에 위치값 전달: `Body` → `(0.42f, -0.75f, 0f)`, `Head` → `(0.51f, -0.23f, 0f)`, `Weapon` → `Vector3.zero`(그립 Pivot이 이미 원점 기준이므로 변경 없음)
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs`
+  - `_headBasePosition`/`_bodyBasePosition`/`_weaponBasePosition`(private Vector3) 필드 추가
+  - `Start()` 신규 추가 — 3개 렌더러의 `transform.localPosition`을 각각 Base 필드에 캐싱(SceneSetupEditor가 배치한 정면 기준 위치를 그대로 기준값으로 사용)
+  - `Update()`의 `flipX` 적용 직후, 회전(`localRotation`) 적용 이전에 `float sign = _facingRight ? 1f : -1f;`로 3개 렌더러 `localPosition`의 X만 부호 반전 적용(Y/Z는 유지), `localRotation` 설정 라인과는 완전히 분리해 서로 덮어쓰지 않음
+
+**버그 근본 원인:**
+- 1) 기존 `CreateCharacterPart()`가 `localPosition`을 전혀 설정하지 않아 Body/Head/Weapon 3개 파츠가 모두 Character 로컬 원점 `(0,0,0)`에 겹쳐 렌더링됨
+- 2) `SpriteRenderer.flipX`는 비트맵만 반전시킬 뿐 `Transform.localPosition`에는 영향을 주지 않으므로, X가 양수인 위치에 고정 배치된 Head/Body가 `flipX` 켜져도 같은 쪽에 남아 좌우 반전처럼 보이지 않는 문제
+
+**범위 밖(건드리지 않음):**
+- `CharacterManager.cs`, `BallLauncher.cs`, `Ball.cs` 등 기존 게임플레이 로직 — 전혀 수정하지 않음
+- qa 에이전트가 보고한 Minor 3/6번 등 다른 항목 — 오케스트레이터가 실제 결함이 아니라고 판단, 이번 범위에서 제외
+- `localScale` 반전 방식 — 여전히 사용하지 않음(기존 확정 사항 유지)
+- 원격 환경에 Unity 에디터 없어 `SampleScene.unity`에는 반영되지 않음 — 사용자가 로컬에서 `PurpleCow/Setup/Scene Setup` 메뉴 재실행 필요
+
+**주요 결정사항:**
+- localPosition 수치는 오케스트레이터가 산출한 값을 그대로 적용, dev 에이전트가 임의로 재계산/보정하지 않음
+- `CreateCharacterPart()`의 멱등성 패턴(기존 sprite/sortingOrder처럼 재실행 시 항상 재적용)을 `localPosition`에도 동일하게 적용
+- 위치 미러링 로직은 `Start()`에서 1회 캐싱 + `Update()`에서 매 프레임 부호만 재계산하는 방식으로 구현(회전 로직과 필드/타이밍 분리로 충돌 방지)
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리)

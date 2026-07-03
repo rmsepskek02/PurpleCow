@@ -15,4 +15,3 @@
 ### 주요 결정사항
 - `spriteMode: 2`(Multiple)인 경우 최상위 `spritePivot`은 legacy 필드로 실제 적용되지 않고, 실제 Pivot은 `spriteSheet.sprites[0].alignment`/`pivot`가 결정한다는 점을 확인. `alignment: 0`(Center)일 때는 `pivot` 값이 무시되므로 Custom Pivot 적용을 위해 `alignment: 9`로 변경 필요.
 - (0.39, 0.43) 좌표는 알파 트림된 실제 rect(width: 59, height: 116) 기준, 그립(가로 띠 무늬 손잡이) 위치를 픽셀 분석해 정규화한 값 (research.md/plan.md 근거).
-</content>
