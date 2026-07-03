@@ -371,6 +371,7 @@ public static class SceneSetupEditor
         PlaceColliderObject("Wall_Left",  "Wall",   new Vector3(-5.5f, 0f, 0f),  new Vector2(0.2f, 20f));
         PlaceColliderObject("Wall_Right", "Wall",   new Vector3(5.5f,  0f, 0f),  new Vector2(0.2f, 20f));
         PlaceColliderObject("Ground",     "Ground", new Vector3(0f, -10f, 0f),   new Vector2(12f,  0.2f));
+        PlaceColliderObject("Wall_Top",   "Wall",   new Vector3(0f, 8f, 0f),     new Vector2(12f,  0.2f));
     }
 
     private static void PlaceColliderObject(string objName, string tag, Vector3 position, Vector2 colliderSize)

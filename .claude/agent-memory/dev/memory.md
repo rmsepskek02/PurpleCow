@@ -616,3 +616,27 @@
 - `WaveTableData.CreateWaveDataAssets()`는 asset이 이미 있으면 스킵하는 기존 멱등성 관례를 유지 (20개 개별 스킵 로그 → 1개 스킵 로그로 단순화)
 - `SetupWaveSpawnEntries()`에서 `SerializedObject.ApplyModifiedPropertiesWithoutUndo()` 호출을 매 웨이브 반복문 안에서가 아니라 루프 종료 후 1회만 호출하도록 변경 — 기존엔 20개 별도 asset이라 웨이브마다 각각의 SerializedObject를 Apply해야 했지만, 이제 하나의 SerializedObject(같은 asset)를 여러 웨이브에 걸쳐 수정하므로 마지막에 한 번만 Apply하는 것이 자연스러움
 - 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 별도 처리)
+
+---
+
+## 2026-07-03
+
+### 작업: 볼 천장 이탈 버그 수정 (Wall_Top 콜라이더 추가)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-03/12-48_ball-ceiling-wall-fix/plan.md` (research.md 포함, 사용자 승인 완료)
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step5_PlaceWallsAndGround()`에 `PlaceColliderObject("Wall_Top", "Wall", new Vector3(0f, 8f, 0f), new Vector2(12f, 0.2f));` 1줄 추가 (`Ground` 호출 바로 다음 줄). 좌표 y=8은 `AIFailures.md` 문서화된 실제 플레이 영역 상단값, size(12,0.2)는 `Ground`와 동일 재사용, 태그는 좌우 벽과 동일한 `"Wall"`.
+
+**Ball.cs 재검증 결과:**
+- `Ball.OnCollisionEnter2D`의 `else if (collision.gameObject.CompareTag("Wall"))` 분기(111~130번 줄)는 오브젝트 이름이 아닌 태그값만으로 분기하므로, `Wall_Top`이 `"Wall"` 태그로 생성되면 좌우 벽과 완전히 동일하게 처리됨을 코드로 재확인. `Ball.cs` 수정 불필요 — 실제로 수정하지 않음.
+
+**범위 밖 항목(건드리지 않음):**
+- `Assets/Scenes/SampleScene.unity` — 사용자가 옵션 A(로컬 Unity 에디터에서 `PurpleCow/Setup/Scene Setup` 메뉴 재실행)로 진행하기로 확정했으므로 씬 파일 직접 편집하지 않음. 사용자가 로컬에서 메뉴를 재실행해야 `Wall_Top`이 실제 씬에 반영됨.
+- `BallBounce.physicsMaterial2D`의 Wall/Ground 미연결 문제, `CollisionDetectionMode2D.Continuous` 터널링 가능성 — research.md/plan.md에서 이미 이번 작업 범위 제외로 확정되어 손대지 않음.
+
+**주요 결정사항:**
+- 코드 변경은 정확히 plan.md에 명시된 1줄 추가로 한정, 다른 리팩토링/개선 없음
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리)
