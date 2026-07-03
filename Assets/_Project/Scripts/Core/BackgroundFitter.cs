@@ -13,7 +13,7 @@ public class BackgroundFitter : MonoBehaviour
             _targetCamera.orthographicSize * 2f * _targetCamera.aspect,
             _targetCamera.orthographicSize * 2f);
         Vector2 spriteSize = _spriteRenderer.sprite.bounds.size;
-        float scale = Mathf.Max(camSize.x / spriteSize.x, camSize.y / spriteSize.y);
+        float scale = Mathf.Min(camSize.x / spriteSize.x, camSize.y / spriteSize.y);
         transform.localScale = new Vector3(scale, scale, 1f);
     }
 }
