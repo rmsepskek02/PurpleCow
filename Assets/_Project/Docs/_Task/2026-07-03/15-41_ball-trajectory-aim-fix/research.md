@@ -1,6 +1,6 @@
 # Research — Ball Trajectory Aim Fix
 
-이 문서는 볼 궤도(트레젝토리) 프리뷰와 관련해 사용자가 지적한 두 가지 조작 문제, 즉 (1) 궤적이 터치할 때만 보이는 문제와 (2) 터치 조준 시 손가락 방향과 궤적 각도가 미묘하게 어긋나는 정확성 문제를 다룬다. 현재 구현(`InputHandler`, `TrajectoryPreview`, `BallLauncher`)을 코드 레벨에서 조사하고, 각 문제의 원인을 분석한 뒤 다음 단계(plan.md)에서 다룰 방향을 정리한다. 구체적인 코드 수정은 이 문서에서 다루지 않는다.
+이 문서는 볼 궤도(트레젝토리) 프리뷰와 관련해 사용자가 지적한 세 가지 문제, 즉 (1) 궤적이 터치할 때만 보이는 문제, (2) 터치 조준 시 손가락 방향과 궤적 각도가 미묘하게 어긋나는 정확성 문제, (3) 궤적 프리뷰의 레드닷/링/점선 색상과 크기가 원본 게임과 다른 문제를 다룬다. 현재 구현(`InputHandler`, `TrajectoryPreview`, `BallLauncher`)을 코드 레벨에서 조사하고, 각 문제의 원인을 분석한 뒤 다음 단계(plan.md)에서 다룰 방향을 정리한다. 구체적인 코드 수정은 이 문서에서 다루지 않는다.
 
 ## 현재 상태
 
@@ -34,13 +34,33 @@
 
 이는 지금까지의 구현(터치 시작~릴리즈 구간에만 `SetVisible(true)`)과 정확히 일치하는 스펙 문구이며, 이번에 논의된 "항상 표시" 방향으로 바뀌면 이 문서 내용도 함께 갱신되어야 한다.
 
+### 레드닷/링/점선의 현재 색상 및 크기 설정
+
+`TrajectoryPreview.cs` 24~33행 `Awake()`에서 `_hitDot`과 `_hitRing`을 각각 생성하는데, 두 `LineRenderer` 모두 `_hitColor`를 색상으로 넘기고 있다.
+
+```csharp
+_hitDot         = CreateLineRenderer("HitDot",  _dotRadius * 1.6f, _hitColor, CreateSolidTexture());
+_hitRing        = CreateLineRenderer("HitRing", _lineWidth,        _hitColor, CreateSolidTexture());
+```
+
+`_hitColor`의 기본값은 `Color.red`(255,0,0, 순수 채도 100% 빨강)이며, 이 값이 닷과 링 양쪽에 그대로 쓰인다. 크기 관련해서는 `_dotRadius = 0.08f`, `_ringRadius = 0.3f`로 설정되어 있어 닷/링 반지름 비율이 약 0.267(27%)이다. 점선(`_trajectoryLine`)은 `_lineColor = Color.white`(순백색)를 사용하며, `DASH_WORLD_SIZE = 0.3f` 월드 단위 주기로 앞쪽 절반은 불투명·뒤쪽 절반은 투명한 50:50 듀티비 대시 텍스처(163~176행, `CreateDashTexture()`)를 반복시키는 방식으로 그려진다.
+
+사용자가 `Assets/_Project/Docs/targetUI/` 폴더의 원본 게임(통통 디펜스: 핀볼 마스터) 실제 플레이 스크린샷, 특히 `KakaoTalk_20260701_190324151.jpg`, `KakaoTalk_20260701_190324151_02.jpg`, `KakaoTalk_20260703_115951058_02.jpg` 세 장을 픽셀 단위로 확대해 직접 비교한 결과는 다음과 같다.
+
+- **레드닷 색상**: 사막 배경/숲 배경 스크린샷 두 곳에서 각각 픽셀을 추출했을 때 모두 RGB `(200~220, 90~110, 90~100)` 범위였다. 채도를 낮춘 코랄/브릭 계열의 붉은색으로, 현재 코드의 순수 빨강(255,0,0)과는 확실히 다르다.
+- **레드닷 크기**: 원본에서는 링 대비 닷의 지름 비율이 대략 15~25% 수준으로, 현재 구현의 27%보다 더 작게 그려져야 한다.
+- **링(고리) 색상**: 원본에서도 흰색이 맞다. 즉 링을 흰색으로 유지하려는 의도 자체는 맞았으나, 현재 코드에서 `_hitRing`이 `_hitColor`(빨강)를 그대로 참조하고 있어 실제로는 의도와 다르게 빨간색 링으로 그려지고 있다. 링은 `_lineColor`(흰색) 계열의 별도 색상 참조로 분리되어야 한다.
+- **점선 간격**: 원본은 대시 하나의 길이와 대시 사이 간격이 현재 구현보다 훨씬 짧고 촘촘하다. `DASH_WORLD_SIZE`를 줄이는 방향의 조정이 필요해 보인다.
+- **점선 색상**: 원본은 어두운 배경 위에서 순백색보다는 살짝 톤 다운된 회백색(그레이에 가까운 화이트)에 가깝게 보인다.
+
 ## 관련 파일 및 의존성
 
 - `Assets/_Project/Scripts/Core/InputHandler.cs` — 터치/마우스 입력을 폴링해 `OnAimBegin`/`OnDrag`/`OnRelease` static event를 발행. `OnDrag`의 방향 벡터가 스크린 픽셀 좌표 차이를 그대로 정규화한 값이라는 점이 이번 이슈 2의 핵심.
-- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` — 위 세 이벤트만 구독해 궤적선/레드닷/링을 갱신하는 현재 구조. 자체 `Update()` 없음. 이슈 1(항상 표시 + 실시간 갱신)의 직접적인 수정 대상.
+- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` — 위 세 이벤트만 구독해 궤적선/레드닷/링을 갱신하는 현재 구조. 자체 `Update()` 없음. 이슈 1(항상 표시 + 실시간 갱신)의 직접적인 수정 대상이며, 동시에 `_hitDot`/`_hitRing`/`_trajectoryLine`의 색상·크기 필드(`_hitColor`, `_dotRadius`, `_ringRadius`, `_lineColor`, `DASH_WORLD_SIZE`)를 정의하고 있어 이슈 3(궤적 프리뷰 색상/크기 불일치)의 수정 대상이기도 하다.
 - `Assets/_Project/Scripts/Ball/BallLauncher.cs` — `LaunchDirection` 프로퍼티(마지막 조준 방향)를 노출. 터치하지 않는 동안 궤적을 계속 그릴 때 기준이 되는 값이며, `OnDrag`를 직접 구독해 자체적으로 방향을 갱신하고 있어 `TrajectoryPreview`와 별개의 구독 구조를 갖고 있다는 점도 확인 필요.
 - `Assets/_Project/Docs/GameplayMechanics.md` 섹션 1(볼 발사 및 궤도 시스템) — 터치 시작 시 조준 확정, 드래그 중 실시간 갱신, 재발사 시 최신 조준 방향 사용 등 원본 스펙 근거. 섹션 2(몬스터 스폰 및 전진 시스템) — 몬스터가 볼 사이클과 무관하게 항상 이동한다는 근거이며, 이슈 1에서 "터치하지 않을 때도 궤적 충돌 지점이 몬스터를 따라가야 하는" 이유가 된다.
 - `Assets/_Project/Docs/UIRules.md` 섹션 11(궤적 프리뷰 시각 규칙) — "조준 중에만 표시" 문구가 이번 변경 방향과 상충하므로 함께 갱신이 필요한 문서.
+- `Assets/_Project/Docs/targetUI/KakaoTalk_20260701_190324151.jpg`, `KakaoTalk_20260701_190324151_02.jpg`, `KakaoTalk_20260703_115951058_02.jpg` — 원본 게임(통통 디펜스: 핀볼 마스터) 실제 플레이 화면 캡처. 사용자가 이슈 3 분석을 위해 픽셀 단위로 확대해 레드닷/링/점선의 실제 색상 및 크기 비율을 직접 확인한 레퍼런스.
 
 ## 문제점 / 구현 대상 파악
 
@@ -67,8 +87,17 @@ OnDrag?.Invoke(direction);
 - 즉 근본 원인은 스크린 좌표 벡터를 스크린→월드 변환(예: 카메라 기준으로 두 스크린 포인트를 각각 월드 좌표로 변환한 뒤 그 차이로 방향을 계산하는 방식 등) 없이 그대로 정규화해서 사용하고 있다는 점으로 분석된다.
 - 구체적인 해결 방식(예: `Camera.main.ScreenToWorldPoint` 활용 등)은 이 문서에서 확정하지 않으며, 다음 단계(plan.md)에서 다룬다.
 
+### 이슈 3: 궤적 프리뷰 색상/크기가 원본과 다름
+
+- 현재 `TrajectoryPreview.cs` 24~33행에서 `_hitDot`과 `_hitRing`이 둘 다 `_hitColor`(기본값 `Color.red`, 순수 빨강)를 참조하는 버그가 있다. 링은 원래 흰색으로 그려질 의도였는데, 색상 참조가 분리되어 있지 않아 실제로는 빨간색으로 그려지고 있다.
+- 사용자가 `Assets/_Project/Docs/targetUI/` 레퍼런스 스크린샷(`KakaoTalk_20260701_190324151.jpg`, `KakaoTalk_20260701_190324151_02.jpg`, `KakaoTalk_20260703_115951058_02.jpg`)을 픽셀 단위로 확대해 직접 비교한 결과, 레드닷은 순수 빨강이 아니라 RGB `(200~220, 90~110, 90~100)` 범위의 채도를 낮춘 코랄/브릭 계열 색이며, 링 대비 닷의 지름 비율도 현재 구현의 27%보다 작은 15~25% 수준이어야 한다는 점이 확인됐다.
+- 링 색상 자체는 원본에서도 흰색이 맞으므로, 문제는 색상 값이 아니라 `_hitRing`이 `_hitColor` 대신 `_lineColor`(또는 그에 준하는 흰색 계열 필드)를 참조하도록 분리하는 데 있다.
+- 점선(`_trajectoryLine`)도 두 가지 차이가 확인됐다. (1) 대시 길이와 간격이 원본이 현재 `DASH_WORLD_SIZE = 0.3f`보다 훨씬 촘촘하다. (2) 원본의 점선 색은 순백색보다 살짝 톤 다운된 회백색에 가깝다.
+- 즉 이슈 3의 원인은 (1) `_hitDot`/`_hitRing`이 같은 색상 필드를 참조하는 설계상의 버그, (2) 닷 반지름·대시 주기·점선 색상 수치가 원본과 다르게 설정되어 있다는 값 불일치 두 가지로 정리된다. 구체적인 색상값·비율·주기 수치는 이 문서에서 확정하지 않으며 다음 단계(plan.md)에서 다룬다.
+
 ## 결론
 
 - 이슈 1(궤적이 터치할 때만 보임)의 해결 방향은 확정되었다. `TrajectoryPreview`를 현재의 이벤트 전용 구조에서 `Update()` 기반 매 프레임 재계산 구조로 변경하여, 터치 여부와 무관하게 궤적을 항상 표시하고 몬스터 이동을 실시간 반영한다. 터치 중에는 드래그 방향을, 터치하지 않을 때는 `BallLauncher.Instance.LaunchDirection`을 기준으로 궤적을 그린다. 이 변경과 함께 `UIRules.md` 섹션 11의 "조준 중에만 표시" 문구도 함께 갱신이 필요하다.
 - 이슈 2(조준 정확도 문제)의 원인은 `InputHandler.cs`가 스크린 픽셀 좌표 차이를 스크린→월드 변환 없이 그대로 정규화해 조준 방향으로 사용하고 있기 때문으로 분석된다. 구체적인 해결 방식은 다음 단계(plan.md)에서 다룬다.
-- 두 이슈 모두 구현이 필요한 파일은 `InputHandler.cs`, `TrajectoryPreview.cs`이며, `BallLauncher.cs`는 `LaunchDirection` 값을 참조 대상으로 다시 확인이 필요하다. 문서 갱신 대상은 `UIRules.md` 섹션 11이다.
+- 이슈 3(궤적 프리뷰 색상/크기 불일치)의 해결 방향: (1) `_hitDot`과 `_hitRing`이 서로 다른 색상을 참조하도록 분리하고, 링은 흰색 계열, 닷은 톤 다운된 브릭레드 계열로 변경한다. (2) `_dotRadius`를 줄여 링 대비 닷 크기를 작게 조정한다. (3) `DASH_WORLD_SIZE`(점선 주기)를 줄여 더 촘촘하게, `_lineColor`도 순백색에서 약간 톤 다운된 회백색으로 조정한다. 구체적인 수치는 plan.md 단계에서 다룬다.
+- 세 이슈 모두 구현이 필요한 파일은 `InputHandler.cs`, `TrajectoryPreview.cs`이며(이슈 3은 `TrajectoryPreview.cs`의 색상/크기 관련 필드만 대상으로, 이슈 1과 같은 파일이지만 다른 필드다), `BallLauncher.cs`는 `LaunchDirection` 값을 참조 대상으로 다시 확인이 필요하다. 문서 갱신 대상은 `UIRules.md` 섹션 11이다.
