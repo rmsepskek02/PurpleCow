@@ -126,6 +126,7 @@ public static class UISetupEditor
 
         CharacterHpBar hpBar = charHpObj.GetComponent<CharacterHpBar>();
         SerializedObject hpBarSo = new SerializedObject(hpBar);
+        hpBarSo.FindProperty("_slider").objectReferenceValue = charHpObj.GetComponent<Slider>();
         hpBarSo.FindProperty("_hpText").objectReferenceValue = hpTextObj.GetComponent<TextMeshProUGUI>();
         hpBarSo.ApplyModifiedPropertiesWithoutUndo();
 
@@ -144,6 +145,12 @@ public static class UISetupEditor
         if (levelTextObj.GetComponent<TextMeshProUGUI>() == null)
             levelTextObj.AddComponent<TextMeshProUGUI>();
         EnsureComponent<CharacterXpBar>(charXpObj);
+
+        CharacterXpBar xpBar = charXpObj.GetComponent<CharacterXpBar>();
+        SerializedObject xpBarSo = new SerializedObject(xpBar);
+        xpBarSo.FindProperty("_slider").objectReferenceValue = charXpObj.GetComponent<Slider>();
+        xpBarSo.FindProperty("_levelText").objectReferenceValue = levelTextObj.GetComponent<TextMeshProUGUI>();
+        xpBarSo.ApplyModifiedPropertiesWithoutUndo();
 
         Debug.Log("[UISetupEditor] HUD Canvas 구성 완료.");
     }
