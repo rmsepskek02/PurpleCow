@@ -545,3 +545,35 @@
 - 코드(`SceneSetupEditor.cs`) 수정은 옵션 A/B 어느 쪽을 택하든 공통으로 필요하다고 판단 — 향후 씬 재생성 시에도 천장 벽이 항상 생성되도록 보장하기 위함
 - 이번 요청은 "plan.md 작성"만 포함되며 실제 코드/씬 파일 수정은 진행하지 않음(TaskRules.md 절차 준수, 사용자의 명시적 승인 대기)
 - AGENTS.md는 개별 task 폴더를 별도로 인덱싱하지 않는 기존 정책(56~57번 줄, "개별 task 폴더 목록은 이 문서에서 별도로 관리하지 않으며, 필요할 때 해당 경로를 직접 탐색")을 확인했으므로 이번 plan.md 생성에 대해서는 AGENTS.md 갱신 불필요로 판단
+
+---
+
+### 작업 내용 (추가)
+- dev 에이전트가 task 문서 없이 예외 진행한 "WaveData 20개 개별 asset → WaveTableData 단일 테이블 SO" 리팩토링(main 커밋 `9c188a8`, 이미 완료됨)에 대한 사후 문서 갱신
+- 수정 파일: `Assets/_Project/Docs/DevRules.md`, `Assets/_Project/Docs/ProjectStatus.md`, `Assets/_Project/Docs/ProjectHistory.md` (코드는 건드리지 않음)
+
+### 결과
+- `DevRules.md`: "ScriptableObject 사용 범위" 표에서 `WaveData | 웨이브별 몬스터 구성, 처치 조건` 행을 `WaveTableData | 웨이브 20개의 몬스터 구성/처치 조건을 한 asset에 테이블로 관리`로 교체 (해당 행만 수정)
+- `ProjectStatus.md`: "완료된 작업"에 WaveTableData 리팩토링 항목 추가(task 문서 없이 예외 진행, main 직접 커밋 `9c188a8` 명시), "다음 작업 순서"에 1번 항목으로 "사용자가 로컬 Unity에서 Monster System Setup → Scene Setup 재실행하여 WaveTableData.asset 생성 및 WaveManager 참조 재연결 필요(안 하면 웨이브 스폰 불가)"를 추가하고 기존 플레이 테스트 항목을 2번으로 밀어냄
+- `ProjectHistory.md`: 2026-07-03 날짜 섹션 하단에 "WaveData → WaveTableData 리팩토링" 소제목 신규 추가 — 배경(asset 과다), 삭제/신규/수정 파일 목록, 원격 환경에 Unity 에디터가 없어 asset 생성/씬 재연결이 미완료 상태임을 기존 항목들과 같은 서술 형식(무엇을/왜/어떻게)으로 기록
+
+### 주요 결정사항
+- AGENTS.md는 이번 갱신으로 인덱스 변경 사항이 없어 건드리지 않음(사용자 지시대로)
+- 코드 파일(WaveManager.cs, MonsterSetupEditor.cs, SceneSetupEditor.cs, WaveTableData.cs 등)은 이미 커밋된 상태이므로 문서 3개만 수정하고 Read 외 접근하지 않음
+- 커밋/푸시는 진행하지 않고 파일 수정까지만 수행(오케스트레이터/사용자 판단에 위임)
+
+---
+
+### 작업 내용 (추가)
+- WaveData → WaveTableData 리팩토링 후속: 사용자가 로컬 Unity에서 `Monster System Setup` → `Scene Setup`을 실행해 `WaveTableData.asset` 생성 및 `SampleScene.unity`의 `WaveManager._waveTable` 참조 재연결 완료(커밋 `ceeb9e2`)한 것을 오케스트레이터가 직접 검증한 결과를 문서에 반영
+- 수정 파일: `Assets/_Project/Docs/ProjectStatus.md` 1개만 (다른 문서는 이미 정확하다는 지시에 따라 건드리지 않음)
+
+### 결과
+- `ProjectStatus.md`: "완료된 작업"의 기존 WaveData→WaveTableData 항목 문장 뒤에 검증 완료 내용을 이어붙임 — `WaveTableData.asset` 생성/씬 재연결 완료, 커밋(`ceeb9e2`)/푸시 완료, 오케스트레이터 검증 결과(웨이브 1~20 스폰 데이터 정확 일치, 구 `_waveDatas` 필드 완전 제거, `_waveTable` 단일 참조로 정상 교체, `Assets/_Project/Data/` asset 개수 35→16개 감소) 명시
+- "다음 작업 순서"에서 선행 필요 항목(구 1번, Monster/Scene Setup 재실행 요청)을 완전히 제거하고, 기존 2번("실제 플레이 테스트...")을 1번으로 당김
+- 최상단 "현재 상태" 서술(`**단계**`)은 이미 "실제 플레이 테스트 단계 진입"으로 되어 있어 추가 수정 없이 그대로 유지(과도한 재작성 지양 지시 준수)
+
+### 주요 결정사항
+- `TrajectoryPreview` GameObject가 같은 커밋에 씬에 추가된 것은 `SceneSetupEditor.cs`의 기존 "Scene Setup" 메뉴가 여러 시스템을 한 번에 처리하는 과정에서 발생한 정상적인 부수 효과로, 이번 WaveData 작업과 무관하다고 판단하여 문서에 별도 기록하지 않음
+- DevRules.md/ProjectHistory.md/AGENTS.md는 지시대로 이번 세션에서 전혀 수정하지 않음
+- 커밋/푸시는 진행하지 않고 파일 수정까지만 수행

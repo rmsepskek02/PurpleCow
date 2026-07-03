@@ -79,25 +79,28 @@ public static class MonsterSetupEditor
     {
         EnsureDataFolder();
 
+        const string path = "Assets/_Project/Data/WaveTableData.asset";
+
+        if (AssetDatabase.LoadAssetAtPath<WaveTableData>(path) != null)
+        {
+            Debug.Log("[MonsterSetupEditor] WaveTableData 이미 존재, 스킵.");
+            return;
+        }
+
+        WaveTableData waveTable = ScriptableObject.CreateInstance<WaveTableData>();
+
+        SerializedObject so = new SerializedObject(waveTable);
+        SerializedProperty wavesProp = so.FindProperty("_waves");
+        wavesProp.arraySize = 20;
         for (int n = 1; n <= 20; n++)
         {
-            string path = $"Assets/_Project/Data/WaveData_Wave{n}.asset";
-
-            if (AssetDatabase.LoadAssetAtPath<WaveData>(path) != null)
-            {
-                Debug.Log($"[MonsterSetupEditor] WaveData_Wave{n} 이미 존재, 스킵.");
-                continue;
-            }
-
-            WaveData waveData = ScriptableObject.CreateInstance<WaveData>();
-
-            SerializedObject so = new SerializedObject(waveData);
-            so.FindProperty("_waveNumber").intValue = n;
-            so.ApplyModifiedPropertiesWithoutUndo();
-
-            AssetDatabase.CreateAsset(waveData, path);
-            Debug.Log($"[MonsterSetupEditor] WaveData 생성: {path}");
+            SerializedProperty waveEntry = wavesProp.GetArrayElementAtIndex(n - 1);
+            waveEntry.FindPropertyRelative("WaveNumber").intValue = n;
         }
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        AssetDatabase.CreateAsset(waveTable, path);
+        Debug.Log($"[MonsterSetupEditor] WaveTableData 생성: {path}");
     }
 
     [MenuItem("PurpleCow/Setup/Setup Wave Spawn Entries")]
@@ -113,20 +116,29 @@ public static class MonsterSetupEditor
                 Debug.LogWarning($"[MonsterSetupEditor] MonsterData_{monsterNames[i]}.asset 없음.");
         }
 
+        const string tablePath = "Assets/_Project/Data/WaveTableData.asset";
+        WaveTableData waveTable = AssetDatabase.LoadAssetAtPath<WaveTableData>(tablePath);
+        if (waveTable == null)
+        {
+            Debug.LogWarning($"[MonsterSetupEditor] {tablePath} 없음. Monster System Setup을 먼저 실행하세요.");
+            return;
+        }
+
+        SerializedObject tableSo = new SerializedObject(waveTable);
+        SerializedProperty wavesProp = tableSo.FindProperty("_waves");
+
         for (int waveIdx = 0; waveIdx < 20; waveIdx++)
         {
             int waveNumber = waveIdx + 1;
-            string path = $"Assets/_Project/Data/WaveData_Wave{waveNumber}.asset";
-            WaveData waveData = AssetDatabase.LoadAssetAtPath<WaveData>(path);
-            if (waveData == null) continue;
+            if (waveIdx >= wavesProp.arraySize) continue;
 
-            SerializedObject so = new SerializedObject(waveData);
-            SerializedProperty entriesProp = so.FindProperty("_spawnEntries");
+            SerializedProperty waveEntry = wavesProp.GetArrayElementAtIndex(waveIdx);
+            SerializedProperty entriesProp = waveEntry.FindPropertyRelative("SpawnEntries");
 
             // 이미 스폰 데이터가 있으면 스킵
             if (entriesProp.arraySize > 0)
             {
-                Debug.Log($"[MonsterSetupEditor] WaveData_Wave{waveNumber} 이미 스폰 데이터 있음, 스킵.");
+                Debug.Log($"[MonsterSetupEditor] Wave{waveNumber} 이미 스폰 데이터 있음, 스킵.");
                 continue;
             }
 
@@ -155,10 +167,10 @@ public static class MonsterSetupEditor
                 gridPos.FindPropertyRelative("y").intValue = startY - (s / 5); // startY, startY-1, ...
             }
 
-            so.ApplyModifiedPropertiesWithoutUndo();
-            Debug.Log($"[MonsterSetupEditor] WaveData_Wave{waveNumber} 스폰 데이터 {spawnCount}개 설정 완료.");
+            Debug.Log($"[MonsterSetupEditor] Wave{waveNumber} 스폰 데이터 {spawnCount}개 설정 완료.");
         }
 
+        tableSo.ApplyModifiedPropertiesWithoutUndo();
         AssetDatabase.SaveAssets();
         Debug.Log("[MonsterSetupEditor] Wave Spawn Entries 설정 완료.");
     }
