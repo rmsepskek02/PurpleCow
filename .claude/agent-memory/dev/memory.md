@@ -640,3 +640,37 @@
 **주요 결정사항:**
 - 코드 변경은 정확히 plan.md에 명시된 1줄 추가로 한정, 다른 리팩토링/개선 없음
 - 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리)
+
+---
+
+## 2026-07-04
+
+### 작업: 캐릭터 시각 구현 2/3단계 (CharacterAimController.cs 신규, SceneSetupEditor.cs Step10 추가)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-04/01-38_character-visual-implementation/plan.md` (research.md 포함, 사용자 승인 완료). 이번 범위는 plan.md 2단계+3단계만.
+- 신규 파일 1개 생성 + 기존 파일 1개 수정
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs` (신규 `Character` 폴더) — `MonoBehaviour`, `_bodyRenderer`/`_headRenderer`/`_weaponRenderer`(SpriteRenderer) + `_headDampFactor`(기본 0.25f) + `_flipDeadzone`(기본 0.05f) SerializeField. `Update()`에서 `BallLauncher.Instance.LaunchDirection`을 매 프레임 읽어 `aimAngle = Atan2(y,x)*Rad2Deg - 90f` 계산, `direction.x` 데드존 비교로 `_facingRight` 갱신(구간 내에서는 이전 상태 유지), 3개 렌더러 모두 `flipX = !_facingRight`만 사용(localScale 반전 금지), Weapon은 감쇠 없이 `aimAngle` 그대로 회전, Head는 `aimAngle * _headDampFactor`로 감쇠 회전, Body는 회전 없음.
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `SetupScene()`에 `Step10_SetupCharacterVisual();` 호출 추가(`Step9_ConnectWaveManagerRefs()` 다음 줄) — 파일 내 기존 Step 최대 번호가 9였으므로 다음 번호 10 사용
+  - `Step9_ConnectWaveManagerRefs()` 메서드 직후에 `Step10_SetupCharacterVisual()` 및 헬퍼 `CreateCharacterPart(...)` 신규 추가
+    - `BallLauncher`/`LaunchPoint`를 `GameObject.Find`+`Find("LaunchPoint")`로 조회 후 없으면 경고 로그만 남기고 return (기존 Step7 패턴과 동일하게 과도한 방어 없이 처리)
+    - `Character` GameObject를 `BallLauncher`의 자식(= `LaunchPoint`의 형제)으로 생성, `localPosition`을 `LaunchPoint.localPosition`과 동일하게 설정 (이미 존재하면 재사용, 멱등성 유지)
+    - `CreateCharacterPart()` 헬퍼로 Body/Head/Weapon 3개 자식 GameObject + SpriteRenderer 생성, 각각 `Character_Main_body.png`/`Character_Main_head.png`/`Character_main_weapon.png` 로드 연결(`Character_Main.png`는 사용하지 않음), `sortingOrder`를 0/1/2로 순차 부여(정밀 조정은 범위 밖)
+    - `Character` GameObject에 `CharacterAimController` 컴포넌트 추가 후 `SerializedObject`로 `_bodyRenderer`/`_headRenderer`/`_weaponRenderer` 3개 필드에 방금 생성한 SpriteRenderer 연결
+
+**범위 밖(건드리지 않음):**
+- `CharacterManager.cs`(HP/XP 로직), `BallLauncher.cs`, `Ball.cs` 등 기존 게임플레이 로직 파일 — 전혀 수정하지 않음
+- `LaunchPoint` 자체나 `BallLauncher._launchPoint` 필드, 볼 발사/귀환 로직 — 전혀 수정하지 않음
+- 무기 스프라이트 Pivot 재설정(1단계, design 에이전트 담당)과 코드 리뷰(4단계, qa 에이전트 담당)는 이번 작업 범위 아님
+- 원격 환경에 Unity 에디터가 없어 `SampleScene.unity`에는 아직 반영되지 않음 — 사용자가 로컬에서 `PurpleCow/Setup/Scene Setup` 메뉴 재실행 필요 (기존 WaveTableData/Wall_Top 사례와 동일 패턴)
+
+**주요 결정사항:**
+- 반전은 반드시 `SpriteRenderer.flipX`만 사용, `transform.localScale` 반전은 사용하지 않음 (plan.md에서 오케스트레이터-사용자 논의로 확정된 사항 그대로 반영, 회전 각도 계산과 반전을 완전히 분리)
+- `BallLauncher.Instance`에 대한 null 방어 코드는 추가하지 않음 — 기존 코드베이스(다른 매니저 참조 코드) 관례를 그대로 따름
+- Step 번호는 `SceneSetupEditor.cs` 파일 내 기존 최대 번호(9) 기준으로 다음 번호(10)를 사용 (다른 *SetupEditor.cs 파일들의 Step 번호는 별개 네임스페이스이므로 고려하지 않음)
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리)

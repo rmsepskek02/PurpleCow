@@ -20,6 +20,7 @@ public static class SceneSetupEditor
         Step7_ConnectBallLauncherRefs(ballPrefab);
         Step8_ConnectBallPrefabRefs();
         Step9_ConnectWaveManagerRefs();
+        Step10_SetupCharacterVisual();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -294,6 +295,80 @@ public static class SceneSetupEditor
 
         so.ApplyModifiedPropertiesWithoutUndo();
         Debug.Log("[SceneSetupEditor] WaveManager 참조 연결 완료.");
+    }
+
+    // ──────────────────────────────────────────
+    //  Step 10. Character 시각 오브젝트 배치
+    // ──────────────────────────────────────────
+
+    private static void Step10_SetupCharacterVisual()
+    {
+        GameObject launcherObj = GameObject.Find("BallLauncher");
+        if (launcherObj == null)
+        {
+            Debug.LogWarning("[SceneSetupEditor] BallLauncher 오브젝트를 찾을 수 없어 Character 배치를 건너뜁니다.");
+            return;
+        }
+
+        Transform launchPoint = launcherObj.transform.Find("LaunchPoint");
+        if (launchPoint == null)
+        {
+            Debug.LogWarning("[SceneSetupEditor] LaunchPoint를 찾을 수 없어 Character 배치를 건너뜁니다.");
+            return;
+        }
+
+        // Character는 LaunchPoint와 동일한 부모(BallLauncher)의 형제 오브젝트로, 동일한 localPosition에 배치한다.
+        Transform characterTransform = launcherObj.transform.Find("Character");
+        GameObject characterObj;
+        if (characterTransform == null)
+        {
+            characterObj = new GameObject("Character");
+            characterObj.transform.SetParent(launcherObj.transform);
+            characterObj.transform.localPosition = launchPoint.localPosition;
+            Debug.Log("[SceneSetupEditor] Character 생성 완료.");
+        }
+        else
+        {
+            characterObj = characterTransform.gameObject;
+        }
+
+        SpriteRenderer bodyRenderer   = CreateCharacterPart(characterObj.transform, "Body",   "Assets/_Project/Sprites/Character/Character_Main_body.png",  0);
+        SpriteRenderer headRenderer   = CreateCharacterPart(characterObj.transform, "Head",   "Assets/_Project/Sprites/Character/Character_Main_head.png",  1);
+        SpriteRenderer weaponRenderer = CreateCharacterPart(characterObj.transform, "Weapon", "Assets/_Project/Sprites/Character/Character_main_weapon.png", 2);
+
+        CharacterAimController aimController = characterObj.GetComponent<CharacterAimController>();
+        if (aimController == null)
+            aimController = characterObj.AddComponent<CharacterAimController>();
+
+        SerializedObject so = new SerializedObject(aimController);
+        so.FindProperty("_bodyRenderer").objectReferenceValue   = bodyRenderer;
+        so.FindProperty("_headRenderer").objectReferenceValue   = headRenderer;
+        so.FindProperty("_weaponRenderer").objectReferenceValue = weaponRenderer;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        Debug.Log("[SceneSetupEditor] Character 시각 오브젝트 배치 완료.");
+    }
+
+    private static SpriteRenderer CreateCharacterPart(Transform parent, string partName, string spritePath, int sortingOrder)
+    {
+        Transform existing = parent.Find(partName);
+        GameObject partObj = existing != null ? existing.gameObject : new GameObject(partName);
+        if (existing == null)
+            partObj.transform.SetParent(parent, false);
+
+        SpriteRenderer sr = partObj.GetComponent<SpriteRenderer>();
+        if (sr == null)
+            sr = partObj.AddComponent<SpriteRenderer>();
+
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
+        if (sprite != null)
+            sr.sprite = sprite;
+        else
+            Debug.LogWarning($"[SceneSetupEditor] {partName} 스프라이트를 찾을 수 없음: {spritePath}");
+
+        sr.sortingOrder = sortingOrder;
+
+        return sr;
     }
 
     // ──────────────────────────────────────────
