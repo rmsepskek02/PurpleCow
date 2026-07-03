@@ -613,3 +613,22 @@
 - plan.md는 이번 요청 범위에 포함하지 않음 — 사용자가 research.md 확인 후 별도로 작성 요청할 예정 (TaskRules.md 절차 준수)
 - AGENTS.md는 갱신하지 않음 — 기존 정책(56~57행, 개별 task 폴더는 별도 인덱싱하지 않음)에 따라 이번 신규 task 폴더도 등록 대상 아님
 - 코드/에셋 파일은 전혀 수정하지 않고 Read만 수행 (Pivot 재설정 등 실제 변경은 plan.md/구현 단계로 이월)
+
+---
+
+### 작업 내용 (추가)
+- Character Visual Implementation task plan.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/01-38_character-visual-implementation/plan.md`
+- 작성 전 같은 폴더의 research.md와 TaskRules.md(plan.md 구조 규정)를 Read로 재확인
+
+### 결과
+- plan.md 생성 완료: `구현 목표`/`단계별 작업 계획`/`예상 변경·생성 파일 목록`/`주의사항` 4개 섹션(TaskRules.md 규정 구조) 그대로 작성
+- "구현 목표"에 research.md의 "[열린 이슈]"였던 좌우 반전-회전 부호 충돌 문제를 **확정 사항**으로 명시 반영: `localScale.x = -1` 반전 금지, 각 파츠 `SpriteRenderer.flipX`로만 좌우 반전 처리, 회전은 항상 `BallLauncher.LaunchDirection`(월드 좌표)을 `Mathf.Atan2`로 변환한 각도 그대로 사용 — flipX가 Transform 회전 계산에 관여하지 않으므로 부호 재매핑 불필요
+- "단계별 작업 계획" 4단계 각각 담당 에이전트 명시: 1단계(design, 무기 스프라이트 Pivot을 그립 위치 약 0.36/0.43으로 Custom 재설정), 2단계(dev, 신규 `Assets/_Project/Scripts/Character/CharacterAimController.cs` — Body/Head/Weapon SpriteRenderer 참조, `_headDampFactor` 등 SerializeField, `aimAngle = Atan2(...)*Rad2Deg - 90f`, deadzone 기반 `facingRight` 판정, flipX 반전, Weapon은 감쇠 없는 회전/Head는 `aimAngle * _headDampFactor`/Body는 회전 없음), 3단계(dev, `SceneSetupEditor.cs`에 Character 배치 신규 Step 추가 — LaunchPoint 위치에 Character GameObject + 자식 Body/Head/Weapon 생성 및 컴포넌트 연결, Sorting Order는 배치 후 조정 대상으로 보류), 4단계(qa, 코드 리뷰/로직 검증, 실제 플레이 테스트는 사용자가 로컬에서 진행)
+- "예상 변경/생성 파일 목록": 신규 `CharacterAimController.cs`, 수정 `SceneSetupEditor.cs`, 수정 `Character_main_weapon.png.meta`(spritePivot), 그리고 사용자가 로컬에서 `PurpleCow/Setup/Scene Setup` 메뉴 재실행해야 `SampleScene.unity`에 실제 반영됨을 기존 WaveTableData/Wall_Top 사례와 동일 패턴으로 명시
+- "주의사항": 원격 환경에 Unity 에디터 부재로 코드 수정만으론 씬 즉시 반영 안 됨(로컬 Scene Setup 재실행 필요), CharacterManager/BallLauncher/Ball 등 기존 게임플레이 로직 미수정, Weapon 회전 오프셋(-90도)은 dev 구현 중 미세조정 가능성, Sorting Order는 사전 확정하지 않고 배치 후 조정 4개 항목 기재
+
+### 주요 결정사항
+- research.md에서 열린 이슈로 남겼던 반전-회전 부호 충돌 문제는 오케스트레이터가 사용자와 논의를 마치고 확정한 사항이므로, plan.md에는 "열린 이슈"가 아니라 "확정 사항"으로 명확히 구분해 서술(구현 목표 섹션에 굵게 표시)
+- 이번 요청은 문서 작성만 포함되며 코드/에셋 파일은 전혀 수정하지 않음(Read만 수행), 실제 구현은 사용자의 명시적 승인 이후 dev/design/qa 에이전트가 진행 예정 (TaskRules.md 절차 준수)
+- AGENTS.md는 기존 정책(개별 task 폴더 비인덱싱)에 따라 이번에도 갱신하지 않음
