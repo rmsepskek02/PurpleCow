@@ -347,9 +347,11 @@ public static class SceneSetupEditor
 
     private static void Step4_PlaceBackground()
     {
-        if (GameObject.Find("Background") != null)
+        GameObject existing = GameObject.Find("Background");
+        if (existing != null)
         {
             Debug.Log("[SceneSetupEditor] Background 이미 존재, 스킵.");
+            ConnectBackgroundFitterRefs(existing, existing.GetComponent<SpriteRenderer>());
             return;
         }
 
@@ -364,7 +366,21 @@ public static class SceneSetupEditor
         else
             Debug.LogWarning("[SceneSetupEditor] Background 스프라이트를 찾을 수 없음: Background_1_Stage.png");
 
+        ConnectBackgroundFitterRefs(go, sr);
+
         Debug.Log("[SceneSetupEditor] Background 배치 완료.");
+    }
+
+    private static void ConnectBackgroundFitterRefs(GameObject go, SpriteRenderer sr)
+    {
+        BackgroundFitter fitter = go.GetComponent<BackgroundFitter>();
+        if (fitter == null)
+            fitter = go.AddComponent<BackgroundFitter>();
+
+        SerializedObject so = new SerializedObject(fitter);
+        so.FindProperty("_spriteRenderer").objectReferenceValue = sr;
+        so.FindProperty("_targetCamera").objectReferenceValue   = Camera.main;
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     // ──────────────────────────────────────────
