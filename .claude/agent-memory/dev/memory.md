@@ -723,3 +723,23 @@
 **주요 결정사항:**
 - `_nativeLeftX`(-6.04) / `_nativeRightX`(5.89) / `_nativeTopY`(5.55)는 요청 범위 밖이므로 변경하지 않음
 - 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: 배경/벽 크기 계산에 확대 배율(zoomFactor) 추가
+
+**작업 내용:**
+- 실기기 테스트에서 격자가 화면에서 차지하는 비중이 작다는 피드백에 따라, 배경 전체를 1.3배 확대해 격자가 화면을 더 크게 채우고 바깥 테두리 장식은 화면 밖으로 잘려나가도록 함
+- `BackgroundFitter`와 `WallFitter`가 동일한 배율(`_zoomFactor = 1.3f`)을 사용해야 벽이 계속 배경 격자와 맞음
+- 기존 파일 3개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/BackgroundFitter.cs` — `[SerializeField] private float _zoomFactor = 1.3f;` 필드 추가, `Start()` 내 `transform.localScale` 계산 시 `camSize.x / spriteSize.x`, `camSize.y / spriteSize.y` 각각에 `_zoomFactor`를 곱하도록 수정
+- `Assets/_Project/Scripts/Core/WallFitter.cs` — `[SerializeField] private float _zoomFactor = 1.3f;` 필드 추가, `Start()` 내 `scaleX`/`scaleY` 계산 시 각각 `_zoomFactor`를 곱하도록 수정
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `ConnectBackgroundFitterRefs()`에 `so.FindProperty("_zoomFactor").floatValue = 1.3f;` 추가, `Step6_SetupWallFitter()`에 동일하게 `so.FindProperty("_zoomFactor").floatValue = 1.3f;` 추가 (기존 SerializedObject/FindProperty/ApplyModifiedPropertiesWithoutUndo 패턴 재사용)
+
+**주요 결정사항:**
+- 다른 로직(native 좌표값, 스케일 계산 외 부분)은 일절 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)

@@ -376,6 +376,7 @@ public static class SceneSetupEditor
         SerializedObject so = new SerializedObject(fitter);
         so.FindProperty("_spriteRenderer").objectReferenceValue = sr;
         so.FindProperty("_targetCamera").objectReferenceValue   = Camera.main;
+        so.FindProperty("_zoomFactor").floatValue = 1.3f;
         so.ApplyModifiedPropertiesWithoutUndo();
     }
 
@@ -450,6 +451,7 @@ public static class SceneSetupEditor
         so.FindProperty("_nativeRightX").floatValue = 5.89f;
         so.FindProperty("_nativeTopY").floatValue = 5.55f;
         so.FindProperty("_nativeBottomY").floatValue = -10f;
+        so.FindProperty("_zoomFactor").floatValue = 1.3f;
         so.ApplyModifiedPropertiesWithoutUndo();
 
         Debug.Log("[SceneSetupEditor] WallFitter 연동 완료.");

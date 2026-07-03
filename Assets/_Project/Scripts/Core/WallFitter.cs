@@ -12,6 +12,7 @@ public class WallFitter : MonoBehaviour
     [SerializeField] private float _nativeRightX = 5.89f;
     [SerializeField] private float _nativeTopY = 5.55f;
     [SerializeField] private float _nativeBottomY = -10f;
+    [SerializeField] private float _zoomFactor = 1.3f;
 
     private void Start()
     {
@@ -21,8 +22,8 @@ public class WallFitter : MonoBehaviour
             _targetCamera.orthographicSize * 2f * _targetCamera.aspect,
             _targetCamera.orthographicSize * 2f);
         Vector2 spriteSize = _backgroundSpriteRenderer.sprite.bounds.size;
-        float scaleX = camSize.x / spriteSize.x;
-        float scaleY = camSize.y / spriteSize.y;
+        float scaleX = camSize.x / spriteSize.x * _zoomFactor;
+        float scaleY = camSize.y / spriteSize.y * _zoomFactor;
 
         SetX(_wallLeft, _nativeLeftX * scaleX);
         SetX(_wallRight, _nativeRightX * scaleX);
