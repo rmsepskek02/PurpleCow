@@ -704,3 +704,22 @@
 **주요 결정사항:**
 - 요청 범위를 정확히 준수해 스케일 계산 로직 2줄만 교체, 그 외 파일 내용(주석 없음, null 체크 등) 일절 손대지 않음
 - 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-03
+
+### 작업: WallFitter._nativeBottomY 기준값 수정 (-5.33f → -10f)
+
+**작업 내용:**
+- `Ground`(하단 벽)는 다른 벽들(`Wall_Left`/`Wall_Right`/`Wall_Top`)과 달리 배경 격자 경계가 아니라 그 아래 캐릭터/볼 발사 위치까지 포함하는 더 아래쪽 지점에 있어야 함이 확인됨
+- 원래(변경 전) `Ground` 값이 `y=-10`이었고 배경 텍스처 맨 아래 끝 계산값(`y≈-10.24`)과 거의 일치하므로, 격자 경계값(-5.33) 대신 원래 값(-10)으로 되돌림
+- 기존 파일 2개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/WallFitter.cs` — `_nativeBottomY` 필드 기본값 `-5.33f` → `-10f`
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step6_SetupWallFitter()` 내 `so.FindProperty("_nativeBottomY").floatValue` `-5.33f` → `-10f`
+
+**주요 결정사항:**
+- `_nativeLeftX`(-6.04) / `_nativeRightX`(5.89) / `_nativeTopY`(5.55)는 요청 범위 밖이므로 변경하지 않음
+- 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
