@@ -266,18 +266,13 @@ public static class SceneSetupEditor
 
         SerializedObject so = new SerializedObject(waveManager);
 
-        // _waveDatas 배열 연결
-        SerializedProperty waveDatasProp = so.FindProperty("_waveDatas");
-        waveDatasProp.arraySize = 20;
-        for (int i = 0; i < 20; i++)
-        {
-            string path = $"Assets/_Project/Data/WaveData_Wave{i + 1}.asset";
-            WaveData waveData = AssetDatabase.LoadAssetAtPath<WaveData>(path);
-            if (waveData != null)
-                waveDatasProp.GetArrayElementAtIndex(i).objectReferenceValue = waveData;
-            else
-                Debug.LogWarning($"[SceneSetupEditor] {path} 없음. Monster System Setup을 먼저 실행하세요.");
-        }
+        // _waveTable 연결
+        const string waveTablePath = "Assets/_Project/Data/WaveTableData.asset";
+        WaveTableData waveTable = AssetDatabase.LoadAssetAtPath<WaveTableData>(waveTablePath);
+        if (waveTable != null)
+            so.FindProperty("_waveTable").objectReferenceValue = waveTable;
+        else
+            Debug.LogWarning($"[SceneSetupEditor] {waveTablePath} 없음. Monster System Setup을 먼저 실행하세요.");
 
         // _monsterPrefab → Fluffy
         MonsterBase fluffyPrefab = AssetDatabase.LoadAssetAtPath<MonsterBase>(

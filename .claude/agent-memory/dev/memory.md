@@ -581,3 +581,38 @@
 **주요 결정사항:**
 - 로스터 볼에는 사실상 `_maxBounces`/`_remainingBounces` 개념이 완전히 무의미해짐(Wall 분기에서 아예 감소시키지 않음) — 다만 서브볼 등 로스터 밖 볼은 여전히 이 값을 사용하므로 필드 자체나 `BallData._maxBounces`는 제거하지 않고 그대로 둠
 - 귀환 트리거는 오직 `"Ground"` 태그 충돌 1곳으로 확정 — Wall에서는 어떤 경우에도 로스터 볼을 귀환시키지 않음
+
+---
+
+## 2026-07-03
+
+### 작업: WaveData 20개 → WaveTableData 1개 테이블 SO 통합 (asset 개수 축소, task 문서 없이 예외 승인)
+
+**작업 내용:**
+- 사용자와 이미 합의된 "웨이브 20개 개별 asset → 테이블 SO 1개" 리팩토링. 간단한 작업으로 판단되어 research.md/plan.md 없이 예외적으로 바로 구현 (사용자 명시적 예외 승인)
+- 기존 파일 3개 수정 + 신규 파일 1개 생성 + 기존 파일 1개 삭제 + 구 asset/meta 40개 삭제
+
+**삭제 파일:**
+- `Assets/_Project/Scripts/Data/WaveData.cs`, `WaveData.cs.meta` — `git rm`
+- `Assets/_Project/Data/WaveData_Wave1.asset` ~ `WaveData_Wave20.asset` 및 각 `.meta` (총 40개) — `git rm`
+
+**신규 파일:**
+- `Assets/_Project/Scripts/Data/WaveTableData.cs` — `WaveEntry`(WaveNumber, SpawnEntries) Serializable 클래스 + `WaveTableData`(ScriptableObject, `_waves` List, `Waves`/`WaveCount` 프로퍼티) + 기존 `MonsterSpawnEntry`(Data, GridPosition) 그대로 이전
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — `_waveDatas` (WaveData[]) → `_waveTable` (WaveTableData) 단일 필드로 교체. `TotalWaves`, `SpawnWave()`, `CheckWaveCleared()`, `AdvanceToNextWave()` 전부 `_waveTable.WaveCount`/`_waveTable.Waves[index]` 기준으로 수정. `WaveData waveData` 지역변수 → `WaveEntry waveEntry`로 교체
+- `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs`
+  - `CreateWaveDataAssets()` — 20개 개별 asset 생성 로직을 `Assets/_Project/Data/WaveTableData.asset` 1개 생성 + `_waves` 배열 크기 20 설정 + `WaveNumber` 1~20 채우기로 교체 (이미 존재하면 스킵 로그 후 return)
+  - `SetupWaveSpawnEntries()` — 몬스터 종류 수/스폰 개수/그리드 위치 계산 로직(그룹별 진행, `spawnCount = 3 + posInGroup + groupIdx * 2`, `startY = 8 - groupIdx * 2` 등)은 그대로 유지. 20개의 개별 `WaveData` asset을 로드하던 것을 `WaveTableData.asset` 1개를 로드해 `_waves[waveIdx].SpawnEntries`에 채우는 방식으로 교체. 웨이브별 "이미 스폰 데이터 있으면 스킵" 멱등성 체크 유지, `SerializedObject.ApplyModifiedPropertiesWithoutUndo()`는 루프 밖으로 이동(단일 오브젝트이므로 1회만 호출)
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `Step9_ConnectWaveManagerRefs()`의 `_waveDatas` 배열(20개 GUID 로드 후 `arraySize=20` 설정) 연결 로직을 `WaveTableData.asset` 1개 로드 후 `_waveTable` 단일 필드에 대입하는 방식으로 단순화
+
+**환경 제약 및 후속 작업 필요:**
+- 이 원격 환경에 Unity 에디터가 없어 `[MenuItem]` 실행 불가 — 새 `WaveTableData.asset` 파일은 생성하지 못함(코드만 수정)
+- `Assets/Scenes/SampleScene.unity`의 `WaveManager` 컴포넌트 직렬화 데이터에 구 `_waveDatas` 배열(20개 GUID 참조)이 그대로 남아있음 — 필드명이 `_waveTable`로 바뀌었으므로 이 데이터는 Unity가 열면 고아 데이터로 처리되고 `_waveTable`은 비어있는 상태로 로드됨
+- 사용자가 로컬 Unity에서 반드시 순서대로 재실행해야 함: `PurpleCow/Setup/Monster System Setup` (또는 `CreateWaveDataAssets()`+`SetupWaveSpawnEntries()`가 포함된 메뉴) → `WaveTableData.asset` 생성 및 스폰 데이터 채움, 이어서 `PurpleCow/Setup/Scene Setup`(또는 Step9 단독)을 재실행해 `WaveManager._waveTable`을 새 asset에 재연결해야 함
+- `DevRules.md`의 하드코딩 금지 표 `WaveData` 언급은 이번 작업 범위에서 의도적으로 미수정 (별도 문서 갱신 예정)
+
+**주요 결정사항:**
+- `WaveTableData.CreateWaveDataAssets()`는 asset이 이미 있으면 스킵하는 기존 멱등성 관례를 유지 (20개 개별 스킵 로그 → 1개 스킵 로그로 단순화)
+- `SetupWaveSpawnEntries()`에서 `SerializedObject.ApplyModifiedPropertiesWithoutUndo()` 호출을 매 웨이브 반복문 안에서가 아니라 루프 종료 후 1회만 호출하도록 변경 — 기존엔 20개 별도 asset이라 웨이브마다 각각의 SerializedObject를 Apply해야 했지만, 이제 하나의 SerializedObject(같은 asset)를 여러 웨이브에 걸쳐 수정하므로 마지막에 한 번만 Apply하는 것이 자연스러움
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 별도 처리)

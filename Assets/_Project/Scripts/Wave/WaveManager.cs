@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class WaveManager : Singleton<WaveManager>
 {
-    [SerializeField] private WaveData[] _waveDatas;
+    [SerializeField] private WaveTableData _waveTable;
     [SerializeField] private MonsterBase _monsterPrefab;
     [SerializeField] private Transform _poolParent;
     [SerializeField] private int _initialPoolSize = 20;
@@ -26,7 +26,7 @@ public class WaveManager : Singleton<WaveManager>
     public static event Action<MonsterBase> OnMonsterReachedBottom;
     public static event Action<int, int>    OnMonsterCountChanged; // (남은 수, 전체 수)
 
-    public int TotalWaves => _waveDatas.Length;
+    public int TotalWaves => _waveTable.WaveCount;
 
     protected override void Awake()
     {
@@ -56,12 +56,12 @@ public class WaveManager : Singleton<WaveManager>
 
     private void SpawnWave(int index)
     {
-        if (index < 0 || index >= _waveDatas.Length)
+        if (index < 0 || index >= _waveTable.WaveCount)
             return;
 
-        WaveData waveData = _waveDatas[index];
+        WaveEntry waveEntry = _waveTable.Waves[index];
 
-        foreach (MonsterSpawnEntry entry in waveData.SpawnEntries)
+        foreach (MonsterSpawnEntry entry in waveEntry.SpawnEntries)
         {
             MonsterBase monster = _monsterPool.Get();
             if (entry.Data != null)
@@ -75,9 +75,9 @@ public class WaveManager : Singleton<WaveManager>
             _activeMonsters.Add(monster);
         }
 
-        _currentWaveTotalCount = waveData.SpawnEntries.Count;
+        _currentWaveTotalCount = waveEntry.SpawnEntries.Count;
 
-        OnWaveStarted?.Invoke(waveData.WaveNumber);
+        OnWaveStarted?.Invoke(waveEntry.WaveNumber);
         OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
     }
 
@@ -119,7 +119,7 @@ public class WaveManager : Singleton<WaveManager>
         if (_activeMonsters.Count == 0)
         {
             // 마지막 웨이브인 경우 스킬 선택 없이 바로 종료
-            if (_currentWaveIndex + 1 >= _waveDatas.Length)
+            if (_currentWaveIndex + 1 >= _waveTable.WaveCount)
             {
                 OnAllWavesCleared?.Invoke();
             }
@@ -135,7 +135,7 @@ public class WaveManager : Singleton<WaveManager>
     {
         _currentWaveIndex++;
 
-        if (_currentWaveIndex < _waveDatas.Length)
+        if (_currentWaveIndex < _waveTable.WaveCount)
         {
             SpawnWave(_currentWaveIndex);
         }

@@ -170,6 +170,55 @@ Transform:
   - {fileID: 859741423}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &71915422
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 71915424}
+  - component: {fileID: 71915423}
+  m_Layer: 0
+  m_Name: TrajectoryPreview
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &71915423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 71915422}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c947045f4dff11e44a8bffe687f5b53b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TrajectoryPreview
+  _lineWidth: 0.05
+  _lineColor: {r: 1, g: 1, b: 1, a: 1}
+  _hitColor: {r: 1, g: 0, b: 0, a: 1}
+  _dotRadius: 0.08
+  _ringRadius: 0.3
+--- !u!4 &71915424
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 71915422}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &161162617
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -658,27 +707,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11a63663bb0c3ea44a46ae28249c39f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaveManager
-  _waveDatas:
-  - {fileID: 11400000, guid: e107a3bb983a99d40b5a6240e6dd7816, type: 2}
-  - {fileID: 11400000, guid: 5fd402771114979499a9455f6cbd4263, type: 2}
-  - {fileID: 11400000, guid: 7734f0ddab4e459488f3ea1cea41bb1d, type: 2}
-  - {fileID: 11400000, guid: 35ef73fe6f56f1f4fa6e4454fa71fa21, type: 2}
-  - {fileID: 11400000, guid: b456c551ce6339e4984c978ffea19e04, type: 2}
-  - {fileID: 11400000, guid: bf40d823d39d8294e9c95458ae5b3a39, type: 2}
-  - {fileID: 11400000, guid: 0b3aab3abc6b35f479d732e119c2eabd, type: 2}
-  - {fileID: 11400000, guid: dd60d67f14a735144973eafad83b3221, type: 2}
-  - {fileID: 11400000, guid: 307433540993e334caf0091a3753c281, type: 2}
-  - {fileID: 11400000, guid: 2c66295a7d6b5d046b6ff43dd87700d5, type: 2}
-  - {fileID: 11400000, guid: 2f752495bf4f68140a1ddb13ce9e96cd, type: 2}
-  - {fileID: 11400000, guid: 070bc81e3ab0a7c41bc8cf54c700d13c, type: 2}
-  - {fileID: 11400000, guid: fa253781d82b5e04397cf4589c2429eb, type: 2}
-  - {fileID: 11400000, guid: 2600c8d231a2dc84aa1d40b15fd0d997, type: 2}
-  - {fileID: 11400000, guid: 7e9ea614eb42a00418b6946de95f1587, type: 2}
-  - {fileID: 11400000, guid: de5923eeec8906741827118d0b2cdb0c, type: 2}
-  - {fileID: 11400000, guid: 53075a773d262de43b4628d0324bc5f6, type: 2}
-  - {fileID: 11400000, guid: b97d446854db80a45ab580fc67dc6ff6, type: 2}
-  - {fileID: 11400000, guid: f77527d65d2eb284184c8cdc897bd860, type: 2}
-  - {fileID: 11400000, guid: a2a51c5d69447d642b51bd203ff661a2, type: 2}
+  _waveTable: {fileID: 11400000, guid: 3599dd25ec56240459c3b00126dc69b0, type: 2}
   _monsterPrefab: {fileID: 902358362466310241, guid: 86c601ad8bf02e342be484c0e4ed7044, type: 3}
   _poolParent: {fileID: 1067195984}
   _initialPoolSize: 20
@@ -1431,7 +1460,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &529092509
 Transform:
   m_ObjectHideFlags: 0
@@ -4761,3 +4790,4 @@ SceneRoots:
   - {fileID: 2096812208}
   - {fileID: 1067195984}
   - {fileID: 529092509}
+  - {fileID: 71915424}
