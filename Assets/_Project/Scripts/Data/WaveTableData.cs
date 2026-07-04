@@ -1,25 +1,25 @@
-using System.Collections.Generic;
 using UnityEngine;
-
-[System.Serializable]
-public class WaveEntry
-{
-    public int WaveNumber;
-    public List<MonsterSpawnEntry> SpawnEntries;
-}
 
 [CreateAssetMenu(fileName = "WaveTableData", menuName = "PurpleCow/WaveTableData")]
 public class WaveTableData : ScriptableObject
 {
-    [SerializeField] private List<WaveEntry> _waves;
+    [SerializeField] private int   _baseSpawnCount = 3;
+    [SerializeField] private float _spawnCountPerWave = 0.5f;
+    [SerializeField] private float _baseTwoCellWeight = 0.1f;
+    [SerializeField] private float _twoCellWeightPerWave = 0.03f;
+    [SerializeField] private int   _totalWaves = 20;
+    [SerializeField] private MonsterData _fluffyData;
+    [SerializeField] private MonsterData _spiderData;
+    [SerializeField] private MonsterData _stoneBugData;
+    [SerializeField] private MonsterData _forestDeerData;
 
-    public List<WaveEntry> Waves => _waves;
-    public int WaveCount => _waves.Count;
-}
-
-[System.Serializable]
-public class MonsterSpawnEntry
-{
-    public MonsterData Data;
-    public Vector2Int GridPosition;
+    public int   BaseSpawnCount       => _baseSpawnCount;
+    public float SpawnCountPerWave    => _spawnCountPerWave;
+    public float BaseTwoCellWeight    => _baseTwoCellWeight;
+    public float TwoCellWeightPerWave => _twoCellWeightPerWave;
+    public int   TotalWaves           => _totalWaves;
+    public MonsterData FluffyData     => _fluffyData;
+    public MonsterData SpiderData     => _spiderData;
+    public MonsterData StoneBugData   => _stoneBugData;
+    public MonsterData ForestDeerData => _forestDeerData;
 }

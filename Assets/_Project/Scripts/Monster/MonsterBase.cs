@@ -1,9 +1,25 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class MonsterBase : MonoBehaviour, IPoolable
 {
+    private static readonly Dictionary<BlockSize, Vector2> ColliderSizeMap = new Dictionary<BlockSize, Vector2>
+    {
+        { BlockSize.OneByOne, new Vector2(0.96f, 0.96f) },
+        { BlockSize.TwoByOne, new Vector2(1.92f, 0.96f) },
+        { BlockSize.OneByTwo, new Vector2(0.96f, 1.92f) },
+    };
+
+    // 1칸 폭 기준값 1f (기존 sizeDelta.x = 1 참고), 가로 2칸(TwoByOne)은 2배 폭
+    private static readonly Dictionary<BlockSize, float> HpBarWidthMap = new Dictionary<BlockSize, float>
+    {
+        { BlockSize.OneByOne, 1f },
+        { BlockSize.TwoByOne, 2f },
+        { BlockSize.OneByTwo, 1f },
+    };
+
     [SerializeField] private MonsterData _monsterData;
 
     private float _currentHp;
@@ -29,6 +45,7 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _slowSecondsRemaining   = 0f;
         _slowPercent            = 0f;
         _bonusCritChance        = 0f;
+        ApplyBlockSize();
         OnHpChanged?.Invoke(_currentHp, _monsterData.Hp);
     }
 
@@ -36,7 +53,28 @@ public class MonsterBase : MonoBehaviour, IPoolable
     {
         _monsterData = data;
         _currentHp   = _monsterData.Hp;
+        ApplyBlockSize();
         OnHpChanged?.Invoke(_currentHp, _monsterData.Hp);
+    }
+
+    private void ApplyBlockSize()
+    {
+        if (_monsterData == null)
+            return;
+
+        if (TryGetComponent<BoxCollider2D>(out BoxCollider2D collider) &&
+            ColliderSizeMap.TryGetValue(_monsterData.BlockSize, out Vector2 colliderSize))
+        {
+            collider.size = colliderSize;
+        }
+
+        RectTransform hpBarRect = GetComponentInChildren<RectTransform>();
+        if (hpBarRect != null && HpBarWidthMap.TryGetValue(_monsterData.BlockSize, out float hpBarWidth))
+        {
+            Vector2 sizeDelta = hpBarRect.sizeDelta;
+            sizeDelta.x = hpBarWidth;
+            hpBarRect.sizeDelta = sizeDelta;
+        }
     }
 
     public void OnDespawn()

@@ -951,3 +951,37 @@
 - `SceneSetupEditor.cs`는 절대 수정 금지 지시를 준수, 리소스(PNG)도 수정하지 않음
 - 이 원격 환경에는 Unity 에디터가 없어 컴파일 검증 불가 — 문법/네이밍 컨벤션만 신중히 확인
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
+
+---
+
+## 2026-07-04
+
+### 작업: 몬스터 시스템 개편 (BlockSize 데이터화, 콜라이더/HP바 자동 적용, 프리팹 BlockVisual 합성, WaveTableData/WaveManager 파라미터화 + 그리드 랜덤 배치)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-04/22-53_monster-system-overhaul/plan.md` (사용자 승인 문서, STEP1~6 그대로 구현)
+- 기존 파일 4개 수정 + 신규 파일 1개 생성 (프리팹/asset 실물 반영은 `PurpleCow/Setup/Monster Overhaul Setup` 메뉴 실행 필요, 원격 환경엔 Unity 에디터 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Data/MonsterData.cs` — `public enum BlockSize { OneByOne, TwoByOne, OneByTwo }` 추가(클래스 밖), `_blockSize` 필드 + `BlockSize` 프로퍼티 추가. 기존 4개 필드/프로퍼티는 그대로 유지.
+- `Assets/_Project/Scripts/Monster/MonsterBase.cs` — `ColliderSizeMap`(BlockSize→Vector2)/`HpBarWidthMap`(BlockSize→float) static readonly Dictionary 추가, `ApplyBlockSize()` private 메서드 신규 추가 후 `OnSpawn()`/`ApplyData()` 양쪽에서 호출. `GetComponentInChildren<RectTransform>()`로 HP바 RectTransform을 찾아 `sizeDelta.x`만 갱신(y는 유지).
+- `Assets/_Project/Scripts/Data/WaveTableData.cs` — 좌표 포함 `WaveEntry`/`MonsterSpawnEntry` 구조 완전 삭제, plan.md 스니펫 그대로 파라미터 구조(`_baseSpawnCount`/`_spawnCountPerWave`/`_baseTwoCellWeight`/`_twoCellWeightPerWave`/`_totalWaves` + MonsterData 4종 참조)로 전면 재작성.
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — `_gridColumns=9`/`_gridRows=5` 필드 추가, `TotalWaves`를 `_waveTable.TotalWaves` 참조로 변경, `SpawnWave(int index)`를 9×5 그리드 랜덤 배치 + `bool[,] occupied` 점유 체크로 전면 재작성(신규 헬퍼 `GetFreeAnchors`/`MarkOccupied` 추가). **주의**: plan.md가 "수정 금지"로 지정한 `CheckWaveCleared()`/`AdvanceToNextWave()` 내부의 `_waveTable.WaveCount` 참조 2곳을 `_waveTable.TotalWaves`로 최소 치환함 — `WaveTableData.WaveCount` 프로퍼티가 STEP4에서 완전히 삭제되어 그대로 두면 컴파일 오류가 나기 때문(불가피한 최소 변경, 로직/구조는 미변경).
+
+**신규 파일:**
+- `Assets/_Project/Scripts/Editor/MonsterOverhaulSetupEditor.cs` — `MenuItem("PurpleCow/Setup/Monster Overhaul Setup")`. (1) MonsterData_Fluffy/Spider/StoneBug/ForestDeer.asset에 `_blockSize` 설정(Fluffy/Spider→OneByOne, StoneBug→TwoByOne, ForestDeer→OneByTwo), 2칸 몬스터는 `_hp`/`_reward` 상향. (2) WaveTableData.asset을 새 파라미터 구조로 생성/갱신(없으면 CreateAsset, 있으면 필드만 갱신). (3) 프리팹 4종에 `PrefabUtility.EditPrefabContentsScope`로 `BlockVisual` 자식(SpriteRenderer만, 콜라이더 없음, sortingOrder=0) 추가 + 캐릭터 SpriteRenderer sortingOrder=1로 조정 + 프리팹 BoxCollider2D 크기 사전 갱신 + `HpBarCanvas`를 `HpBarCanvas`가 이미 존재하는 위치에서 `BlockVisual`의 자식으로 재배치(로컬 Y 오프셋을 블록 정면 하단 근사값으로 조정). `MonsterSetupEditor.cs`는 전혀 수정하지 않음(읽기만 함).
+
+**임의로 결정한 수치 (plan.md에 정확한 값 미명시 부분):**
+- 2칸 몬스터(StoneBug/ForestDeer) 상향 스탯: `Hp=50`(1칸 기본값 30 대비), `Reward=18`(1칸 기본값 10 대비) — plan.md 제시 범위(Hp45~60/Reward15~20) 내에서 중간값 선택.
+- HP바 폭 기준값: `MonsterBase.HpBarWidthMap` — OneByOne=1f, TwoByOne=2f(가로 2배), OneByTwo=1f(세로 2칸이지만 폭은 1칸 그대로) — 기존 `sizeDelta.x=1` 기준값 유지.
+- 그리드 스폰 수 상한(`capacityLimit`): `(_gridColumns * _gridRows) / 2` = (9*5)/2 = 22 — plan.md가 예시로 제시한 값 그대로 채택.
+- HP바 프리팹 초기 Y 오프셋(근사치, 런타임에 STEP2가 x폭만 재조정하고 y는 그대로 사용): 1칸/가로2칸(높이 0.96) 블록은 `-0.33`, 세로 2칸(ForestDeer, 높이 1.92) 블록은 `-0.81` — 블록 하단에서 살짝 띄운 근사값.
+- 2칸 몬스터 중 가로(TwoByOne)/세로(OneByTwo) 선택 및 1칸 몬스터 중 Fluffy/Spider 선택은 각각 50:50 랜덤(`UnityEngine.Random.value < 0.5f`)으로 구현 — plan.md에 정확한 분배 비율 명시 없어 균등 분배로 결정.
+
+**주요 결정사항:**
+- `WaveManager.SpawnWave()`의 그리드 좌표→월드좌표 변환은 앵커(블록의 좌하단 셀) 좌표를 그대로 사용, 별도 중앙정렬 보정 없음 — plan.md가 명시한 `_spawnRoot.position + new Vector3(col*cellSize, row*cellSize, 0)` 형태를 그대로 따름.
+- `Ball.cs`/`MonsterHpBar.cs`는 전혀 수정하지 않음 — 콜라이더가 여전히 루트에 있고 `MonsterHpBar.Start()`가 `GetComponentInParent<MonsterBase>()`를 쓰므로 `HpBarCanvas` 부모가 `BlockVisual`로 바뀌어도 문제없음을 확인.
+- 기존 블록 스텁 4종(`Block_1x1/1x2/2x1/2x2.prefab`)은 삭제하지 않고 그대로 방치 — 스프라이트 에셋(`Block_*.png`)만 새 `BlockVisual` 자식에서 재사용.
+- 블록 스프라이트 로드는 `AssetDatabase.LoadAssetAtPath<Sprite>` 대신 `AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().FirstOrDefault()` 사용 — Multiple 모드 스프라이트(서브에셋 이름이 파일명과 다름, 예: `Block_1x1_0`)를 안전하게 로드하기 위함.
+- 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/프리팹 GUI 편집/asset 재직렬화 검증 불가 — 문법/네이밍/직렬화 필드명(SerializedObject.FindProperty 대상 문자열) 일치 여부만 신중히 재확인함.
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
