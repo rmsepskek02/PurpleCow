@@ -890,3 +890,31 @@
 - plan.md에 기술된 구현 순서(헬퍼 메서드 추가 위치, 각 분기 수정 내용)를 그대로 따름, 별도 해석/추가 변경 없음
 - `UIRules.md`, `TrajectoryPreview.cs` 등 이슈 1~3 관련 파일은 이번 범위에 포함되지 않으므로 손대지 않음
 - git 커밋/푸시는 수행하지 않음 (사용자가 별도 처리 예정)
+
+---
+
+## 2026-07-04
+
+### 작업: 이슈 5 — 터치 시작(Began) 단계 폴링 누락 대응, `_isDragging` 상태 기반 판정으로 재구성 (`InputHandler.cs`)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/plan.md` "이슈 5" 섹션 (research.md 이슈 5 포함, 사용자 승인 완료). 이슈 1~4는 이미 구현 완료 상태였고 이번엔 이슈 5만 추가 구현.
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/InputHandler.cs`
+  - `Update()` 내부 `Vector2? pressedPos`/`Vector2? currentPos` 두 지역 변수를 `Vector2? touchPos` 하나로 통합
+  - 터치 phase 분기: `Began`/`Moved`/`Stationary` 세 경우를 하나의 조건으로 묶어 `touchPos = touch.position.ReadValue();`로 채우도록 변경. `Ended`/`Canceled`일 때만 `released = true` 유지
+  - 마우스 분기: `wasPressedThisFrame` 기반으로 별도 `pressedPos`를 채우던 코드 제거, `Mouse.current.leftButton.isPressed`일 때 `touchPos = Mouse.current.position.ReadValue();`로 통일. `wasReleasedThisFrame`일 때 `released = true`는 그대로 유지
+  - `pressedPos.HasValue` 블록과 `currentPos.HasValue && _isDragging` 블록을 `if (touchPos.HasValue) { if (!_isDragging) { _isDragging = true; OnAimBegin?.Invoke(); } OnDrag?.Invoke(ComputeAimDirection(touchPos.Value)); }` 하나로 통합 (plan.md 4번 코드 그대로)
+  - `released && _isDragging` 블록은 변경 없음
+  - `ComputeAimDirection(Vector2 screenPos)` 헬퍼(이슈 4에서 추가)는 수정 없이 그대로 재사용
+
+**주의사항 확인 결과:**
+- 일반적인 터치 시나리오(Began이 정상 관측되는 경우)의 동작 불변 확인: `!_isDragging` 조건이 여전히 시작 프레임에서만 참이 되므로 `OnAimBegin`은 정확히 1회, 그 직후 `OnDrag`도 즉시 1회 발행됨 — 기존 동작과 로직상 동일하며, Began이 누락되는 예외 프레임만 추가로 안전하게 처리됨
+- 마우스 분기 통일로 사라진 클릭 첫 프레임의 `OnDrag` 중복 발행에 의존하는 코드가 없는지 확인: 코드 전체에서 `InputHandler.OnDrag`를 구독하는 곳은 `BallLauncher.HandleDrag(Vector2 direction) { _launchDirection = direction; }` 한 곳뿐이며(`TrajectoryPreview`는 이슈 1에서 이미 `Update()` 기반으로 전환되어 `OnDrag` 구독 안 함), 단순 필드 대입으로 완전히 멱등(idempotent)이라 중복 호출 제거로 인한 영향 없음을 grep으로 확인
+- `pressedPos`/`currentPos` 변수명/주석 잔존 여부 확인: `Assets/_Project` 전체 grep 결과 두 이름 모두 InputHandler.cs를 포함한 코드에서 완전히 제거되었고, 문서(plan.md/research.md 등 task 문서)에만 과거 기록으로 남아있음을 확인(문서는 수정 대상 아님)
+
+**주요 결정사항:**
+- plan.md에 기술된 코드 스니펫(4번)을 그대로 적용, 별도 해석/추가 변경 없음
+- git 커밋/푸시는 수행하지 않음 (사용자가 별도 처리 예정)

@@ -28,44 +28,38 @@ public class InputHandler : Singleton<InputHandler>
 
     private void Update()
     {
-        Vector2? pressedPos  = null;
-        Vector2? currentPos  = null;
-        bool     released    = false;
+        Vector2? touchPos = null;
+        bool     released = false;
 
         if (Touchscreen.current != null && Touchscreen.current.touches.Count > 0)
         {
             var touch = Touchscreen.current.touches[0];
             var phase = touch.phase.ReadValue();
 
-            if (phase == UnityEngine.InputSystem.TouchPhase.Began)
-                pressedPos = touch.position.ReadValue();
-            else if (phase == UnityEngine.InputSystem.TouchPhase.Moved ||
-                     phase == UnityEngine.InputSystem.TouchPhase.Stationary)
-                currentPos = touch.position.ReadValue();
+            if (phase == UnityEngine.InputSystem.TouchPhase.Began ||
+                phase == UnityEngine.InputSystem.TouchPhase.Moved ||
+                phase == UnityEngine.InputSystem.TouchPhase.Stationary)
+                touchPos = touch.position.ReadValue();
             else if (phase == UnityEngine.InputSystem.TouchPhase.Ended ||
                      phase == UnityEngine.InputSystem.TouchPhase.Canceled)
                 released = true;
         }
         else if (Mouse.current != null)
         {
-            if (Mouse.current.leftButton.wasPressedThisFrame)
-                pressedPos = Mouse.current.position.ReadValue();
             if (Mouse.current.leftButton.isPressed)
-                currentPos = Mouse.current.position.ReadValue();
+                touchPos = Mouse.current.position.ReadValue();
             if (Mouse.current.leftButton.wasReleasedThisFrame)
                 released = true;
         }
 
-        if (pressedPos.HasValue)
+        if (touchPos.HasValue)
         {
-            _isDragging = true;
-            OnAimBegin?.Invoke();
-            OnDrag?.Invoke(ComputeAimDirection(pressedPos.Value));
-        }
-
-        if (currentPos.HasValue && _isDragging)
-        {
-            OnDrag?.Invoke(ComputeAimDirection(currentPos.Value));
+            if (!_isDragging)
+            {
+                _isDragging = true;
+                OnAimBegin?.Invoke();
+            }
+            OnDrag?.Invoke(ComputeAimDirection(touchPos.Value));
         }
 
         if (released && _isDragging)
