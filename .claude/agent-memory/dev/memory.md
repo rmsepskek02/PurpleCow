@@ -951,3 +951,41 @@
 - `SceneSetupEditor.cs`는 절대 수정 금지 지시를 준수, 리소스(PNG)도 수정하지 않음
 - 이 원격 환경에는 Unity 에디터가 없어 컴파일 검증 불가 — 문법/네이밍 컨벤션만 신중히 확인
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
+
+---
+
+## 2026-07-04
+
+### 작업: 캐릭터 프리팹 구성 + 무기 조준 회전 애니메이션 (CharacterAimController, CharacterSetupEditor, weapon meta 수정)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/04-03_character-weapon-aim/plan.md` (사용자 승인 완료, 6단계 그대로 구현)
+- 기존 파일 2개 수정 + 신규 파일 2개 생성
+
+**수정 파일:**
+- `Assets/_Project/Sprites/Character/Character_main_weapon.png.meta`
+  - rect `width: 59` → `64` (실제 PNG 픽셀 크기 64×116과 불일치 수정, Python PIL로 실측 재확인함)
+  - 최상위 `alignment: 0` → `9`, `spritePivot: {x: 0.5, y: 0.5}` → `{x: 0.18, y: 0.29}`
+  - `spriteSheet.sprites[0]`(개별 스프라이트 엔트리)의 `alignment: 0` → `9`, `pivot: {x: 0, y: 0}` → `{x: 0.18, y: 0.29}`도 함께 수정 — spriteMode가 Multiple(2)이라 실제 pivot은 per-sprite 필드가 우선 적용될 가능성이 높아 최상위/개별 두 곳 모두 일치시킴
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `SetupScene()`에 `Step11_PlaceCharacter();` 호출 추가 (Step10 이후, WallFitter 적용 이후 실행되도록 배치 — LaunchPoint 월드 좌표가 최대한 확정된 시점을 노림)
+  - `Step11_PlaceCharacter()` 메서드 신규 추가: `Assets/_Project/Prefabs/Character/Character.prefab`을 `PrefabUtility.InstantiatePrefab`으로 씬에 배치하고, `LaunchPoint` Transform의 월드 좌표로 position만 맞춤(부모-자식 재구성은 하지 않음, 기존 `FindTransformOrWarn` 유틸 재사용). 프리팹 없으면 LogWarning으로 "Character Setup을 먼저 실행하세요" 안내. 이미 "Character" 오브젝트가 씬에 있으면 스킵(멱등성)
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs` (신규 `Character` 폴더)
+  - `Update()`에서 `BallLauncher.Instance.LaunchDirection` 읽어 `Mathf.Atan2(direction.x, direction.y)`로 목표 각도 계산 → `[SerializeField] private float _rotationOffset = -18f;` 보정(부호 Inspector에서 뒤집을 수 있게 노출) → `Mathf.Clamp(-_clampAngle, _clampAngle)`(기본 90도) → `Mathf.MoveTowardsAngle`로 `_rotationSpeed`(deg/sec, 기본 360) 속도 보간 → `_weaponTransform.localRotation = Quaternion.Euler(0f, 0f, -_currentAngle)`으로 적용
+  - 최종 적용식에서 각도 부호를 반전(`-_currentAngle`)한 이유: Unity의 Z축 회전은 CCW가 양수인데, `Atan2(direction.x, direction.y)`는 "위쪽 기준, 오른쪽으로 갈수록 양수"인 convention이라 이 둘을 그대로 매칭하려면 반전이 수학적으로 필요함(별도 Inspector 값 아님, `_rotationOffset`과는 독립적인 고정 변환)
+  - `_weaponTransform`은 `[SerializeField] private Transform`으로 Inspector 연결
+- `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs` (신규, `MonsterSetupEditor.cs` 패턴 참고)
+  - `[MenuItem("PurpleCow/Setup/Character Setup")]`
+  - `Character`(루트, 빈 GameObject) → `Body`(SpriteRenderer, `Character_Main_body.png`, sortingOrder 0, local (0,0)) → 그 자식으로 `Head`(`Character_Main_head.png`, sortingOrder 1, local (0.34, 0.58))와 `Weapon`(`Character_main_weapon.png`, sortingOrder 2, local (-0.29, 0.65)) 생성
+  - 루트에 `CharacterAimController` 추가 후 `SerializedObject`로 `_weaponTransform`에 Weapon Transform 연결
+  - `PrefabUtility.SaveAsPrefabAsset(root, "Assets/_Project/Prefabs/Character/Character.prefab")`으로 저장, 이미 존재하면 스킵
+
+**주요 결정사항:**
+- 회전 각도/오프셋/클램프/속도 수치는 모두 plan.md의 이미지 분석 기반 추정치이며, Inspector 노출 필드로 그대로 두어 사용자가 Unity에서 실제 회전시켜보며 조정하도록 함(과신 금지 원칙 준수)
+- `CharacterAimController`는 별도 이벤트 구독 없이 `Update()`에서 매 프레임 `BallLauncher.Instance.LaunchDirection`을 폴링 — plan.md가 이미 이 방식으로 확정했고 3줄 내외의 단순한 로직이라 이벤트 기반으로 바꾸지 않음
+- Character 씬 배치는 `LaunchPoint`를 부모로 재구성하지 않고 "같은 월드 좌표에 배치"하는 방식으로 구현(plan.md 6단계 결정 그대로 따름). `WallFitter`가 `[ExecuteAlways]`/`OnValidate`/`Start()`에서 `LaunchPoint.position`을 카메라 종횡비 기준으로 재계산하므로, 씬 로드/해상도 변경 시점에 따라 `Character` 위치가 어긋날 수 있다는 한계가 있음 — 이는 plan.md에서 이미 인지하고 감수하기로 한 트레이드오프이며, 이번 범위에서 추가 조치는 하지 않음
+- `Character_Main_head.png`/`Character_Main_body.png`의 meta는 rect가 실측과 거의/정확히 일치하여 별도 수정하지 않음(plan.md 1단계 확인 사항)
+- 이 원격 환경에는 Unity 에디터가 없어 실제 컴파일/씬 반영 검증 불가 — 문법/네임스페이스/API 시그니처(`BallLauncher.LaunchDirection`, `Singleton<T>.Instance` 등)만 신중히 대조 확인함. 실제 프리팹 생성과 씬 배치는 사용자가 로컬 Unity에서 `PurpleCow/Setup/Character Setup` → `PurpleCow/Setup/Scene Setup` 순서로 메뉴를 실행해야 반영됨
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
