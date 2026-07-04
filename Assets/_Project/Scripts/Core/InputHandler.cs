@@ -10,14 +10,20 @@ public class InputHandler : Singleton<InputHandler>
 
     private Camera _mainCamera;
 
-    // 스크린(픽셀) 좌표가 아닌 월드 좌표를 저장한다(스크린→월드 변환 후 값).
-    private Vector2 _dragStartPosition;
     private bool _isDragging;
 
     protected override void Awake()
     {
         base.Awake();
         _mainCamera = Camera.main;
+    }
+
+    // 발사 지점(BallLauncher.Instance.LaunchPoint)에서 screenPos(스크린 좌표)를 향하는 절대 조준 방향을 계산한다.
+    private Vector2 ComputeAimDirection(Vector2 screenPos)
+    {
+        Vector2 worldPos = _mainCamera.ScreenToWorldPoint(screenPos);
+        Vector2 launchPointPos = BallLauncher.Instance.LaunchPoint.position;
+        return (worldPos - launchPointPos).normalized;
     }
 
     private void Update()
@@ -52,16 +58,14 @@ public class InputHandler : Singleton<InputHandler>
 
         if (pressedPos.HasValue)
         {
-            _dragStartPosition = _mainCamera.ScreenToWorldPoint(pressedPos.Value);
             _isDragging = true;
             OnAimBegin?.Invoke();
+            OnDrag?.Invoke(ComputeAimDirection(pressedPos.Value));
         }
 
         if (currentPos.HasValue && _isDragging)
         {
-            Vector2 currentWorldPos = _mainCamera.ScreenToWorldPoint(currentPos.Value);
-            Vector2 direction = (currentWorldPos - _dragStartPosition).normalized;
-            OnDrag?.Invoke(direction);
+            OnDrag?.Invoke(ComputeAimDirection(currentPos.Value));
         }
 
         if (released && _isDragging)

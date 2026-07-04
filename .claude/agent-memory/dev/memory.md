@@ -863,3 +863,30 @@
 - 씬 파일(`SampleScene.unity`)의 `TrajectoryPreview` 인스펙터 오버라이드 값을 코드 기본값과 동일하게 직접 갱신 — plan.md 예상 파일 목록에는 없었지만 "주의사항" 섹션의 명시적 지시(오버라이드 확인 후 필요 시 리셋/재적용)에 따른 조치. 이전 작업(볼 천장 이탈 버그 수정)과 달리 이번엔 plan.md가 씬 값 확인/재적용을 직접 요구했으므로 직접 편집함
 - `TrajectoryPreview.cs` 클래스 상단 주석 수정은 plan.md에 명시되지 않았지만, 방금 제거한 이벤트 기반 로직을 그대로 서술하던 부정확한 주석이라 같은 변경 범위로 판단해 함께 수정
 - git 커밋/푸시는 수행하지 않음 (사용자가 별도 처리 예정)
+
+---
+
+## 2026-07-04
+
+### 작업: 이슈 4 — 조준 모델 전환 (상대 드래그 → 절대 조준, `InputHandler.cs`)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/plan.md` "이슈 4" 섹션 (research.md 이슈 4 포함, 사용자 승인 완료). 이슈 1~3은 이미 구현 완료 상태였고 이번엔 이슈 4만 추가 구현.
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/InputHandler.cs`
+  - `_dragStartPosition` 필드 제거 (상대 드래그 기준점 개념 삭제)
+  - `private Vector2 ComputeAimDirection(Vector2 screenPos)` 헬퍼 메서드 추가 — `_mainCamera.ScreenToWorldPoint(screenPos)`로 구한 월드 좌표에서 `BallLauncher.Instance.LaunchPoint.position`을 뺀 뒤 `.normalized` 반환
+  - `pressedPos.HasValue` 분기: `_isDragging = true; OnAimBegin?.Invoke();`에 이어 `OnDrag?.Invoke(ComputeAimDirection(pressedPos.Value));`를 즉시 발행하도록 추가 (터치 시작 프레임부터 궤적이 반응하도록 수정)
+  - `currentPos.HasValue && _isDragging` 분기: 기존 "월드 currentPos - 월드 dragStartPosition" 델타 계산을 제거하고 `OnDrag?.Invoke(ComputeAimDirection(currentPos.Value));`로 교체 (발사 지점 → 현재 손가락 위치의 절대 방향을 매 프레임 재계산)
+  - `released && _isDragging` 분기는 `_dragStartPosition`을 참조하지 않아 수정 불필요 (plan.md 예상대로)
+
+**사전 확인 사항 (주의사항 대응):**
+- `BallLauncher`도 `Singleton<BallLauncher>` 상속이며 `Awake()`에서 `base.Awake()`로 `Instance` 할당. `InputHandler`는 `BallLauncher.Instance`를 `Awake()`/`Start()`가 아닌 `Update()`(그것도 `ComputeAimDirection` 호출 시점, 즉 터치 발생 프레임)에서만 참조하므로, 모든 오브젝트의 `Awake()`가 끝난 뒤 `Update()`가 도는 Unity 생명주기상 스크립트 실행 순서와 무관하게 안전함을 코드 레벨에서 확인
+- `Assets/Scenes/SampleScene.unity`에서 `BallLauncher` 컴포넌트의 `_launchPoint: {fileID: 859741423}`가 실제로 연결되어 있어 `LaunchPoint`가 null이 아님을 씬 YAML 직접 확인
+
+**주요 결정사항:**
+- plan.md에 기술된 구현 순서(헬퍼 메서드 추가 위치, 각 분기 수정 내용)를 그대로 따름, 별도 해석/추가 변경 없음
+- `UIRules.md`, `TrajectoryPreview.cs` 등 이슈 1~3 관련 파일은 이번 범위에 포함되지 않으므로 손대지 않음
+- git 커밋/푸시는 수행하지 않음 (사용자가 별도 처리 예정)
