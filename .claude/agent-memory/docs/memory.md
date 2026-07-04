@@ -859,3 +859,21 @@
 - ProjectHistory.md 신규 섹션은 기존 날짜 섹션과 동일하게 `### 소제목 (task 경로)` 형식 + `- **문제**/**해결**/**실기기 검증**` 굵은 라벨 bullet 구조로 작성해 2026-07-03 섹션들과 문체 일관성 유지
 - ProjectStatus.md 완료 목록 항목은 기존 항목들과 동일하게 task 경로를 인라인 코드로 병기하고 한 문단으로 요약하는 기존 패턴을 그대로 따름
 - Bash 미사용, Read/Edit만 사용해 작업 완료
+
+---
+
+## 2026-07-05
+
+### 작업 내용
+- 캐릭터 프리팹 구성 + 무기 조준 회전 애니메이션 task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/04-03_character-weapon-aim/research.md`
+- 작업 전 `Character_Main.png`/`Character_Main_head.png`/`Character_Main_body.png`/`Character_main_weapon.png` 4개 스프라이트를 이미지로 직접 열람하고 각 `.meta`(pivot/픽셀 크기)를 확인, `InputHandler.cs`/`BallLauncher.cs`/`TrajectoryPreview.cs`/`SceneSetupEditor.cs`/`CharacterManager.cs`를 Read로 재확인, `targetUI` 레퍼런스 스크린샷 1장 재열람
+
+### 결과
+- research.md 생성 완료: 현재 상태(스프라이트 4개 pivot 전부 중앙 `0.5,0.5`, weapon 이미지가 캔버스 내에서 대각선으로 그려져 있음을 실측 확인, Character 프리팹 부재, CharacterManager는 HP/XP만 담당하고 비주얼 미연결, 조준 방향 데이터가 이미 `BallLauncher.LaunchDirection`으로 흐르고 있음) / 관련 파일 및 의존성 표 / 문제점 6가지(pivot 재조정, 무기 원본 각도 오프셋 실측 필요, 캐릭터-LaunchPoint 배치 정합 옵션, ±90도 클램프·보간 계산 후보, TrajectoryPreview 즉시 반영과의 트레이드오프, 신규 스크립트 필요) / 결론 순서로 작성
+- 확정된 설계 3가지(Body+Weapon 2파츠, 위쪽 반원 ±90도 클램프, 부드러운 보간)는 사용자 지시 그대로 반영하고, 정확한 pivot 좌표·각도 오프셋 수치·스크립트 이름 등은 "plan.md에서 확정 필요"로 명시적으로 남겨둠
+
+### 주요 결정사항
+- weapon 스프라이트(59×116px)는 실제로 열어본 결과 내용물이 좌하단→우상단 대각선으로 그려져 있어 회전 시 각도 오프셋 보정이 필요하다는 점을 기존 문서 톤(2026-07-04 배경 격자 보정 research.md)과 동일하게 "실측 확인 + 정확한 수치는 plan.md로 유보" 방식으로 서술
+- AGENTS.md는 이번 문서 추가로 별도 갱신하지 않음(Task 문서 섹션은 개별 폴더 목록을 관리하지 않는 방식이라는 기존 정책 그대로 따름)
+- Bash 미사용, Read/Write만 사용해 작업 완료
