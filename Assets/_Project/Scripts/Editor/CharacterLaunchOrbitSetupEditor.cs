@@ -16,9 +16,8 @@ public static class CharacterLaunchOrbitSetupEditor
         {
             character.localPosition = new Vector3(0f, -8f, 0f);
             Debug.Log("[CharacterLaunchOrbitSetupEditor] Character 초기 위치 설정 완료.");
+            ConnectWallFitterCharacterRef(character);
         }
-
-        ConnectWallFitterCharacterRef(character);
     }
 
     private static Transform FindCharacter()

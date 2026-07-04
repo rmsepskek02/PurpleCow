@@ -937,3 +937,17 @@
 - `Ball.cs`/`BallLauncher.cs`의 `ReturnToLaunchPoint()` 메서드명, `toLaunchPoint` 지역변수명, 관련 주석 문구는 plan.md가 명시적으로 리네이밍을 요청하지 않아 그대로 유지 (참조 표현식만 교체)
 - `SceneSetupEditor.cs`의 `SetupScene()` 상단 주석("WallFitter는 Step8에서 생성되는 LaunchPoint를 참조해야 하므로...")은 plan.md 6단계가 명시한 삭제 대상(Step8/Step6/Step11 세 메서드 내부)에 포함되지 않아 손대지 않음 — 다만 이제 Step8이 LaunchPoint를 생성하지 않으므로 이 주석은 현재 사실과 어긋난 상태로 남아있음(사용자/QA 확인 필요)
 - 커밋/푸시 미수행 (오케스트레이터가 처리 예정)
+
+---
+
+### 작업: `CharacterLaunchOrbitSetupEditor.cs` QA Major 버그 수정 (null WallFitter 참조 덮어쓰기 방지)
+
+**작업 내용:**
+- 배경: qa 에이전트 코드 리뷰에서 발견한 Major 버그. `SetupCharacterLaunchOrbit()`에서 `FindCharacter()`가 `null`을 반환해도 `ConnectWallFitterCharacterRef(character)`가 조건 없이 호출되어, 이미 정상 연결되어 있던 `WallFitter._character` 참조를 `null`로 덮어쓰는 문제
+- 수정: `character != null` 블록 안으로 `ConnectWallFitterCharacterRef(character)` 호출을 이동시켜, Character를 못 찾은 경우 위치 설정과 WallFitter 연동 모두 스킵하도록 가드 추가
+- 수정 파일: `Assets/_Project/Scripts/Editor/CharacterLaunchOrbitSetupEditor.cs` (1개 파일, `SetupCharacterLaunchOrbit()` 메서드 내부 호출 순서/조건만 변경)
+
+**주요 결정사항:**
+- `ConnectWallFitterCharacterRef()` 메서드 시그니처와 내부 로직은 요청 범위 외라 변경하지 않음
+- 다른 로직/네이밍 변경 없음, 범위는 이 파일 하나로 한정
+- 커밋/푸시 미수행 (오케스트레이터가 처리)
