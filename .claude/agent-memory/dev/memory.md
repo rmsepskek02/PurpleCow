@@ -986,3 +986,21 @@
 - 로직/수치는 전혀 변경하지 않음 — 순수 위치 이동. 로그 문자열의 prefix(`[SceneSetupEditor]` → `[CharacterLaunchOrbitSetupEditor]`)만 이관된 파일의 클래스명에 맞게 자연스럽게 교체(디버그 로그 텍스트는 동작에 영향 없음)
 - `[MenuItem]`은 요청대로 `SetupCharacterLaunchOrbit()` 하나만 유지, 하위 로직은 모두 private 메서드로 분리
 - 커밋/푸시 미수행 (오케스트레이터가 처리)
+
+---
+
+## 2026-07-04
+
+### 작업: CharacterLaunchOrbitSetupEditor 씬 저장 누락 수정
+
+**작업 내용:**
+- 오케스트레이터 직접 지시(버그 수정, plan.md 없이 진행) — `CharacterLaunchOrbitSetupEditor.cs`가 Character/WallFitter 등 씬 오브젝트를 변경하지만 `EditorSceneManager.SaveScene()` 호출이 없어 메뉴 실행 후에도 씬이 디스크에 저장되지 않던 문제 수정
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/CharacterLaunchOrbitSetupEditor.cs`
+  - `using UnityEditor.SceneManagement;` 추가
+  - `SetupCharacterLaunchOrbit()` 메서드 끝(`SetupWallFitter(character);` 다음)에 `AssetDatabase.SaveAssets(); AssetDatabase.Refresh(); EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());` 추가
+
+**주요 결정사항:**
+- `character`가 null이라 조기 return되는 경로에는 저장 호출 없음 — 정상 완료된 경우에만 저장 (기존 `SceneSetupEditor.SetupScene()`과 동일 패턴)
+- 커밋/푸시는 하지 않음 (오케스트레이터 처리 예정)

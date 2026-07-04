@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 // Character 시각 오브젝트 생성, 초기 위치 설정, WallFitter 연동을 한 번에 처리하는 에디터 스크립트.
@@ -18,6 +19,10 @@ public static class CharacterLaunchOrbitSetupEditor
         Debug.Log("[CharacterLaunchOrbitSetupEditor] Character 초기 위치 설정 완료.");
 
         SetupWallFitter(character);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
     }
 
     // ──────────────────────────────────────────
