@@ -740,3 +740,44 @@
 - GameplayMechanics.md 섹션 1 상단의 "확정된 스펙 서술"(원본 게임 확인 내용) 문구 자체는 사용자 지시대로 삭제/재작성하지 않고 그대로 유지 — 이슈 4 research.md에서 이미 이 문구가 절대 조준 모델과 더 잘 맞는다고 분석이 끝난 상태이므로, 별도 문구 수정 없이 "구현 현황"에서 이 부합 사실만 확인하는 방식으로 처리(문구를 다시 쓰면 오히려 원본 확인 기록의 원문성이 훼손된다고 판단)
 - 기존 내용은 어디에도 삭제/재작성하지 않고 "완료" 상태를 반영하는 문장만 각 문서에 추가하는 방식으로만 편집(사용자가 명시적으로 요청한 제약)
 - AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 이번에도 갱신하지 않음
+
+---
+
+### 작업 내용 (추가)
+- 몬스터 전용 통합 규칙 문서 `MonsterRules.md` 신규 생성 (사용자 승인된 목차 기준, task 문서 없이 순수 문서 작업으로 진행)
+- 경로: `Assets/_Project/Docs/MonsterRules.md`
+- `GameplayMechanics.md` 섹션 2 본문을 `MonsterRules.md`로 이관하고 원래 자리에는 안내 문구 + 링크만 남김 (섹션 1은 손대지 않음)
+- `AGENTS.md` Docs 문서 표에 `MonsterRules.md` 행 신규 추가
+- 작성 전 `MonsterData.cs`, `MonsterBase.cs`(최근 재설계된 냉동/슬로우/도트/보너스크리티컬 API 전부 포함), `WaveTableData.cs`, `WaveManager.cs`, `Ball.cs`(전체, `CalculateDamage`/`OnCollisionEnter2D`/`OnTriggerEnter2D` 흐름 확인), `BallSkillBase.cs`, `MonsterSetupEditor.cs`(웨이브별 몬스터 등장 구간 및 기본 스탯 자동 생성 로직), `GameplayMechanics.md` 섹션 2, `UIRules.md` 섹션 9/10, `DevRules.md`(ScriptableObject 사용 범위), `ProjectHistory.md`(`SetupWaveSpawnEntries` 기록)를 모두 Read로 직접 확인
+
+### 결과
+- `MonsterRules.md` 생성 완료: 1.개요 / 2.스폰·전진 메커닉(GameplayMechanics.md 섹션2 원문 이관) / 3.몬스터 종류·스탯(Fluffy/Spider/StoneBug/ForestDeer 웨이브별 등장 구간 표 + MonsterData 필드 표, 4종 기본값이 현재 모두 동일함을 각주로 명시) / 4.HP 관리·사망 처리(TakeDamage/Die/OnHpChanged + Ball→Monster 데미지 전달 흐름을 Ball.cs 실제 코드 기준으로 상세 기술, 낡은 task 문서의 static event 기반 충돌 감지 설계는 참고하지 않았음을 명시) / 5.상태이상 처리(ApplyFreeze/ApplySlow/ApplyBonusCritChance·ConsumeBonusCritChance/ApplyDot 표 + IceBallSkill/FireBallSkill/AmethystDaggerPassive/EmeraldDaggerPassive 연동 지점) / 6.웨이브 시스템(WaveTableData 구조, WaveManager 스폰→진행→처치/통과 판정→클리어→AdvanceToNextWave 흐름, GetWeakestMonster/GetMonstersInRow 헬퍼) / 7.UI 연동 참조(UIRules.md 9/10장 링크만, 중복 서술 없음) / 8.관련 파일 목록 표까지 총 8개 섹션 작성 완료
+- `GameplayMechanics.md` 섹션 2 본문을 "이 내용은 MonsterRules.md로 이관되었습니다" 안내 문구 + 링크로 교체 완료 (섹션 1은 변경 없음)
+- `AGENTS.md` Docs 문서 표에 `MonsterRules.md` 행 추가 완료
+- `UIRules.md`는 사용자 지시대로 전혀 수정하지 않음
+
+### 주요 결정사항
+- 몬스터 관련 규칙의 단일 기준(source of truth)을 `MonsterRules.md`로 확정 — 향후 몬스터 관련 규칙 변경/추가는 이 문서를 기준으로 갱신
+- `_Task/2026-06-30/14-00_Monster시스템구현/`의 초기 설계(static event `OnHitMonster`/`LastDamage` 기반 충돌 감지)는 현재 코드(Unity `OnCollisionEnter2D`/`OnTriggerEnter2D`에서 `CalculateDamage()`가 직접 `TakeDamage()` 호출, `OnHitMonster`는 데미지 적용 "이후" 다른 시스템에 알리는 용도로만 사용)와 다르다는 점을 4장에 명시적으로 각주 처리해 향후 혼동 방지
+- `MonsterSetupEditor.cs` 확인 결과 4종 몬스터의 `MonsterData` 기본값이 현재 모두 동일(Hp 30/MoveSpeed 1/Damage 1/Reward 10)함을 확인 — 종별 차등 수치는 코드에 하드코딩되어 있지 않고 이후 에셋 Inspector 직접 조정으로 반영되는 구조임을 3장 각주로 정확히 기록(과장하거나 임의로 차등값을 지어내지 않음)
+- Ball의 스킬 연동(냉동/슬로우/도트/보너스크리티컬)은 `PlayerActiveSkillDesign.md`의 4종 스킬이 아니라 `BallSkillBase`를 상속하는 Active/Passive 볼 스킬 클래스(`IceBallSkill`/`FireBallSkill`/`AmethystDaggerPassive`/`EmeraldDaggerPassive`)가 실제로 호출하는 구조임을 코드로 직접 확인 후 5장에 정확히 기술
+- Bash 미사용, Read/Edit/Write/Glob/Grep만 사용해 작업 완료
+
+---
+
+### 작업 내용 (추가)
+- 사용자·오케스트레이터가 긴 논의 끝에 확정한 몬스터 시스템 개편 설계를 `MonsterRules.md`와 `UIRules.md`(섹션 9)에 순수 문서 작업으로 반영. 코드는 전혀 수정하지 않음(구현은 이후 별도 task로 진행 예정)
+- 경로: `Assets/_Project/Docs/MonsterRules.md`, `Assets/_Project/Docs/UIRules.md`
+- 작업 전 최신 상태 확인을 위해 `MonsterRules.md`, `UIRules.md` 전문과 `MonsterData.cs`, `MonsterBase.cs`, `WaveManager.cs`, `WaveTableData.cs`, `MonsterSetupEditor.cs`를 모두 Read로 직접 재확인. 특히 `MonsterSetupEditor.SetupWaveSpawnEntries()`가 에디터에서 한 번 실행 시점에 웨이브별 `GridPosition`을 고정값으로 계산해 `WaveTableData.asset`에 미리 구워넣는 구조임을 코드로 직접 확인(런타임 랜덤이 아님 — 기존 `MonsterRules.md` 2장에 이미 있던 "매 웨이브 새로 랜덤 결정" 서술과 실제로 어긋나 있었음)
+- 원본 게임 레퍼런스 스크린샷(`Assets/_Project/Docs/targetUI/KakaoTalk_20260701_190324151_02.jpg`)을 Read로 직접 열람해 몬스터가 블록(발판) 위에 서 있고 HP바(빨간 바)가 블록 앞면 하단에 임베드되어 있으며 폭이 블록 가로 길이에 비례함을 시각적으로 확인 후 문서에 반영
+
+### 결과
+- `MonsterRules.md` 수정 완료: 서두 요약에 이번 갱신 내용(전종류 랜덤 등장/런타임 랜덤 배치+점유체크/고정 블록 크기/HP바 방식) 2줄 추가. 2장(스폰/전진 메커닉)에 "웨이브 1~20 전 구간 4종 전부 랜덤 등장" + "런타임 매번 새로 랜덤 계산 + 점유 체크" 확정 규칙 추가, 구현 현황에 현재 코드가 에디터에서 좌표를 고정 계산해 굽는 방식이라 확정 규칙과 다르다는 점을 "(구현 예정 — 아직 코드 미반영)"으로 명시. 3장(몬스터 종류·스탯)에 "종류 및 고정 블록(베이스) 크기" 소제목 신규 추가(Fluffy/Spider→Block_1x1, StoneBug→Block_2x1, ForestDeer→Block_1x2, Block_2x2 미사용, 콜라이더 전체 커버, 점유 체크 필요), "웨이브별 등장 구성 — 전종류 랜덤" 소제목 신규 추가(기존 웨이브 구간별 등장 표 삭제, 난이도 스케일링 방향성만 서술하고 수치 공식은 미정으로 명시), MonsterData 필드 표 아래에 "2칸 몬스터 Hp/Reward 상향" 확정 규칙 + 현재 코드가 4종 동일 기본값임을 대비해 명시. 6장(웨이브 시스템)을 "데이터 구조 — 신규 확정 구조"(WaveTableData가 좌표 대신 스폰수/가중치 구성 파라미터만 보유)와 "WaveManager 흐름 — 신규 확정 흐름"(SpawnWave가 매번 종류 랜덤 결정→점유 체크 기반 좌표 랜덤 결정→배치 3단계)으로 재구성하고, 기존 현재 구현 흐름은 인용 블록으로 하위에 유지하며 스킬/킬카운트/클리어 판정 로직(5~7번)은 그대로 유지된다는 점 명시. 7장(UI 연동 참조)을 HP바 블록 앞면 임베드 방식으로 갱신하고 UIRules.md 9장 링크 유지. 1장 개요의 HP바 서술도 최신 방식으로 갱신
+- `UIRules.md` 9장 "몬스터 HP바" 전면 재작성 완료: 기존 "머리 위 월드 스페이스 캔버스+슬라이더" 서술 삭제. "확정된 방식 — 블록(베이스) 앞면 임베드"(블록 앞면 하단 임베드, 폭이 블록 가로 길이에 비례, 정확한 비율은 `targetUI/` 레퍼런스 기준), "배치 방식(앵커/부모 구조 변경)"(HP바를 블록 오브젝트의 자식으로 이동, Canvas 설정 World Space/Sorting Layer UI는 유지), "재사용 가능한 부분"(`MonsterHpBar`, `MonsterBase.OnHpChanged` 이벤트 구독 구조와 발행 시점은 그대로 재사용 가능, 바뀌는 것은 부모/앵커/크기뿐) 3개 소제목으로 재구성
+- `AGENTS.md`는 두 문서 모두 기존 표의 설명 문구가 이미 "몬스터 HP바"/"스폰 및 전진 메커닉" 등 주제 단위로 서술되어 있어 세부 내용이 바뀌어도 그대로 유효 — 신규 섹션 추가가 아니므로 갱신하지 않음
+
+### 주요 결정사항
+- 이번 작업은 순수 문서 갱신이며 코드(`MonsterData.cs`/`MonsterBase.cs`/`WaveManager.cs`/`WaveTableData.cs`/`MonsterSetupEditor.cs`)는 전혀 수정하지 않음 — 구현은 이후 별도 task(research.md/plan.md)로 진행 예정이므로 이번 문서에는 "확정된 규칙"만 서술하고 정확한 수치 공식(스폰 수 증가 폭, 가중치 곡선, 2칸 몬스터 스탯 배율 등)은 미정으로 남겨둠
+- 확정 규칙과 현재 코드 상태가 다른 부분은 전부 "(확정)" / "(구현 예정 — 아직 코드 미반영)" / "(현재 구현 — 아직 새 규칙 미반영)" 3가지 표시로 명확히 구분해 향후 구현 task 담당자가 무엇을 바꿔야 하는지 문서만 보고 파악 가능하게 처리
+- 배경 이미지 비율 보정(`BackgroundFitter`/`WallFitter`)은 볼 충돌벽/캐릭터 위치 등에 영향을 주는 위험도 높은 별도 선행 task로 분리하기로 확정되어 있어, `MonsterRules.md` 2장에 "그리드는 정사각형 셀 전제, 배경 비율 보정은 별도 선행 task 예정"이라는 한 줄만 남기고 상세 내용은 다루지 않음
+- `WaveTableData`의 정확한 신규 필드 설계(가중치를 배열로 표현할지, 몬스터별 확률 테이블로 표현할지 등)는 이 문서에서 확정하지 않고 "추후 plan.md에서 결정"으로 명시 — 문서 작업 단계에서 구현 세부사항을 임의로 확정하지 않기 위함
