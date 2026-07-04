@@ -1,6 +1,6 @@
 # Plan — Ball Trajectory Aim Fix
 
-이 문서는 `research.md`에서 파악한 네 가지 문제(궤적 상시 표시 미구현, 터치 조준 정확도 왜곡, 궤적 프리뷰 색상/크기 불일치, 그리고 이슈 2 구현 완료 후 실제 플레이 테스트에서 재발견된 조준 모델 자체의 괴리감)에 대한 구체적인 구현 계획을 다룬다. `TrajectoryPreview.cs`를 이벤트 전용 구조에서 `Update()` 기반 매 프레임 갱신 구조로 전환하고, `InputHandler.cs`의 방향 계산을 스크린 좌표 기반에서 월드 좌표 기반으로 바꾸며, `TrajectoryPreview.cs`의 색상/크기 관련 필드 값을 원본 게임에 맞게 조정한다. 이후 이슈 1~3이 구현 완료된 뒤 실제 플레이 테스트에서 재발견된 이슈 4에 대해서는, `InputHandler.cs`의 조준 모델을 상대 드래그 방식에서 절대 조준 방식으로 전환한다. 문서 갱신 대상인 `UIRules.md` 섹션 11도 함께 수정한다. 이 문서는 계획 문서이므로 실제 코드 수정은 진행하지 않는다.
+이 문서는 `research.md`에서 파악한 다섯 가지 문제(궤적 상시 표시 미구현, 터치 조준 정확도 왜곡, 궤적 프리뷰 색상/크기 불일치, 이슈 2 구현 완료 후 실제 플레이 테스트에서 재발견된 조준 모델 자체의 괴리감, 그리고 이슈 4 구현 완료 후 실제 플레이 테스트에서 재발견된 터치 시작 단계 폴링 누락 문제)에 대한 구체적인 구현 계획을 다룬다. `TrajectoryPreview.cs`를 이벤트 전용 구조에서 `Update()` 기반 매 프레임 갱신 구조로 전환하고, `InputHandler.cs`의 방향 계산을 스크린 좌표 기반에서 월드 좌표 기반으로 바꾸며, `TrajectoryPreview.cs`의 색상/크기 관련 필드 값을 원본 게임에 맞게 조정한다. 이후 이슈 1~3이 구현 완료된 뒤 실제 플레이 테스트에서 재발견된 이슈 4에 대해서는 `InputHandler.cs`의 조준 모델을 상대 드래그 방식에서 절대 조준 방식으로 전환한다. 이슈 4까지 구현 완료된 뒤 실제 플레이 테스트에서 재발견된 이슈 5에 대해서는, `InputHandler.cs`의 터치/마우스 phase 분기 로직을 `TouchPhase.Began` 같은 특정 phase 값 의존에서 `_isDragging` 상태 기반 판정으로 재구성한다. 문서 갱신 대상인 `UIRules.md` 섹션 11도 함께 수정한다. 이 문서는 계획 문서이므로 실제 코드 수정은 진행하지 않는다.
 
 ## 구현 목표
 
@@ -8,6 +8,7 @@
 - 터치 조준 시 손가락이 가리키는 실제 방향과 궤적 각도가 일치하도록 스크린→월드 변환을 적용한다.
 - 궤적 프리뷰(레드닷/링/점선)의 색상과 크기를 원본 게임(통통 디펜스: 핀볼 마스터) 레퍼런스에 맞게 조정한다.
 - 터치 시작 순간부터 궤적이 손가락 위치를 절대적으로(발사 지점 기준) 따라가도록 조준 모델을 상대 드래그 방식에서 절대 조준 방식으로 전환한다.
+- 터치 시작(Began) 단계가 폴링 프레임에서 누락되더라도 조준 시작 처리(`OnAimBegin` 발행 + 즉시 조준 방향 계산)가 스킵되지 않도록, `InputHandler.cs`의 phase 분기 로직을 `_isDragging` 상태 기반 판정으로 재구성한다.
 - 위 변경 사항 중 스펙 문서와 상충하는 부분(`UIRules.md` 섹션 11)을 함께 최신화한다.
 
 ## 단계별 작업 계획
@@ -54,6 +55,36 @@
 5. `released && _isDragging` 분기(릴리즈)는 `_dragStartPosition`을 참조하지 않으므로 별도 수정이 필요 없다.
 6. `Camera.main` 캐싱(`_mainCamera` 필드, `Awake()`)은 이슈 2에서 이미 구현되어 있으므로 그대로 재사용한다. 이번 변경으로 새로 추가되는 의존성은 `BallLauncher.Instance.LaunchPoint` 하나뿐이다.
 
+### 이슈 5: 터치 시작(Began) 단계 폴링 누락 — phase 값 대신 `_isDragging` 상태 기반으로 시작 판정 재구성 (`InputHandler.cs`)
+
+이슈 4(절대 조준 모델 전환) 구현이 완료되어 main에 반영된 이후 실제 플레이 테스트에서 재발견된 문제다(research.md 이슈 5 참고). `TouchPhase.Began`이라는 특정 phase 값이 관측되어야만 조준 시작으로 인식하는 현재 구조 대신, "아직 드래그 중이 아닌 상태에서 터치/클릭이 감지되면 그 자체를 시작으로 인식"하는 상태 기반 판정으로 재구성한다. 터치와 마우스를 동일한 구조로 통일한다(아래 근거 참고).
+
+1. `Update()` 내부에서 `pressedPos`/`currentPos`로 분리되어 있던 두 개의 `Vector2?` 지역 변수(현재 31~32행)를 `touchPos` 하나로 통합한다. "터치 시작 프레임"과 "드래그 중 프레임"을 코드 레벨에서 미리 구분해 담아두지 않고, "이번 프레임에 터치/클릭이 감지되었는가"라는 사실 하나만 담도록 단순화한다.
+2. 터치 phase 분기(현재 35~48행)를 다음과 같이 재구성한다.
+   - `phase == TouchPhase.Began || phase == TouchPhase.Moved || phase == TouchPhase.Stationary` 세 경우를 하나의 조건으로 묶어 `touchPos = touch.position.ReadValue();`를 채운다. `Began`인지 `Moved`인지를 더 이상 구분하지 않고, "터치가 유지되고 있는 상태(막 시작했든 계속 눌려있든)"라는 의미로 통합해서 읽는다.
+   - `phase == TouchPhase.Ended || phase == TouchPhase.Canceled`일 때만 기존과 동일하게 `released = true;`로 처리한다.
+3. 마우스 분기(현재 49~57행)도 같은 구조로 통일한다.
+   - `Mouse.current.leftButton.isPressed`일 때 `touchPos = Mouse.current.position.ReadValue();`로 채운다. 기존에 `wasPressedThisFrame`으로 별도 `pressedPos`를 채우던 코드는 제거한다.
+   - `Mouse.current.leftButton.wasReleasedThisFrame`일 때 `released = true;`는 그대로 유지한다.
+   - **통일 근거**: research.md 이슈 5에서 확인된 대로, 기존 마우스 분기는 클릭 첫 프레임에 `wasPressedThisFrame`과 `isPressed`가 동시에 참이 되어 `pressedPos`와 `currentPos`가 모두 채워지고, 그 결과 아래 4번의 두 블록이 같은 프레임에 모두 실행되어 `OnDrag`가 동일한 값으로 두 번 중복 발행되고 있었다. 반면 마우스는 `wasPressedThisFrame` 덕분에 터치처럼 시작 단계 자체가 통째로 누락될 위험은 원천적으로 없다. 즉 마우스 쪽은 이슈 5의 "시작이 스킵되는" 버그 자체는 없지만, 터치와 다른 구조를 유지할 이유도 없고 오히려 위 중복 발행이라는 별개의 문제가 있으므로, 터치 수정과 동일한 구조로 통일하는 쪽을 택한다. 통일 후에는 클릭 첫 프레임에 `touchPos`가 한 번만 채워지고 `_isDragging`도 그 프레임에 한 번만 `false → true`로 전환되므로, `OnAimBegin`/`OnDrag` 모두 정확히 한 번씩만 발행된다.
+4. `pressedPos.HasValue` 블록과 `currentPos.HasValue && _isDragging` 블록(현재 59~69행)을 다음과 같이 하나로 합친다.
+   ```csharp
+   if (touchPos.HasValue)
+   {
+       if (!_isDragging)
+       {
+           _isDragging = true;
+           OnAimBegin?.Invoke();
+       }
+       OnDrag?.Invoke(ComputeAimDirection(touchPos.Value));
+   }
+   ```
+   - `!_isDragging`(아직 드래그 중이 아님)일 때만 `OnAimBegin`을 발행하고 `_isDragging`을 `true`로 전환한다. phase가 `Began`이었는지 `Moved`였는지는 더 이상 판단 근거로 쓰지 않으므로, 같은 프레임에 `Began`이 스킵되고 `Moved`로 읽히더라도 `_isDragging`이 아직 `false`인 이상 이 프레임이 "시작"으로 정확히 인식된다.
+   - 그 다음 줄의 `OnDrag?.Invoke(ComputeAimDirection(touchPos.Value))`는 시작 프레임이든 이후 드래그 프레임이든 매번 동일하게 실행되어, 이슈 4에서 확정한 "터치 시작 프레임부터 즉시 조준 방향 계산" 동작을 그대로 유지한다.
+5. `released && _isDragging` 블록(현재 71~75행)은 변경하지 않는다.
+6. `ComputeAimDirection(Vector2 screenPos)` 헬퍼(이슈 4에서 추가됨)는 그대로 재사용하며 수정하지 않는다.
+7. 위 변경으로 `pressedPos`라는 개념 자체가 코드에서 사라지고, 터치/마우스 두 입력 방식이 "이번 프레임 입력 위치를 `touchPos`에 채운다" → "`touchPos`/`_isDragging`/`released` 세 값만으로 시작·유지·종료를 판정한다"는 동일한 구조로 통일된다.
+
 ### 문서 갱신: `UIRules.md` 섹션 11
 
 1. "조준 중(터치 시작~릴리즈)에만 표시되고, 조준하지 않을 때는 숨겨진다." 문구를, "터치 여부와 무관하게 항상 표시되며, 매 프레임 실시간으로 갱신된다(터치 중에는 드래그 방향을, 터치하지 않을 때는 마지막 조준 방향을 기준으로 갱신)."는 취지로 수정한다.
@@ -71,6 +102,9 @@
 - 색상(`_hitColor`, `_ringColor`, `_lineColor`)과 크기(`_dotRadius`, `DASH_WORLD_SIZE`) 수치는 모두 research.md의 픽셀 추출값을 근사한 예시값이며, 실제 게임 실행 화면에서 원본 레퍼런스(`Assets/_Project/Docs/targetUI/`)와 시각적으로 비교한 뒤 미세 조정이 필요할 수 있다.
 - `_hitColor`, `_ringColor`, `_dotRadius`, `_lineColor`, `_ringRadius`, `_lineWidth`는 모두 `[SerializeField]`이므로, 코드의 기본값을 바꿔도 이미 씬/프리팹 인스펙터에 저장된 오버라이드 값이 있으면 그 값이 우선 적용된다. 구현 단계에서 씬/프리팹의 실제 인스펙터 값도 함께 확인해야 한다.
 - `InputHandler.cs`에서 `Camera.main`을 `Awake()`에서 캐싱하므로, 씬에 `MainCamera` 태그가 정확히 붙은 카메라가 존재하는지 사전에 확인해야 한다(태그가 없거나 다른 카메라에 붙어 있으면 `Camera.main`이 `null`을 반환해 예외가 발생할 수 있음).
+- 이슈 5 변경(`touchPos.HasValue` + `!_isDragging` 통합 판정)은 `Began`이 누락되는 예외적인 프레임을 안전하게 처리하기 위한 것이지, `Began`이 정상적으로 관측되는 대다수 프레임의 동작 자체를 바꾸는 것은 아니다. 즉 일반적인 터치 시나리오에서도 시작 프레임에 `OnAimBegin` + 즉시 `OnDrag`가 정확히 한 번씩 발행되는 기존 동작이 그대로 유지되는지 구현 후 회귀 확인이 필요하다.
+- 이슈 5의 마우스 분기 통합으로 기존에 있던 클릭 첫 프레임의 `OnDrag` 중복 발행(같은 값으로 두 번 호출)이 사라진다. 이 중복 호출에 의존하는 다른 코드가 없는지 확인이 필요하다. 현재 확인된 구독자(`TrajectoryPreview.UpdateTrajectory` 호출, `BallLauncher._launchDirection` 갱신)는 모두 같은 값을 다시 대입하는 멱등(idempotent) 연산이라 중복 호출이 있어도 결과에 차이가 없어 보이지만, 최종 확인은 구현 단계에서 진행한다.
+- `pressedPos`/`currentPos` 두 지역 변수가 `touchPos` 하나로 합쳐지므로, 변수명 변경에 따라 관련 주석(현재 21행의 `ComputeAimDirection` 설명 주석 등)이나 남아있는 다른 참조가 없는지 함께 확인해야 한다.
 - 세 이슈 모두 `DevRules.md`의 네이밍/코딩 컨벤션(private 필드 `_camelCase`, `[SerializeField]` 필드도 `_camelCase`, `Awake()`에서 컴포넌트/참조 캐싱 등)을 따라야 한다.
 - 이슈 1 변경(궤적 상시 표시)과 함께 `UIRules.md` 섹션 11 문서 갱신이 누락되지 않도록 코드 변경과 문서 변경을 같은 작업 범위로 처리해야 한다.
 - 이슈 4 변경으로 `InputHandler.cs`가 `BallLauncher.Instance.LaunchPoint`를 참조하는 새로운 의존성이 생긴다. `InputHandler`와 `BallLauncher` 둘 다 씬에 항상 존재하는 Singleton이므로 참조 자체는 안전하다고 판단되지만, `Awake()`/`Start()` 실행 순서상 `InputHandler`가 `BallLauncher.Instance`에 접근하는 시점에 `BallLauncher`의 `Awake()`(Instance 할당)가 이미 끝나 있는지, 그리고 `_launchPoint` 필드가 인스펙터에서 실제로 할당되어 `LaunchPoint`가 null이 아닌지 구현 단계에서 함께 확인해야 한다.
