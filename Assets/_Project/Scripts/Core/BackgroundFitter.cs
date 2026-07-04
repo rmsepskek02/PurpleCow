@@ -5,7 +5,7 @@ public class BackgroundFitter : MonoBehaviour
 {
     [SerializeField] private SpriteRenderer _spriteRenderer;
     [SerializeField] private Camera _targetCamera;
-    [SerializeField] private float _zoomFactor = 1.3f;
+    [SerializeField] private float _zoomFactor = 0.5f;
     [SerializeField] private float _cellAspectCorrection = 1.647f;
     [SerializeField] private float _gridAreaWidth = 14.53f;
     [SerializeField] private float _gridAreaHeight = 10.16f;
