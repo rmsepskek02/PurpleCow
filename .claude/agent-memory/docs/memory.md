@@ -877,3 +877,22 @@
 - weapon 스프라이트(59×116px)는 실제로 열어본 결과 내용물이 좌하단→우상단 대각선으로 그려져 있어 회전 시 각도 오프셋 보정이 필요하다는 점을 기존 문서 톤(2026-07-04 배경 격자 보정 research.md)과 동일하게 "실측 확인 + 정확한 수치는 plan.md로 유보" 방식으로 서술
 - AGENTS.md는 이번 문서 추가로 별도 갱신하지 않음(Task 문서 섹션은 개별 폴더 목록을 관리하지 않는 방식이라는 기존 정책 그대로 따름)
 - Bash 미사용, Read/Write만 사용해 작업 완료
+
+---
+
+### 작업 내용 (추가)
+- 캐릭터 프리팹 구성 + 무기 조준 회전 애니메이션 task plan.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/04-03_character-weapon-aim/plan.md`
+- 오케스트레이터(Claude)가 Python(PIL/numpy)으로 실측한 확정 수치(각도 오프셋 약 18도, weapon meta rect 불일치 59×116 vs 실제 64×116, pivot 추천값 (0.18, 0.29), Head/Weapon 로컬 배치 좌표 (+0.34, +0.58)/(-0.29, +0.65))를 그대로 반영해 작성. 작성 전 research.md, TaskRules.md, DevRules.md를 재확인하고, `SceneSetupEditor.cs`의 Step 순서(Step8_ConnectBallLauncherRefs가 LaunchPoint 생성 담당)와 `Character_main_weapon.png.meta` 현재 값(rect 59×116, alignment 0, spritePivot 0.5/0.5)을 직접 열람해 대조
+
+### 결과
+- plan.md 생성 완료: 구현 목표 / 단계별 작업 계획(1단계 meta rect 불일치 우선 수정 → 2단계 pivot 재조정 (0.18,0.29) → 3단계 각도 오프셋 18도 확정(부호는 구현 중 시각 검증) → 4단계 Body/Head/Weapon 프리팹 계층 및 배치 좌표 → 5단계 `CharacterAimController.cs` 작성 → 6단계 SceneSetupEditor에 씬 배치 Step 추가 및 LaunchPoint 정합) / 예상 변경·생성 파일 목록(4건) / 주의사항 순서로 작성
+- 모든 실측 수치는 추정치이며 Unity 에디터에서 시각적으로 검증·미세조정이 필요하다는 점을 단계별 서술과 주의사항 양쪽에 명시
+
+### 주요 결정사항
+- weapon meta rect 수정(1단계)을 다른 모든 수치 확정의 전제 조건으로 두어 단계별 계획 맨 앞에 배치
+- Character-LaunchPoint 정합 방식은 "LaunchPoint를 Character의 자식으로 재구성"이 아니라 "같은 월드 좌표에 배치"를 채택 — 기존 BallLauncher/LaunchPoint 계층 구조(Step8, WallFitter의 Step6 참조 등)를 건드리지 않기 위함
+- CharacterAimController.cs는 신규 `Assets/_Project/Scripts/Character/` 폴더에 배치(기존 Ball/Monster/UI/Skill 폴더 구조와 동일한 방식), 회전 속도·클램프 각도·오프셋 각도는 SO 분리 없이 `[SerializeField] private`로 노출
+- 이번 작업 범위(캐릭터 프리팹 + 무기 회전)에 액티브 스킬 이펙트나 CharacterManager HP/XP 로직 변경은 포함하지 않는다고 plan.md에 명시
+- AGENTS.md는 이번에도 별도 갱신하지 않음(개별 task 폴더 목록을 관리하지 않는 기존 정책 유지)
+- Bash 미사용, Read/Write/Edit/Glob/Grep만 사용해 작업 완료
