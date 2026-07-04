@@ -740,3 +740,21 @@
 - GameplayMechanics.md 섹션 1 상단의 "확정된 스펙 서술"(원본 게임 확인 내용) 문구 자체는 사용자 지시대로 삭제/재작성하지 않고 그대로 유지 — 이슈 4 research.md에서 이미 이 문구가 절대 조준 모델과 더 잘 맞는다고 분석이 끝난 상태이므로, 별도 문구 수정 없이 "구현 현황"에서 이 부합 사실만 확인하는 방식으로 처리(문구를 다시 쓰면 오히려 원본 확인 기록의 원문성이 훼손된다고 판단)
 - 기존 내용은 어디에도 삭제/재작성하지 않고 "완료" 상태를 반영하는 문장만 각 문서에 추가하는 방식으로만 편집(사용자가 명시적으로 요청한 제약)
 - AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 이번에도 갱신하지 않음
+
+---
+
+### 작업 내용 (추가)
+- Gameplay HUD and Skill Selection UI task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/20-04_gameplay-hud-and-skill-selection-ui/research.md`
+- 작성 전 `TaskRules.md`, `AGENTS.md`, `HUDPanel.cs`, `SkillSelectionPanel.cs`, `SkillCardUI.cs`, `SkillSlotGroup.cs`, `SkillSlotIcon.cs`, `SkillData.cs`, `SkillManager.cs`, `WaveManager.cs`, `WaveTableData.cs`, `UIRules.md`, `targetUI/` 파일 목록을 전부 Read/Glob으로 재확인
+
+### 결과
+- research.md 생성 완료: HUD(`HUDPanel.cs`)는 텍스트만 존재하고 시각적 진행바가 전혀 없음, `_progressText`가 계산하는 %는 스테이지 전체가 아닌 "현재 웨이브 내" remaining/total 기준임(`WaveManager._currentWaveTotalCount`가 웨이브 시작마다 초기화됨)을 코드로 확인해 기록, `WaveTableData`/`WaveEntry`에 스테이지명 필드 자체가 없음을 확인, UIRules.md의 `WaveBar`는 문서 정의만 있고 실구현 없음을 재확인
+- 삼택지 파트: `SkillCardUI`에 New!/희귀도 필드 없음, `SkillData`에 희귀도 필드 없음(PDF에도 언급 없음)을 확인, `SkillSlotGroup`/`SkillSlotIcon`은 이미 구현되어 개편 대상 아님으로 명시
+- "결론" 섹션에 사용자 확정 결정사항 6가지(에셋 기능 먼저, 스테이지 타이틀 방식 변경, 스코어텍스트/발사준비인디케이터 제거, New!라벨 포함/희귀도 제외, WaveBar 신규 구현, HUD+삼택지 통합 문서화)를 구현 대상으로 정리
+- 코드 수정 없음, research.md만 작성(사용자 지시대로 plan.md는 작성하지 않음)
+
+### 주요 결정사항
+- research.md는 "코드를 아직 수정하지 않은 상태"의 조사/결정사항 정리 문서라는 지시에 따라 구현 스텝(예: Slider vs Image fillAmount 선택, New! 판별 로직 구체 설계 등)은 일절 다루지 않고 사실관계와 갭, 확정된 범위만 기록
+- HUD % 진행률의 "현재 웨이브 기준 계산"과 레퍼런스의 "TopBar(스테이지 전체 뉘앙스) + WaveBar(웨이브 진행 뉘앙스) 이원 구조" 사이의 불일치를 문제점 섹션에 명시적으로 남겨 plan.md 단계에서 재정의하도록 유도
+- AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 갱신하지 않음
