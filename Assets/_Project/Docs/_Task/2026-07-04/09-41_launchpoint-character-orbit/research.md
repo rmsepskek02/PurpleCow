@@ -115,3 +115,34 @@
 - `ReturnPoint`(귀환 목적지, Body 위치)는 이번 수정과 무관하며 기존 그대로 유지한다.
 - `CharacterAimController._weaponLength`(0.6612f) 필드는 더 이상 게임플레이 계산(발사 위치)에 쓰이지 않게 된다. 무기 스프라이트 자체의 시각적 회전/반전에는 계속 관여할 수 있으므로 완전히 무의미한 필드는 아니지만, "발사 위치를 정하는 값"이라는 기존 의미는 사라진다.
 - 무기(Weapon)/머리(Head)의 회전·반전 로직 자체(각도 크기에 비례해 무기는 크게 회전, 머리는 살짝만 회전, 조준 방향이 12시 기준 좌/우 중 어느 쪽인지에 따라 반전)는 순수 시각적 표현이며, 이번 재검토로 "이 로직이 볼 발사 위치와는 무관한 장식 요소"라는 점이 명확해졌을 뿐, 회전/반전 로직 자체를 바꾸는 것은 아니다(회전/반전 로직 변경은 별도 task인 캐릭터 비주얼 구현 쪽에서 다룬 내용이며, 이 문서에서는 "게임플레이 계산과 무관한 장식 요소임을 확인"이라는 결론만 남긴다).
+
+---
+
+## 재검토 2 — 좌우 반전 시 파츠 위치 이동 버그 발견
+
+이 섹션은 위 "재검토"와는 별개로, `CharacterAimController.cs`의 좌우 반전(`flipX`) 처리 자체에 있는 버그를 새로 발견해 정리한 것이다. 사용자가 실제 플레이 테스트 스크린샷(우리 구현물)을 확인한 결과 좌측 조준 시 캐릭터/무기 방향이 뒤틀려 보이는 문제를 확인했고, 원본 게임 기준으로 대조해 원인과 정답을 확정했다.
+
+### 문제
+
+`CharacterAimController.Update()`(현재 코드)에 다음과 같은 로직이 있다.
+
+```csharp
+float sign = _facingRight ? 1f : -1f;
+_headRenderer.transform.localPosition   = new Vector3(_headBasePosition.x * sign, _headBasePosition.y, _headBasePosition.z);
+_bodyRenderer.transform.localPosition   = new Vector3(_bodyBasePosition.x * sign, _bodyBasePosition.y, _bodyBasePosition.z);
+_weaponRenderer.transform.localPosition = new Vector3(_weaponBasePosition.x * sign, _weaponBasePosition.y, _weaponBasePosition.z);
+```
+
+이 로직은 좌우 반전(`flipX`) 시 Head/Body/Weapon의 로컬 X 좌표 부호까지 함께 뒤집어, 파츠 위치 자체가 반대쪽으로 이동하게 만든다. 그 결과 좌측 조준 시 캐릭터가 오른쪽을 보고 무기가 캐릭터 오른쪽에서 왼쪽을 향하는 등 반전이 뒤틀려 보이는 현상이 발생했다.
+
+이 로직은 이전 task(`2026-07-04/01-38_character-visual-implementation`)의 qa 검토에서 "Major: flipX가 Transform 위치에 영향을 주지 않아 반전 시 파츠 위치가 안 맞는 문제"를 고치겠다며 도입된 것이었는데, 사용자가 실제 원본 게임(통통 디펜스: 핀볼 마스터)을 기준으로 확인해준 정답은 다음과 같다.
+
+**캐릭터는 좌우 반전(`flipX`)만 될 뿐, 위치 자체는 이동하지 않는다.** 즉 파츠 위치를 반전 상태에 따라 이동시키는 것 자체가 잘못된 설계였으며, 앞선 qa 검토에서의 수정 방향 자체가 오류였음이 이번에 확인되었다.
+
+### 확정된 수정 사항
+
+- `CharacterAimController.cs`에서 위 "반전 시 X 좌표 부호를 뒤집어 위치를 이동시키는" 로직(`sign` 변수 및 `localPosition` 재대입 3줄)을 **제거**한다.
+- Head/Body/Weapon은 각자의 기존 로컬 위치(`_headBasePosition`/`_bodyBasePosition`/`_weaponBasePosition`, `Start()`에서 캐싱된 값)를 반전 여부와 무관하게 **그대로 유지**한다.
+- 좌우 반전은 오직 `SpriteRenderer.flipX`만으로 처리한다(기존 확정 사항 그대로 유지, 이번에 바뀌는 건 "위치까지 같이 옮기던 부분"을 없애는 것뿐이다).
+- 회전 로직(Weapon은 조준 방향을 그대로 따라가는 회전, Head는 감쇠된 회전, Body는 회전 없음)은 이번 수정과 무관하며 그대로 유지한다.
+- 이로써 이전 task(01-38, 캐릭터 비주얼 구현)의 qa 검토에서 "Major: flipX가 Transform 위치에 영향을 주지 않아 반전 시 파츠 위치가 안 맞는 문제"를 고치겠다며 도입했던 위치 미러링 로직은, 사실 애초에 필요 없는(오히려 잘못된) 수정이었음이 이번에 확인되었다.
