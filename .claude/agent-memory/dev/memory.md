@@ -1103,3 +1103,22 @@
 - `InputHandler.cs`의 다른 로직(터치/마우스 처리, `_isDragging` 상태 판정 등)은 전혀 수정하지 않음 — `LaunchPoint` 참조 부분만 교체
 - `Assets/_Project/Scripts` 전체에서 `\.LaunchPoint\b` 재검색 결과 잔여 참조 없음 확인
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+---
+
+## 2026-07-04
+
+### 작업: CharacterAimController 좌우 반전 시 파츠 위치 이동 로직 제거
+
+**작업 내용:**
+- 사용자가 실제 플레이 테스트에서 좌우 반전 시 Head/Body/Weapon 파츠 위치까지 반대쪽으로 이동하는 것이 시각적으로 잘못됐음을 확인 — 원본 게임 기준 flipX만 되어야 하고 파츠 위치는 이동하지 않아야 함
+- 오케스트레이터 직접 지시로 진행 (task 문서 없음 — 삭제 범위가 코드 블록 1개로 명확히 한정된 수정 건)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs` — `Update()` 내부에서 `flipX` 대입 직후에 있던 `sign` 계산 및 `_headRenderer`/`_bodyRenderer`/`_weaponRenderer`의 `localPosition`을 `_headBasePosition`/`_bodyBasePosition`/`_weaponBasePosition`에 부호를 곱해 재대입하던 5줄(주석 포함 7줄) 블록 완전 삭제
+
+**주요 결정사항:**
+- `_headBasePosition`/`_bodyBasePosition`/`_weaponBasePosition` 필드와 `Start()`의 캐싱 코드는 지시대로 삭제하지 않고 그대로 유지 — 다만 이제 이 세 필드는 `Start()`에서 할당만 되고 어디서도 읽히지 않아 컴파일러가 CS0414(할당되었지만 사용되지 않음) 경고를 낼 수 있음을 확인하고 보고함 (필드 삭제는 요청 범위 밖이라 진행하지 않음)
+- `flipX` 반전 로직과 Weapon/Head 회전 로직(Body는 회전 없음)은 그대로 유지, 손대지 않음
+- 이 파일 1개만 수정, 다른 파일은 건드리지 않음
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
