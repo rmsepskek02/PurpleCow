@@ -800,3 +800,44 @@
 - Stretch 방식(기기별 가로/세로 독립 배율)이 유지되는 한 "모든 기기에서 최종 화면상 격자가 항상 정사각형"임을 수학적으로 보장하기 어렵다는 점, 반대로 "텍스처 자체의 비정사각형 셀을 보정 계수로 정사각형화"하는 것은 Stretch 정책과 공존 가능하다는 점을 구분해 서술 — 이 구분이 이번 문서의 핵심 목적이므로 결론에서도 재차 강조
 - `ProjectHistory.md`에 이미 기록된 "Wall 좌표가 배경 격자 그림과 애초에 픽셀 단위로 일치하지 않았고, 실기기 테스트로 육안 자연스러움 기준까지만 조정해 확정한 선례"를 근거로, 몬스터 스폰용 논리적 그리드도 배경 텍스처와 완전한 픽셀 정합이 필수는 아닐 수 있다는 점을 파생 쟁점으로 함께 제시
 - AGENTS.md는 "개별 task 폴더 목록은 이 문서에서 별도로 관리하지 않는다"는 기존 방침에 따라 이번 task 등록을 위한 갱신은 하지 않음
+
+---
+
+### 작업 내용 (추가)
+- 배경 격자 정사각형 보정 task plan.md 신규 생성 (research.md 후속, 오케스트레이터·사용자 논의로 확정된 해결 방향을 그대로 반영)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/16-40_background-square-grid-fix/plan.md`
+- 작업 전 research.md, TaskRules.md, `BackgroundFitter.cs`, `WallFitter.cs`, `SceneSetupEditor.cs`(`Step4_PlaceBackground`/`ConnectBackgroundFitterRefs`/`Step5_PlaceWallsAndGround`/`Step6_SetupWallFitter` 라인 번호 포함)를 모두 Read로 직접 재확인. 톤/형식 일관성을 위해 `_Task/2026-07-03/12-30_background-resolution-fix/plan.md`(가장 유사한 선례)도 Read로 참고
+
+### 결과
+- plan.md 생성 완료: 확정된 해결 방향("격자 영역 기준 균일 스케일 + 장식 테두리는 여백으로 흡수")을 그대로 반영한 2단계 계산 공식(1. 고정 상수 `_cellAspectCorrection≈1.647`/`_gridAreaWidth=14.53`/`_gridAreaHeight=10.16`으로 격자 셀 정사각형 보정, 2. `Mathf.Max` Cover 방식 균일 배율 계산 후 `scaleY = uniformScale × _cellAspectCorrection`)을 구체 코드 스니펫으로 작성. 이 공식이 "셀 정사각형 보장"과 "격자 영역 Cover 보장" 두 조건을 동시에 만족함을 수식으로 직접 검증한 뒤 문서에 반영
+- 단계별 계획 5단계 구성: 1단계(공식 정리), 2단계(`BackgroundFitter.cs` 계산식 교체), 3단계(`WallFitter.cs` 동일 계산식 교체 + `_native*` 값 재조정 필요성 명시), 4단계(`SceneSetupEditor.cs`의 `ConnectBackgroundFitterRefs()`/`Step6_SetupWallFitter()`에 신규 필드 3개 주입 코드 추가), 5단계(사용자 로컬 Scene Setup 재실행 + 실기기 검증 필요성을 이번 task 범위 밖으로 명시)
+- 예상 변경 파일 목록(`BackgroundFitter.cs`/`WallFitter.cs`/`SceneSetupEditor.cs` 수정, `SampleScene.unity`는 간접 영향, PNG는 변경 없음)과 주의사항(리소스 미수정, 두 스크립트 계산식 일관성 필수, 벽/발사 위치 직접 영향, 원격 환경엔 Unity 없어 실기기 검증 불가, `_zoomFactor` 유지 여부는 dev 판단, 기존 중복 계산 구조를 리팩토링하지 않음) 작성 완료
+- 문서 말미에 사용자의 명시적 승인 후에만 구현 시작한다는 문구 포함
+
+### 주요 결정사항
+- 텍스처 고유 보정(고정, 기기 무관)과 기기별 Cover 균일 배율(가변)을 명확히 분리된 2개 레이어로 공식화 — `scaleX = uniformScale`, `scaleY = uniformScale × _cellAspectCorrection` 형태로, "가로/세로 동일 배율"이 문자 그대로 `scaleX == scaleY`를 의미하는 게 아니라 "기기별 가변 배율 레이어가 두 축에 동일하게 적용된다"는 뜻임을 계산식과 검증 과정을 통해 명확히 하고 plan.md에 그대로 기술
+- Cover 기준값을 전체 스프라이트 크기가 아닌 "격자 영역"의 실측 월드유닛 크기(`_gridAreaWidth=14.53`, `_gridAreaHeight=10.16`, 이미지 픽셀 실측 x199~1652/y540~1556 기준)로 새로 정의 — 기존 `_spriteRenderer.sprite.bounds.size` 참조는 새 계산식에서 불필요해지지만, 외과적 변경 원칙에 따라 필드 자체를 삭제하는 리팩토링은 하지 않기로 명시
+- `WallFitter`의 `_nativeLeftX`/`_nativeRightX`/`_nativeTopY`/`_nativeBottomY`/`_nativeLaunchPointY` 5개 값은 계산식 교체만 하고 값 자체는 이번 코드 구현에서 건드리지 않음 — 스케일 비율 구조가 근본적으로 바뀌므로(scaleY가 항상 scaleX×1.647의 고정비) 재조정은 사용자의 로컬 실기기 검증 몫으로 명시적으로 넘김
+- `BackgroundFitter`/`WallFitter`의 기존 계산 로직 중복 구조(공용 유틸리티 미분리)는 이번에도 그대로 유지 — 요청 범위를 벗어나는 리팩토링이므로 손대지 않음
+- Bash 미사용, Read/Write만 사용해 작업 완료
+
+---
+
+### 작업 내용 (추가)
+- 배경 격자 정사각형 보정 task plan.md 사용자 피드백 반영 수정 (Bash 미사용, Read/Edit만 사용)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/16-40_background-square-grid-fix/plan.md`
+- 사용자 요청: 이미 여러 Step으로 커진 기존 `SceneSetupEditor.cs`를 신규 필드 3개 주입을 위해 계속 편집하면 혼선이 생긴다는 우려로, `SceneSetupEditor.cs`는 전혀 건드리지 않고 신규 필드 3개(`_cellAspectCorrection`/`_gridAreaWidth`/`_gridAreaHeight`) 주입 전용의 완전히 별도인 신규 에디터 스크립트를 작성하는 방식으로 변경. `BackgroundFitter.cs`/`WallFitter.cs`(런타임 계산식 자체 교체)는 기존 계획대로 "수정"이 맞다는 것을 사용자가 재확인 — 바뀐 범위는 4단계(에디터 연동 부분)뿐
+
+### 결과
+- 4단계 제목/내용을 "`SceneSetupEditor.cs` 연동"에서 "`BackgroundGridFitSetupEditor.cs` 신규 작성 (필드 3개 주입 전용)"으로 전면 교체: 신규 파일 `Assets/_Project/Scripts/Editor/BackgroundGridFitSetupEditor.cs`, 별도 `MenuItem`(`PurpleCow/Setup/Background Grid Fit Setup`), 기존 `SceneSetupEditor.cs`/`MonsterSetupEditor.cs`와 동일한 탐색(`GameObject.Find`/`FindObjectOfType`) + `SerializedObject`/`FindProperty` 주입 패턴을 그대로 따르되 완전히 독립된 신규 스크립트로 작성한다는 점을 명시
+- 5단계(사용자 로컬 검증)에 "신규 메뉴 `Background Grid Fit Setup`을 별도로 실행" 문구 반영, 기존 `Scene Setup` 메뉴는 이번에 수정되지 않았으므로 그대로 두고 신규 메뉴만 추가 실행하면 된다는 점 명시
+- 예상 변경/생성 파일 목록에서 `SceneSetupEditor.cs` 항목 삭제, `BackgroundGridFitSetupEditor.cs`(신규 생성) 항목으로 교체
+- 주의사항에 "기존 `SceneSetupEditor.cs`는 이번 작업에서 수정하지 않으며, 신규 필드 주입은 별도의 새 에디터 스크립트로 분리한다" 문장 추가
+- 문서 전반의 교차 참조(3단계의 "4단계 참고"→"5단계 참고", 파일 목록/주의사항의 "Scene Setup 재실행"→"Background Grid Fit Setup 메뉴 실행") 일관성 있게 함께 수정
+- 1~3단계(구현 목표, 계산 공식, `BackgroundFitter.cs`/`WallFitter.cs` 수정 계획)는 요청대로 전혀 건드리지 않음
+
+### 주요 결정사항
+- `BackgroundFitter.cs`/`WallFitter.cs`는 계산식 자체를 바꾸는 목적이므로 기존 파일 "수정"이 맞고, 에디터 스크립트만 "신규 작성"으로 분리하는 것이 이번 피드백의 핵심 — 두 성격(런타임 스크립트 수정 vs 에디터 스크립트 신규 분리)을 문서에서 명확히 구분해 서술
+- 신규 에디터 스크립트는 `BackgroundFitter`와 `WallFitter` 두 컴포넌트 모두에 동일한 필드 3개 값을 주입하도록 범위를 명시 (씬 오브젝트 탐색은 기존 관행 그대로)
+- `_native*` 값 재조정이 필요해질 경우 어느 스크립트(기존 `SceneSetupEditor.cs` vs 신규 `BackgroundGridFitSetupEditor.cs`)에 반영할지는 이번 plan.md에서 미리 결정하지 않고 사용자의 실기기 검증 이후 시점으로 판단을 유보
+- Bash 미사용, Read/Edit만 사용해 작업 완료
