@@ -1,12 +1,13 @@
 # Plan — Ball Trajectory Aim Fix
 
-이 문서는 `research.md`에서 파악한 세 가지 문제(궤적 상시 표시 미구현, 터치 조준 정확도 왜곡, 궤적 프리뷰 색상/크기 불일치)에 대한 구체적인 구현 계획을 다룬다. `TrajectoryPreview.cs`를 이벤트 전용 구조에서 `Update()` 기반 매 프레임 갱신 구조로 전환하고, `InputHandler.cs`의 방향 계산을 스크린 좌표 기반에서 월드 좌표 기반으로 바꾸며, `TrajectoryPreview.cs`의 색상/크기 관련 필드 값을 원본 게임에 맞게 조정한다. 문서 갱신 대상인 `UIRules.md` 섹션 11도 함께 수정한다. 이 문서는 계획 문서이므로 실제 코드 수정은 진행하지 않는다.
+이 문서는 `research.md`에서 파악한 네 가지 문제(궤적 상시 표시 미구현, 터치 조준 정확도 왜곡, 궤적 프리뷰 색상/크기 불일치, 그리고 이슈 2 구현 완료 후 실제 플레이 테스트에서 재발견된 조준 모델 자체의 괴리감)에 대한 구체적인 구현 계획을 다룬다. `TrajectoryPreview.cs`를 이벤트 전용 구조에서 `Update()` 기반 매 프레임 갱신 구조로 전환하고, `InputHandler.cs`의 방향 계산을 스크린 좌표 기반에서 월드 좌표 기반으로 바꾸며, `TrajectoryPreview.cs`의 색상/크기 관련 필드 값을 원본 게임에 맞게 조정한다. 이후 이슈 1~3이 구현 완료된 뒤 실제 플레이 테스트에서 재발견된 이슈 4에 대해서는, `InputHandler.cs`의 조준 모델을 상대 드래그 방식에서 절대 조준 방식으로 전환한다. 문서 갱신 대상인 `UIRules.md` 섹션 11도 함께 수정한다. 이 문서는 계획 문서이므로 실제 코드 수정은 진행하지 않는다.
 
 ## 구현 목표
 
 - 궤적 프리뷰가 터치 여부와 무관하게 항상 화면에 표시되고, 몬스터 이동을 포함해 매 프레임 실시간으로 갱신되도록 한다.
 - 터치 조준 시 손가락이 가리키는 실제 방향과 궤적 각도가 일치하도록 스크린→월드 변환을 적용한다.
 - 궤적 프리뷰(레드닷/링/점선)의 색상과 크기를 원본 게임(통통 디펜스: 핀볼 마스터) 레퍼런스에 맞게 조정한다.
+- 터치 시작 순간부터 궤적이 손가락 위치를 절대적으로(발사 지점 기준) 따라가도록 조준 모델을 상대 드래그 방식에서 절대 조준 방식으로 전환한다.
 - 위 변경 사항 중 스펙 문서와 상충하는 부분(`UIRules.md` 섹션 11)을 함께 최신화한다.
 
 ## 단계별 작업 계획
@@ -42,6 +43,17 @@
 4. `_lineColor` 기본값을 `Color.white`에서 살짝 톤 다운된 회백색으로 변경한다. 예: `[SerializeField] private Color _lineColor = new Color32(225, 225, 220, 255);`.
 5. 위 필드는 모두(또는 `DASH_WORLD_SIZE` 제외) `[SerializeField]`이므로, 코드의 기본값만으로는 화면에 반영되지 않을 수 있다. 씬/프리팹 인스펙터에 이미 개별 오버라이드 값이 저장되어 있는 경우 그 값이 우선 적용되므로, 구현 단계에서 실제 씬/프리팹의 인스펙터 값도 함께 확인하고 필요 시 리셋 또는 재적용해야 한다.
 
+### 이슈 4: 조준 모델 전환 — 상대 드래그(relative drag) → 절대 조준(absolute aim) (`InputHandler.cs`)
+
+이슈 2 수정(스크린→월드 변환)이 구현 완료되어 main에 반영된 이후 실제 플레이 테스트에서 재발견된 문제다(research.md 이슈 4 참고). 터치 시작 지점을 고정 기준점으로 삼아 그로부터의 상대적 이동량을 방향으로 쓰는 현재 모델 대신, 발사 지점(`BallLauncher.Instance.LaunchPoint`)에서 현재 손가락 위치를 향하는 절대 방향을 매 순간 계산하는 모델로 조준 방식 자체를 전환한다.
+
+1. `_dragStartPosition` 필드를 제거한다. 절대 조준 모델에서는 "터치 시작 지점"이라는 기준점 개념 자체가 더 이상 필요 없기 때문이다.
+2. 중복 계산을 피하기 위해 `private Vector2 ComputeAimDirection(Vector2 screenPos)` private 헬퍼 메서드를 새로 추가한다. 이 메서드는 `_mainCamera.ScreenToWorldPoint(screenPos)`로 구한 월드 좌표에서 `BallLauncher.Instance.LaunchPoint.position`을 뺀 뒤 `.normalized`로 정규화한 `Vector2`를 반환한다.
+3. `pressedPos.HasValue` 분기(터치 시작 프레임, 현재 53~58행)에서, 기존에 `_dragStartPosition`을 저장만 하던 로직을 제거하고, `_isDragging = true; OnAimBegin?.Invoke();`에 이어서 곧바로 `ComputeAimDirection(pressedPos.Value)`로 방향을 계산해 `OnDrag?.Invoke(direction)`을 발행한다. 이로써 터치를 시작하는 바로 그 프레임부터 조준 방향이 확정되어 `OnDrag`가 즉시 발행된다.
+4. `currentPos.HasValue && _isDragging` 분기(드래그 중, 현재 60~65행)에서도 동일하게 `ComputeAimDirection(currentPos.Value)`로 방향을 계산해 `OnDrag?.Invoke(direction)`을 발행하도록 바꾼다. 기존의 "월드 currentPos - 월드 dragStartPosition" 델타 계산 대신, 매 프레임 "발사 지점 → 현재 손가락 위치"를 새로 계산하는 방식이므로 손가락의 실제 화면 위치를 항상 따라가게 된다.
+5. `released && _isDragging` 분기(릴리즈)는 `_dragStartPosition`을 참조하지 않으므로 별도 수정이 필요 없다.
+6. `Camera.main` 캐싱(`_mainCamera` 필드, `Awake()`)은 이슈 2에서 이미 구현되어 있으므로 그대로 재사용한다. 이번 변경으로 새로 추가되는 의존성은 `BallLauncher.Instance.LaunchPoint` 하나뿐이다.
+
 ### 문서 갱신: `UIRules.md` 섹션 11
 
 1. "조준 중(터치 시작~릴리즈)에만 표시되고, 조준하지 않을 때는 숨겨진다." 문구를, "터치 여부와 무관하게 항상 표시되며, 매 프레임 실시간으로 갱신된다(터치 중에는 드래그 방향을, 터치하지 않을 때는 마지막 조준 방향을 기준으로 갱신)."는 취지로 수정한다.
@@ -61,3 +73,4 @@
 - `InputHandler.cs`에서 `Camera.main`을 `Awake()`에서 캐싱하므로, 씬에 `MainCamera` 태그가 정확히 붙은 카메라가 존재하는지 사전에 확인해야 한다(태그가 없거나 다른 카메라에 붙어 있으면 `Camera.main`이 `null`을 반환해 예외가 발생할 수 있음).
 - 세 이슈 모두 `DevRules.md`의 네이밍/코딩 컨벤션(private 필드 `_camelCase`, `[SerializeField]` 필드도 `_camelCase`, `Awake()`에서 컴포넌트/참조 캐싱 등)을 따라야 한다.
 - 이슈 1 변경(궤적 상시 표시)과 함께 `UIRules.md` 섹션 11 문서 갱신이 누락되지 않도록 코드 변경과 문서 변경을 같은 작업 범위로 처리해야 한다.
+- 이슈 4 변경으로 `InputHandler.cs`가 `BallLauncher.Instance.LaunchPoint`를 참조하는 새로운 의존성이 생긴다. `InputHandler`와 `BallLauncher` 둘 다 씬에 항상 존재하는 Singleton이므로 참조 자체는 안전하다고 판단되지만, `Awake()`/`Start()` 실행 순서상 `InputHandler`가 `BallLauncher.Instance`에 접근하는 시점에 `BallLauncher`의 `Awake()`(Instance 할당)가 이미 끝나 있는지, 그리고 `_launchPoint` 필드가 인스펙터에서 실제로 할당되어 `LaunchPoint`가 null이 아닌지 구현 단계에서 함께 확인해야 한다.
