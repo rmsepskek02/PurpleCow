@@ -1196,3 +1196,34 @@
 - 두 수치(`spritePivot`/`pivot` 값, Weapon localPosition 보정값)는 오케스트레이터가 참고 이미지 픽셀 분석으로 산출한 추정치이며, **Unity Editor에서의 실제 시각 확인은 아직 이뤄지지 않음** — 사용자가 직접 에디터에서 확인 필요.
 - 참고로 `Character_main_weapon.png.meta`의 실제 sprite rect width는 59px(52행 근처 spriteSheet에 명시)이나, 오케스트레이터가 제시한 계산식은 64px 기준으로 산출됨 — 이 차이는 보정하지 않고 지시받은 값 그대로 적용함 (오케스트레이터에게 참고용으로 보고).
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 docs 에이전트 작업과 함께 확인 후 직접 처리 예정).
+
+---
+
+## 2026-07-04
+
+### 작업: CharacterAimController — `_facingRight` 초기값 버그 및 Weapon 어깨 위치 좌우 반전 수정
+
+**배경:**
+- 지난 커밋(`0f3455b`)에서 flipX 공식을 `!_facingRight` → `_facingRight`로 고쳤으나, 이에 짝을 맞춰야 할 `_facingRight` 초기값과 Weapon 부착 위치 반전 로직이 누락되어 있었음.
+
+**수정 파일:** `Assets/_Project/Scripts/Character/CharacterAimController.cs` (단일 파일만 수정)
+
+**수정 1 — `_facingRight` 초기값:**
+- `private bool _facingRight = true;` → `private bool _facingRight = false;`
+- 이유: flipX 공식이 `_facingRight`를 그대로 쓰므로, 게임 시작 직후 조준 입력 전(데드존 내 `direction.x`)에 `_facingRight`가 갱신되지 않아 초기값이 그대로 flipX에 반영됨. `true`로 남아있으면 기본 왼쪽 포즈가 아니라 반전된 포즈로 첫 프레임에 보이는 버그가 있었음.
+
+**수정 2 — Weapon 어깨 위치(왼쪽/오른쪽) 좌우 반전:**
+- `[SerializeField] private Vector3 _weaponLeftShoulderLocalPosition = new Vector3(-0.177f, -0.36f, 0f);` 필드 추가 (`CharacterLaunchOrbitSetupEditor.cs`가 Weapon 생성 시 설정하는 값과 동일하게 맞춤 — 기존 스타일과 일관되게 SerializeField 노출 방식 채택, Awake 캐싱 방식 대신 선택).
+- `Update()`에 다음 로직 추가:
+  ```csharp
+  float weaponX = _facingRight ? -_weaponLeftShoulderLocalPosition.x : _weaponLeftShoulderLocalPosition.x;
+  _weaponRenderer.transform.localPosition = new Vector3(weaponX, _weaponLeftShoulderLocalPosition.y, _weaponLeftShoulderLocalPosition.z);
+  ```
+- Body/Head는 위치 관련 코드를 건드리지 않음 (flipX만 계속 적용, 위치 불변 유지). `CharacterLaunchOrbitSetupEditor.cs`도 건드리지 않음(생성 시 초기값이 `_weaponLeftShoulderLocalPosition` 기본값과 여전히 일치).
+
+**검증:**
+- grep으로 `_facingRight` 및 weapon position(`0.177f`, `weaponRenderer`) 참조 전수 확인 — 활성 코드 중 `CharacterAimController.cs`와 `CharacterLaunchOrbitSetupEditor.cs`(Weapon 생성 시 초기 localPosition 설정, 미변경) 외에는 참조 없음. 나머지는 `Docs/_Task/` 등 과거 기록 문서뿐.
+
+**주요 결정사항:**
+- Weapon 기준 위치를 캐싱(Awake)이 아닌 SerializeField로 노출하는 방식을 채택 — 기존 필드들(`_headDampFactor`, `_flipDeadzone` 등)이 모두 SerializeField 인스펙터 노출 스타일이라 일관성 유지.
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 docs 작업과 함께 확인 후 직접 처리 예정).

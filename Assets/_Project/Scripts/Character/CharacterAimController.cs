@@ -11,7 +11,11 @@ public class CharacterAimController : Singleton<CharacterAimController>
     [SerializeField] private float _headDampFactor = 0.25f;
     [SerializeField] private float _flipDeadzone = 0.05f;
 
-    private bool _facingRight = true;
+    // Weapon의 왼쪽 어깨(기본 포즈, _facingRight=false) 기준 localPosition.
+    // CharacterLaunchOrbitSetupEditor.cs에서 Weapon 생성 시 설정하는 값과 일치해야 한다.
+    [SerializeField] private Vector3 _weaponLeftShoulderLocalPosition = new Vector3(-0.177f, -0.36f, 0f);
+
+    private bool _facingRight = false;
 
     public Vector2 BodyPosition => _bodyRenderer.transform.position;
 
@@ -33,6 +37,11 @@ public class CharacterAimController : Singleton<CharacterAimController>
 
         // Weapon: 감쇠 없이 조준 방향을 거의 그대로 따라간다.
         _weaponRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, aimAngle);
+
+        // Weapon 부착 위치는 flipX(비트맵 반전)만으로 부족해 어깨 자체가 좌우로 이동해야 한다.
+        // 기준값은 왼쪽 어깨(_facingRight=false) 위치이며, 오른쪽 조준 시 X 부호를 반전한다.
+        float weaponX = _facingRight ? -_weaponLeftShoulderLocalPosition.x : _weaponLeftShoulderLocalPosition.x;
+        _weaponRenderer.transform.localPosition = new Vector3(weaponX, _weaponLeftShoulderLocalPosition.y, _weaponLeftShoulderLocalPosition.z);
 
         // Head: 감쇠 계수를 적용해 약하게 갸웃하는 정도로만 회전한다.
         _headRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, aimAngle * _headDampFactor);
