@@ -18,10 +18,8 @@ public static class SceneSetupEditor
         Step5_PlaceWallsAndGround();
         Step7_PlaceManagers();
         Step8_ConnectBallLauncherRefs(ballPrefab);
-        Step6_SetupWallFitter();
         Step9_ConnectBallPrefabRefs();
         Step10_ConnectWaveManagerRefs();
-        Step11_SetupCharacterVisual();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -299,74 +297,6 @@ public static class SceneSetupEditor
     }
 
     // ──────────────────────────────────────────
-    //  Step 11. Character 시각 오브젝트 배치
-    // ──────────────────────────────────────────
-
-    private static void Step11_SetupCharacterVisual()
-    {
-        GameObject launcherObj = GameObject.Find("BallLauncher");
-        if (launcherObj == null)
-        {
-            Debug.LogWarning("[SceneSetupEditor] BallLauncher 오브젝트를 찾을 수 없어 Character 배치를 건너뜁니다.");
-            return;
-        }
-
-        // Character는 BallLauncher의 자식 오브젝트다. 초기 위치는 CharacterLaunchOrbitSetupEditor가 담당한다.
-        Transform characterTransform = launcherObj.transform.Find("Character");
-        GameObject characterObj;
-        if (characterTransform == null)
-        {
-            characterObj = new GameObject("Character");
-            characterObj.transform.SetParent(launcherObj.transform);
-            Debug.Log("[SceneSetupEditor] Character 생성 완료.");
-        }
-        else
-        {
-            characterObj = characterTransform.gameObject;
-        }
-
-        SpriteRenderer bodyRenderer   = CreateCharacterPart(characterObj.transform, "Body",   "Assets/_Project/Sprites/Character/Character_Main_body.png",  0, new Vector3(0.42f, -0.75f, 0f));
-        SpriteRenderer headRenderer   = CreateCharacterPart(characterObj.transform, "Head",   "Assets/_Project/Sprites/Character/Character_Main_head.png",  1, new Vector3(0.51f, -0.23f, 0f));
-        SpriteRenderer weaponRenderer = CreateCharacterPart(characterObj.transform, "Weapon", "Assets/_Project/Sprites/Character/Character_main_weapon.png", 2, Vector3.zero);
-
-        CharacterAimController aimController = characterObj.GetComponent<CharacterAimController>();
-        if (aimController == null)
-            aimController = characterObj.AddComponent<CharacterAimController>();
-
-        SerializedObject so = new SerializedObject(aimController);
-        so.FindProperty("_bodyRenderer").objectReferenceValue   = bodyRenderer;
-        so.FindProperty("_headRenderer").objectReferenceValue   = headRenderer;
-        so.FindProperty("_weaponRenderer").objectReferenceValue = weaponRenderer;
-        so.ApplyModifiedPropertiesWithoutUndo();
-
-        Debug.Log("[SceneSetupEditor] Character 시각 오브젝트 배치 완료.");
-    }
-
-    private static SpriteRenderer CreateCharacterPart(Transform parent, string partName, string spritePath, int sortingOrder, Vector3 localPosition)
-    {
-        Transform existing = parent.Find(partName);
-        GameObject partObj = existing != null ? existing.gameObject : new GameObject(partName);
-        if (existing == null)
-            partObj.transform.SetParent(parent, false);
-
-        partObj.transform.localPosition = localPosition;
-
-        SpriteRenderer sr = partObj.GetComponent<SpriteRenderer>();
-        if (sr == null)
-            sr = partObj.AddComponent<SpriteRenderer>();
-
-        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
-        if (sprite != null)
-            sr.sprite = sprite;
-        else
-            Debug.LogWarning($"[SceneSetupEditor] {partName} 스프라이트를 찾을 수 없음: {spritePath}");
-
-        sr.sortingOrder = sortingOrder;
-
-        return sr;
-    }
-
-    // ──────────────────────────────────────────
     //  Step 3. Block 프리팹 4종 생성
     // ──────────────────────────────────────────
 
@@ -478,63 +408,6 @@ public static class SceneSetupEditor
         TrySetTag(go, tag);
 
         Debug.Log($"[SceneSetupEditor] {objName} 배치 완료.");
-    }
-
-    // ──────────────────────────────────────────
-    //  Step 6. Main Camera WallFitter 연동
-    // ──────────────────────────────────────────
-
-    private static void Step6_SetupWallFitter()
-    {
-        Camera mainCamera = Camera.main;
-        if (mainCamera == null)
-        {
-            Debug.LogWarning("[SceneSetupEditor] Main Camera를 찾을 수 없어 WallFitter 연동을 건너뜁니다.");
-            return;
-        }
-
-        WallFitter fitter = mainCamera.GetComponent<WallFitter>();
-        if (fitter == null)
-            fitter = mainCamera.gameObject.AddComponent<WallFitter>();
-
-        GameObject background = GameObject.Find("Background");
-        SpriteRenderer backgroundSr = null;
-        if (background != null)
-            backgroundSr = background.GetComponent<SpriteRenderer>();
-        else
-            Debug.LogWarning("[SceneSetupEditor] Background 오브젝트를 찾을 수 없어 WallFitter._backgroundSpriteRenderer 연결을 건너뜁니다.");
-
-        Transform wallLeft = FindTransformOrWarn("Wall_Left");
-        Transform wallRight = FindTransformOrWarn("Wall_Right");
-        Transform wallTop = FindTransformOrWarn("Wall_Top");
-        Transform ground = FindTransformOrWarn("Ground");
-
-        SerializedObject so = new SerializedObject(fitter);
-        so.FindProperty("_targetCamera").objectReferenceValue = mainCamera;
-        so.FindProperty("_backgroundSpriteRenderer").objectReferenceValue = backgroundSr;
-        so.FindProperty("_wallLeft").objectReferenceValue = wallLeft;
-        so.FindProperty("_wallRight").objectReferenceValue = wallRight;
-        so.FindProperty("_wallTop").objectReferenceValue = wallTop;
-        so.FindProperty("_ground").objectReferenceValue = ground;
-        so.FindProperty("_nativeLeftX").floatValue = -6.5f;
-        so.FindProperty("_nativeRightX").floatValue = 6.3f;
-        so.FindProperty("_nativeTopY").floatValue = 6.0f;
-        so.FindProperty("_nativeBottomY").floatValue = -6.5f;
-        so.FindProperty("_zoomFactor").floatValue = 1.3f;
-        so.ApplyModifiedPropertiesWithoutUndo();
-
-        Debug.Log("[SceneSetupEditor] WallFitter 연동 완료.");
-    }
-
-    private static Transform FindTransformOrWarn(string objName)
-    {
-        GameObject go = GameObject.Find(objName);
-        if (go == null)
-        {
-            Debug.LogWarning($"[SceneSetupEditor] {objName} 오브젝트를 찾을 수 없어 WallFitter 참조 연결을 건너뜁니다.");
-            return null;
-        }
-        return go.transform;
     }
 
     // ──────────────────────────────────────────

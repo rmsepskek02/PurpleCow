@@ -951,3 +951,38 @@
 - `ConnectWallFitterCharacterRef()` 메서드 시그니처와 내부 로직은 요청 범위 외라 변경하지 않음
 - 다른 로직/네이밍 변경 없음, 범위는 이 파일 하나로 한정
 - 커밋/푸시 미수행 (오케스트레이터가 처리)
+
+---
+
+## 2026-07-04
+
+### 작업: SceneSetupEditor → CharacterLaunchOrbitSetupEditor 로직 이관 (Character/WallFitter 코드 위치 재정리)
+
+**작업 내용:**
+- 배경: task 문서(research.md/plan.md) 없이 진행하기로 오케스트레이터가 사용자와 합의한 순수 리팩토링. 동작/수치는 전혀 바꾸지 않고 "어느 파일의 어느 메서드에 있는가"만 변경
+- 대상 파일 2개만 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+  - `SetupScene()`에서 `Step6_SetupWallFitter();` / `Step11_SetupCharacterVisual();` 호출 줄 제거 (나머지 Step1~5, 7~10 호출 순서는 그대로 유지)
+  - `Step6_SetupWallFitter()` 메서드와 그 전용 헬퍼 `FindTransformOrWarn(string)` 통째로 삭제
+  - `Step11_SetupCharacterVisual()` 메서드와 그 전용 헬퍼 `CreateCharacterPart(...)` 통째로 삭제
+  - 그 외 Step1~5, 7~10, `TrySetTag`, `PlaceManager<T>` 등 나머지 코드는 전혀 손대지 않음
+
+- `Assets/_Project/Scripts/Editor/CharacterLaunchOrbitSetupEditor.cs` (전면 재작성, 로직 자체는 이관/재사용만 함)
+  - 기존 `SetupCharacterLaunchOrbit()` 하나의 `[MenuItem("PurpleCow/Setup/Character LaunchPoint Orbit Setup")]`만 유지
+  - `SetupCharacterVisual()` private 메서드 신설 — `SceneSetupEditor.Step11_SetupCharacterVisual()`의 로직을 그대로 옮겨옴(BallLauncher 자식 Character 생성, Body/Head/Weapon 파츠 생성, `CharacterAimController` 컴포넌트 추가 및 `_bodyRenderer`/`_headRenderer`/`_weaponRenderer` 연결). BallLauncher를 못 찾으면 경고 후 `null` 리턴, 있으면 생성/재사용한 `Character`의 `Transform`을 리턴하도록 시그니처 변경(기존 `void` → `Transform` 리턴)
+  - `CreateCharacterPart(...)` private 헬퍼 — `SceneSetupEditor.CreateCharacterPart(...)`를 그대로 옮겨옴 (파츠별 오프셋/sortingOrder 수치 변경 없음: Body(0, (0.42,-0.75,0)) / Head(1, (0.51,-0.23,0)) / Weapon(2, Vector3.zero))
+  - `SetupWallFitter(Transform character)` private 메서드 신설 — `SceneSetupEditor.Step6_SetupWallFitter()`의 로직을 그대로 옮겨옴(Main Camera에서 `WallFitter` 탐색/추가, `Background`/`Wall_Left`/`Wall_Right`/`Wall_Top`/`Ground` 연결, native 값 `_nativeLeftX`=-6.5f/`_nativeRightX`=6.3f/`_nativeTopY`=6.0f/`_nativeBottomY`=-6.5f, `_zoomFactor`=1.3f), 추가로 같은 `SerializedObject so` 안에서 `so.FindProperty("_character").objectReferenceValue = character;`까지 한 번에 처리(기존에 별도 메서드로 재차 `SerializedObject`를 열던 `ConnectWallFitterCharacterRef()`는 이 메서드로 흡수·통합됨)
+  - `FindTransformOrWarn(string objName)` private 헬퍼 — `SceneSetupEditor`에서 그대로 옮겨와 `SetupWallFitter()`에서 재사용
+  - `SetupCharacterLaunchOrbit()` 최종 흐름: `SetupCharacterVisual()` 호출 → `character == null`이면 즉시 `return`(Character를 못 찾으면 위치 설정/WallFitter 연동 모두 스킵하는 기존 QA 수정 가드 유지) → `character.localPosition = (0,-8,0)` 설정 → `SetupWallFitter(character)` 호출
+  - 기존에 있던 `FindCharacter()` 메서드는 `SetupCharacterVisual()`이 Character 탐색/생성과 위치 설정 책임을 모두 흡수하면서 자연스럽게 대체(더 이상 존재하지 않음)
+
+**컴파일 무결성 자가 확인:**
+- 두 파일 모두 중괄호(`{`/`}`) 개수 일치 확인 (`SceneSetupEditor.cs` 67/67, `CharacterLaunchOrbitSetupEditor.cs` 13/13 — grep -c 라인 기준)
+- `SceneSetupEditor.cs`에 `Step6_SetupWallFitter`/`Step11_SetupCharacterVisual`/`FindTransformOrWarn`/`CreateCharacterPart` 잔여 참조 없음을 grep으로 재확인
+
+**주요 결정사항:**
+- 로직/수치는 전혀 변경하지 않음 — 순수 위치 이동. 로그 문자열의 prefix(`[SceneSetupEditor]` → `[CharacterLaunchOrbitSetupEditor]`)만 이관된 파일의 클래스명에 맞게 자연스럽게 교체(디버그 로그 텍스트는 동작에 영향 없음)
+- `[MenuItem]`은 요청대로 `SetupCharacterLaunchOrbit()` 하나만 유지, 하위 로직은 모두 private 메서드로 분리
+- 커밋/푸시 미수행 (오케스트레이터가 처리)
