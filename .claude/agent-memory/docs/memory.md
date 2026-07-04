@@ -859,3 +859,21 @@
 - ProjectHistory.md 신규 섹션은 기존 날짜 섹션과 동일하게 `### 소제목 (task 경로)` 형식 + `- **문제**/**해결**/**실기기 검증**` 굵은 라벨 bullet 구조로 작성해 2026-07-03 섹션들과 문체 일관성 유지
 - ProjectStatus.md 완료 목록 항목은 기존 항목들과 동일하게 task 경로를 인라인 코드로 병기하고 한 문단으로 요약하는 기존 패턴을 그대로 따름
 - Bash 미사용, Read/Edit만 사용해 작업 완료
+
+---
+
+### 작업 내용 (추가)
+- 몬스터 시스템 개편 본작업 research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/22-53_monster-system-overhaul/research.md` (폴더 신규 생성 포함)
+- `MonsterRules.md`(최근 갱신본), `MonsterData.cs`, `MonsterBase.cs`, `WaveTableData.cs`, `WaveManager.cs`, `MonsterSetupEditor.cs`, `BackgroundFitter.cs`, `WallFitter.cs`, `UIRules.md` 9장을 모두 직접 Read로 확인 후 작성
+- 오케스트레이터가 이미 확인한 프리팹 구조(캐릭터 4종 vs 블록 스텁 4종 완전 분리, 블록+캐릭터 합성 프리팹 부재)와 스프라이트 픽셀 실측 결과(Pillow 측정값)를 그대로 인용해 재확인 없이 반영
+
+### 결과
+- research.md 작성 완료: 현재 상태(프리팹 구조/스프라이트 실측/`MonsterData` 필드/`MonsterBase` 동작/콜라이더/HP바/`WaveTableData` 구조/`WaveManager` 흐름/`MonsterSetupEditor` 자동화/격자 영역 정보 총 10개 세부 항목), 관련 파일 및 의존성 표(신규 파일 없이 기존 파일 14개 + asset 2종), 문제점/구현 대상 8개 항목(MonsterData 블록 크기 표현 선택지 A/B, 프리팹 재구성, 콜라이더 확장, HP바 재배치, WaveTableData 구조 변경, WaveManager 랜덤 배치+점유체크, MonsterSetupEditor 대체 방안, 기존 WaveTableData.asset 재생성 필요성), 결론(4갈래 요약) 작성
+- AGENTS.md는 개별 task 폴더 목록을 별도 인덱스로 관리하지 않는다는 기존 규칙(59번 줄)을 확인하여 인덱스 추가 작업은 수행하지 않음
+
+### 주요 결정사항
+- 해결책/구현 방법은 확정하지 않고 선택지만 나열하는 원칙을 지켜, MonsterData 블록 크기 필드 추가 여부·WaveEntry 가중치 필드 설계·그리드 열/행 계산 방식 등은 모두 복수 선택지로만 서술하고 plan.md로 결정을 미룸
+- 콜라이더/HP바 재배치 이슈는 "블록 크기를 어디서 읽어올지"(선택지 1번)와 서로 연결된 하위 질문이라는 점을 명시해 plan.md 논의 시 연계 검토가 필요함을 강조
+- 기존 `WaveTableData.asset`의 구조 변경 시 재직렬화 문제는 원격 텍스트 환경의 한계로 명시하고, 에디터 자동화 스크립트 처리 여부와 사용자 수동 처리 여부 모두 열어둠
+- Bash 미사용, Read/Write만 사용해 작업 완료
