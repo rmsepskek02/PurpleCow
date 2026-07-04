@@ -918,3 +918,36 @@
 **주요 결정사항:**
 - plan.md에 기술된 코드 스니펫(4번)을 그대로 적용, 별도 해석/추가 변경 없음
 - git 커밋/푸시는 수행하지 않음 (사용자가 별도 처리 예정)
+
+---
+
+### 작업: 배경 격자 정사각형 보정 — `BackgroundFitter`/`WallFitter` 계산식 교체 + 신규 필드 주입 에디터
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-04/16-40_background-square-grid-fix/plan.md` (사용자 승인 완료)
+- 기존 파일 2개 수정 + 신규 파일 1개 생성
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/BackgroundFitter.cs`
+  - 신규 필드 3개 추가: `_cellAspectCorrection = 1.647f`, `_gridAreaWidth = 14.53f`, `_gridAreaHeight = 10.16f` (`[SerializeField] private float`, 기존 `_zoomFactor` 뒤에 배치)
+  - `Apply()`의 기존 "camSize / spriteSize × zoomFactor" 독립 축 계산을 plan.md 1단계 공식(scaleXNeeded/scaleYNeeded → uniformScale(Cover, ×zoomFactor) → scaleX=uniformScale, scaleY=uniformScale×cellAspectCorrection)으로 교체
+  - `_spriteRenderer.sprite.bounds.size`(spriteSize) 참조 제거, `_spriteRenderer` 필드 자체와 null 체크는 유지
+  - `[ExecuteAlways]`/`Start()`/`OnValidate()` → `Apply()` 위임 구조 변경 없음
+- `Assets/_Project/Scripts/Core/WallFitter.cs`
+  - `BackgroundFitter`와 동일한 신규 필드 3개(`_cellAspectCorrection`/`_gridAreaWidth`/`_gridAreaHeight`, 동일 값) 추가, 동일한 공식으로 `Apply()` 내 scaleX/scaleY 계산 교체
+  - `_nativeLeftX(-6.5)`/`_nativeRightX(6.3)`/`_nativeTopY(6.0)`/`_nativeBottomY(-6.5)`/`_nativeLaunchPointY(-6.0)`/`_zoomFactor(1.3)` 값은 plan.md 지시대로 코드에 그대로 유지(재조정 안 함) — 새 계산식 아래에서 이 값들이 여전히 유효한지는 사용자의 로컬 실기기 검증 대상
+  - `_backgroundSpriteRenderer` 필드는 스케일 계산에 더 이상 쓰이지 않지만 null 체크 용도로 필드 자체는 유지
+  - `SetX(_wallLeft, ...)` 등 호출부/`[ExecuteAlways]` 구조 변경 없음
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Editor/BackgroundGridFitSetupEditor.cs` (신규)
+  - `[MenuItem("PurpleCow/Setup/Background Grid Fit Setup")]`, 기존 `SceneSetupEditor.cs`/`MonsterSetupEditor.cs`와 동일한 패턴(`SerializedObject`/`FindProperty`/`ApplyModifiedPropertiesWithoutUndo`)
+  - `Object.FindFirstObjectByType<BackgroundFitter>()`/`FindFirstObjectByType<WallFitter>()`로 씬에서 컴포넌트 탐색 후, 신규 필드 3개(`_cellAspectCorrection=1.647f`, `_gridAreaWidth=14.53f`, `_gridAreaHeight=10.16f`)를 두 컴포넌트 모두에 주입
+  - `SceneSetupEditor.cs`는 이번 작업에서 전혀 수정하지 않음(읽기만 함, 패턴 참고 목적)
+
+**주요 결정사항:**
+- Unity 6000.3의 `Object.FindObjectOfType`은 obsolete 경고 대상이라, plan.md에 API명이 명시되지 않았으므로 경고 없는 `FindFirstObjectByType`으로 선택(외과적 변경 범위 내의 합리적 API 선택으로 판단, 별도 리팩토링 아님)
+- plan.md 지시대로 두 스크립트의 계산 로직 중복 구현 구조를 그대로 유지, 공용 유틸리티로 리팩토링하지 않음
+- `SceneSetupEditor.cs`는 절대 수정 금지 지시를 준수, 리소스(PNG)도 수정하지 않음
+- 이 원격 환경에는 Unity 에디터가 없어 컴파일 검증 불가 — 문법/네이밍 컨벤션만 신중히 확인
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
