@@ -101,7 +101,7 @@ public class BallLauncher : Singleton<BallLauncher>
         _activeBallCount++;
     }
 
-    // 귀환(Ground 충돌 후 LaunchPoint 도달)한 로스터 볼을 최신 조준 방향으로 재발사한다.
+    // 귀환(Ground 충돌 후 ReturnPoint 도달)한 로스터 볼을 최신 조준 방향으로 재발사한다.
     public void RelaunchBall(Ball ball)
     {
         if (_currentGameState != GameManager.GameState.Playing)

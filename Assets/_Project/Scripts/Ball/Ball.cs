@@ -76,8 +76,8 @@ public class Ball : MonoBehaviour, IPoolable
 
         if (_isReturning)
         {
-            Vector2 toLaunchPoint = BallLauncher.Instance.ReturnPoint - (Vector2)transform.position;
-            if (toLaunchPoint.magnitude <= RETURN_ARRIVAL_DISTANCE)
+            Vector2 toReturnPoint = BallLauncher.Instance.ReturnPoint - (Vector2)transform.position;
+            if (toReturnPoint.magnitude <= RETURN_ARRIVAL_DISTANCE)
             {
                 _isReturning = false;
                 BallLauncher.Instance.RelaunchBall(this);
@@ -112,10 +112,10 @@ public class Ball : MonoBehaviour, IPoolable
         {
             OnWallHit?.Invoke();
 
-            // 이미 귀환 중인 볼은 반사 카운트를 건드리지 않고 LaunchPoint 방향으로 재조준만 한다.
+            // 이미 귀환 중인 볼은 반사 카운트를 건드리지 않고 ReturnPoint 방향으로 재조준만 한다.
             if (_isReturning)
             {
-                ReturnToLaunchPoint();
+                ReturnToCharacter();
                 return;
             }
 
@@ -133,7 +133,7 @@ public class Ball : MonoBehaviour, IPoolable
             // 로스터 소속 볼만 캐릭터 위치로 귀환 후 재발사한다.
             // 로스터 밖의 볼(서브볼 등)은 기존과 동일하게 즉시 풀로 반환한다.
             if (BallLauncher.Instance.IsRosterMember(this))
-                ReturnToLaunchPoint();
+                ReturnToCharacter();
             else
                 ReturnToPool();
         }
@@ -207,9 +207,9 @@ public class Ball : MonoBehaviour, IPoolable
     }
 
     // Ground 충돌 시점의 자연 반사 방향을 무시하고, 위치는 그대로 둔 채
-    // 이동 방향만 LaunchPoint 쪽으로 강제 재설정해 계속 날아가게 한다(순간이동 아님).
-    // LaunchPoint에 도달하면 FixedUpdate()에서 재발사(BallLauncher.RelaunchBall)를 트리거한다.
-    private void ReturnToLaunchPoint()
+    // 이동 방향만 ReturnPoint 쪽으로 강제 재설정해 계속 날아가게 한다(순간이동 아님).
+    // ReturnPoint에 도달하면 FixedUpdate()에서 재발사(BallLauncher.RelaunchBall)를 트리거한다.
+    private void ReturnToCharacter()
     {
         Vector2 direction = (BallLauncher.Instance.ReturnPoint - (Vector2)transform.position).normalized;
         _rigidbody.linearVelocity = direction * _ballData.Speed;

@@ -18,7 +18,6 @@ public static class SceneSetupEditor
         Step5_PlaceWallsAndGround();
         Step7_PlaceManagers();
         Step8_ConnectBallLauncherRefs(ballPrefab);
-        // WallFitter는 Step8에서 생성되는 LaunchPoint를 참조해야 하므로 Step8 이후에 실행한다.
         Step6_SetupWallFitter();
         Step9_ConnectBallPrefabRefs();
         Step10_ConnectWaveManagerRefs();

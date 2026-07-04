@@ -179,3 +179,60 @@ plan.md/research.md(`Assets/_Project/Docs/_Task/2026-07-01/21-15_ball-launch-mec
 ### 참고
 - 이 정정 자체는 QA 에이전트가 별도로 재검토를 수행해 발견한 것이 아니라 사용자의 실제 플레이 재확인으로 결정된 사항이므로, 코드 리뷰 결과가 아닌 "설계 확정 변경"으로 분류
 - 궤적 프리뷰(4단계, `TrajectoryPreview.cs`)는 2026-07-02 검토 시점엔 Critical(미구현)으로 지적했으나 이후 별도로 구현 완료됨(dev agent-memory 2026-07-02 "궤적 프리뷰 신규 구현" 참고) — 이번 문서 정리 세션에서 재검토는 수행하지 않았으므로, 실제 구현이 plan.md/GameplayMechanics.md 스펙과 완전히 일치하는지는 아직 QA 에이전트가 코드 레벨로 재확인하지 않은 상태로 남아 있음(추후 필요 시 재검토 권장)
+
+## 2026-07-04 — LaunchPoint 캐릭터 궤도화 재설계 코드 리뷰
+
+### 작업 내용
+`Assets/_Project/Docs/_Task/2026-07-04/09-41_launchpoint-character-orbit/research.md`,
+`plan.md` 확인 후 커밋 `7030259`("feat: LaunchPoint를 캐릭터+무기 방향 기반 계산값으로 재설계")의
+`CharacterAimController.cs`, `BallLauncher.cs`, `Ball.cs`, `TrajectoryPreview.cs`, `WallFitter.cs`,
+`SceneSetupEditor.cs`, 신규 `CharacterLaunchOrbitSetupEditor.cs` 전체 검토.
+`Singleton.cs` 구현도 함께 확인.
+
+### 결과 요약
+- Critical: 0건
+- Major: 1건 (`CharacterLaunchOrbitSetupEditor.ConnectWallFitterCharacterRef`가 character=null일 때도
+  호출되어 기존 WallFitter._character 참조를 null로 덮어씀)
+- Minor: 3건 (SceneSetupEditor.cs 21행 Step8/LaunchPoint 주석 사실과 불일치, LaunchPoint 잔존 네이밍
+  다수(Ball.cs의 ReturnToLaunchPoint()/toLaunchPoint, BallLauncher.cs 104행 주석), 무기 pivot.x=0.39
+  비대칭으로 인한 _weaponLength 근사치는 기존 task 확정사항이라 이번 diff 범위 밖)
+
+### 주요 발견사항
+1. plan.md 1~7단계는 실제 구현과 정확히 일치. 계획에서 벗어난 항목 없음.
+2. `LaunchOrigin`(Character.position + LaunchDirection.normalized * WeaponLength) 공식을 수학적으로
+   재검증함. Weapon 파츠 localPosition이 (0,0,0)이고 `aimAngle = atan2(dir)*Rad2Deg - 90f` 회전을
+   기본 방향 (0,1)에 적용하면 정확히 dir과 일치함(회전행렬 유도로 확인). flipX는 로컬 x=0인 벡터에는
+   영향을 주지 않으므로 좌우 반전 시에도 동일하게 성립. 단, "무기 스프라이트 기본 방향이 위쪽"이라는
+   전제 자체는 코드 주석(35~36행)에 이미 "실제 플레이 확인 후 조정 가능"한 가정으로 명시되어 있어
+   검증 불가 영역(Unity 에디터 부재)으로 남음.
+3. `CharacterAimController`를 `Singleton<T>`로 전환한 것은 `Awake()` 오버라이드가 원래 없었으므로
+   문제 없이 상속됨. `Singleton<T>.Awake()`가 `Instance` 설정만 하고 컴포넌트 파괴는 중복 인스턴스일
+   때만 발생하므로 `Start()`/`Update()`와 충돌 없음.
+4. `BallLauncher.LaunchOrigin`/`ReturnPoint`가 `CharacterAimController.Instance` null 체크를 하지
+   않는 것은 이 코드베이스 전체 컨벤션(`GameManager.Instance`, `WaveManager.Instance` 등 어디에도
+   null 체크 없음)과 완전히 일치하며 이례적이지 않음. 다만 마이그레이션 전환기(Character
+   오브젝트가 없는 구버전 씬에서 신규 `CharacterLaunchOrbitSetupEditor` 메뉴 실행 전 플레이하는
+   경우) NRE가 날 수 있음은 plan.md 주의사항에 이미 언급되어 있어 인지된 리스크로 판단.
+5. `SceneSetupEditor.cs`의 삭제 범위(Step11 315~320행/329행, Step6 520/529/534행, Step8
+   629~639행)는 plan.md 6단계와 정확히 일치. 그 외 로직 변경 없음.
+6. **(Minor)** `SceneSetupEditor.cs` 21행 주석 `// WallFitter는 Step8에서 생성되는 LaunchPoint를
+   참조해야 하므로 Step8 이후에 실행한다.`가 이제 사실과 다름. `Step6_SetupWallFitter()`는 더 이상
+   `LaunchPoint`도, `_character`도 참조/연결하지 않음(Wall_Left/Right/Top/Ground는 Step5 산출물).
+   Step8과 Step6의 순서 의존성 자체가 소멸했으므로 주석 삭제 또는 "WallFitter는 더 이상 Step8의
+   산출물을 참조하지 않는다. Character↔WallFitter 배선은 별도 CharacterLaunchOrbitSetupEditor가
+   전담한다" 식으로 교체 제안.
+7. **(Major)** 신규 `CharacterLaunchOrbitSetupEditor.SetupCharacterLaunchOrbit()`(12~22행)에서
+   `FindCharacter()`가 경고 후 null을 반환해도 `ConnectWallFitterCharacterRef(character)`가 그대로
+   호출됨(21행). 내부에서 `so.FindProperty("_character").objectReferenceValue = character;`가
+   조건 없이 실행되므로(60행), 이미 정상 연결되어 있던 `WallFitter._character` 참조를 null로 덮어쓸
+   위험이 있음. `character == null`일 때는 배선 자체를 건너뛰도록 가드가 필요.
+8. `git diff --stat` 결과 `CharacterManager.cs`, 볼 물리/충돌/데미지 로직은 전혀 건드리지 않음.
+   변경 파일은 plan.md의 "예상 변경/생성 파일 목록"과 정확히 일치(7개 파일 + 신규 1개).
+9. (부가) `Ball.cs`의 `ReturnToLaunchPoint()` 메서드명/`toLaunchPoint` 변수명과 주변 주석, 그리고
+   `BallLauncher.cs` 104행 주석이 여전히 "LaunchPoint" 용어를 사용함. 기능상 문제는 없으나 실제
+   LaunchPoint 오브젝트가 사라진 지금 시점에서는 네이밍이 혼동을 줄 수 있어 Minor로 기록.
+
+### 주요 결정사항
+- 코드 수정 없이 자연어로 심각도(Major/Minor) 순 보고
+- git 커밋 로그(`7030259`)를 통해 이미 커밋된 상태임을 확인 후 `git show`로 diff 재구성하여 검토 진행
+- `Singleton.cs`, `CharacterManager.cs`(선례 확인)까지 교차 확인하여 Singleton 전환 안전성 판단
