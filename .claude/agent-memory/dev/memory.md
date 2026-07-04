@@ -1122,3 +1122,26 @@
 - `flipX` 반전 로직과 Weapon/Head 회전 로직(Body는 회전 없음)은 그대로 유지, 손대지 않음
 - 이 파일 1개만 수정, 다른 파일은 건드리지 않음
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+---
+
+## 2026-07-04
+
+### 작업: CharacterAimController 미사용 필드/메서드 제거
+
+**작업 내용:**
+- 직전 반전 로직 정리 시 CS0414 경고 가능성이 보고됐던 `_headBasePosition`/`_bodyBasePosition`/`_weaponBasePosition` 필드와, 이전 세션에서 이미 게임플레이 계산에 쓰이지 않게 된 `_weaponLength`/`WeaponLength`를 오케스트레이터가 grep으로 재확인 후 완전 미사용임을 확인 — 사용자가 "사용하지 않는 코드는 모두 제거해"라고 명시적으로 지시하여 진행
+- 삭제 전 `Assets/_Project/Scripts/` 전체를 grep으로 재확인하여 `WeaponLength`/`_weaponLength`/`_headBasePosition`/`_bodyBasePosition`/`_weaponBasePosition`을 참조하는 다른 `.cs` 파일이 없음을 검증 (일치하는 항목은 `Docs/ProjectHistory.md`, `Docs/ProjectStatus.md`, task 문서(`plan.md`/`research.md`)의 과거 기록뿐이며 이들은 수정 대상이 아님)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs`
+  - `[SerializeField] private float _weaponLength = 0.6612f;` 필드 삭제
+  - `public float WeaponLength => _weaponLength;` 프로퍼티 삭제
+  - `_headBasePosition`/`_bodyBasePosition`/`_weaponBasePosition` 필드 3개 삭제
+  - `Start()` 메서드 전체 삭제 (위 3개 필드에 값을 대입하는 코드만 있었고, 필드 삭제 후 완전히 빈 메서드가 되어 함께 제거)
+
+**주요 결정사항:**
+- `flipX` 반전 로직, `_facingRight` 필드와 데드존 판정, Weapon/Head 회전 로직(감쇠 계수 포함), `_bodyRenderer`/`_headRenderer`/`_weaponRenderer`/`_headDampFactor`/`_flipDeadzone` 필드, `BodyPosition` 프로퍼티(`BallLauncher.ReturnPoint`가 참조), `Update()` 메서드 자체는 모두 그대로 유지
+- 이 파일 1개만 수정, `BallLauncher.cs`/`SceneSetupEditor.cs`/`CharacterLaunchOrbitSetupEditor.cs` 등 다른 파일은 건드리지 않음 (grep 재확인 결과 실제로 참조하는 곳이 없어 보고할 항목 없음)
+- 삭제 후 파일 전체를 재확인하여 CS0414 등 컴파일 경고가 남지 않음을 확인
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)

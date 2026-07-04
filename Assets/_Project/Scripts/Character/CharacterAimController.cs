@@ -10,23 +10,10 @@ public class CharacterAimController : Singleton<CharacterAimController>
     [SerializeField] private SpriteRenderer _weaponRenderer;
     [SerializeField] private float _headDampFactor = 0.25f;
     [SerializeField] private float _flipDeadzone = 0.05f;
-    [SerializeField] private float _weaponLength = 0.6612f;
 
     private bool _facingRight = true;
 
-    private Vector3 _headBasePosition;
-    private Vector3 _bodyBasePosition;
-    private Vector3 _weaponBasePosition;
-
     public Vector2 BodyPosition => _bodyRenderer.transform.position;
-    public float   WeaponLength => _weaponLength;
-
-    private void Start()
-    {
-        _headBasePosition   = _headRenderer.transform.localPosition;
-        _bodyBasePosition   = _bodyRenderer.transform.localPosition;
-        _weaponBasePosition = _weaponRenderer.transform.localPosition;
-    }
 
     private void Update()
     {
