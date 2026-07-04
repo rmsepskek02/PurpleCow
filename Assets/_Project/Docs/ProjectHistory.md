@@ -221,3 +221,42 @@ Assets/_Project/Scripts/
 
 - `WallFitter.Apply()`(`[ExecuteAlways]`, `Start()`/`OnValidate()`에서 호출)가 기기 화면 비율에 맞춰 `LaunchPoint`의 월드 좌표(`_nativeLaunchPointY` 기준)를 런타임에 동적으로 재배치하는데, `Character`는 `Step11_SetupCharacterVisual()`에서 `LaunchPoint`의 `localPosition`을 에디터 설정 시점에 한 번만 복사한 형제 오브젝트로 만들어져 있어, `WallFitter`가 이후 `LaunchPoint`를 움직여도 `Character`는 따라가지 못하고 원래 위치에 남는다.
 - 캐릭터 비주얼 구현 당시에는 아직 `WallFitter`가 main에 없었기 때문에 예상하지 못한 상호작용이며, main과 병합하는 과정에서 오케스트레이터가 직접 발견하였다. 별도 후속 수정이 필요한 상태로 남겨두었다(`ProjectStatus.md` "다음 작업 순서" 참고).
+
+### LaunchPoint 궤도화 재설계 (`_Task/2026-07-04/09-41_launchpoint-character-orbit`)
+
+위에서 발견된 "WallFitter-Character 위치 연동 누락" 문제를 계기로, 오케스트레이터와 사용자가 논의를 거쳐 발사/귀환 지점의 관계 자체를 재설계하였다.
+
+**research.md 조사 결과**
+- `LaunchPoint`(`BallLauncher._launchPoint`)가 겸하고 있던 4가지 역할을 확인: (1) 볼 발사 스폰 위치(`BallLauncher.LaunchRosterEntry()`), (2) 귀환 목적지(`Ball.cs` 도착 판정/`ReturnToLaunchPoint()`), (3) 궤적 프리뷰 원점(`TrajectoryPreview.UpdateTrajectory()`), (4) `WallFitter`가 화면비에 맞춰 런타임에 재배치하는 대상
+- `Character`는 `SceneSetupEditor.Step11_SetupCharacterVisual()`에서 씬 설정 시점에 `LaunchPoint`의 로컬 좌표를 한 번만 복사하는 형제 오브젝트일 뿐, `WallFitter`의 런타임 재배치와는 아무 연결이 없다는 점이 문제의 원인으로 확인됨
+- 무기 스프라이트 그립(Pivot)에서 갈고리 끝까지의 거리를 `Character_main_weapon.png.meta`(`pivot.y=0.43`, `height=116`, `spritePixelsToUnits=100`) 기준으로 역산하면 약 0.6612 유닛
+- 노출 주체, 계산 방식, WallFitter 재배치 대상, 무기 길이 소유 클래스, 씬 배선 스크립트 분리 여부 등 5가지를 열린 이슈로 남기고 plan.md 단계로 이관
+
+**plan.md 확정 사항 (사용자와 논의)**
+- 발사/귀환 지점 노출 창구는 계속 `BallLauncher`로 유지하고, 내부적으로 `CharacterAimController`(시각 레이어)를 참조해 계산 — 게임플레이 로직이 시각 레이어를 직접 알 필요 없도록 유지
+- 별도 GameObject(Transform)를 매 프레임 갱신하는 방식이 아닌 계산 프로퍼티 방식 채택: 발사 시작점 = `Character 위치 + LaunchDirection(정규화) × 무기 길이`, 귀환 목적지 = `CharacterAimController._bodyRenderer.transform.position`. 이번 세션에서 이미 두 차례 겪은 "복사된 값이 원본과 어긋나는" 버그 유형을 재도입하지 않기 위함
+- `WallFitter`의 재배치 대상을 `LaunchPoint`에서 `Character`로 변경, 필드명도 `_launchPoint`→`_character`, `_nativeLaunchPointY`→`_nativeCharacterY`로 리네이밍(기본값 `-6.0f`는 유지)
+- 무기 길이(`0.6612f`)는 `CharacterAimController`의 `SerializeField`로 소유
+- `SceneSetupEditor.cs`는 무의미해진 코드만 삭제하고, 새 배선(`Character` 초기 위치, `WallFitter`↔`Character` 연결)은 신규 `CharacterLaunchOrbitSetupEditor.cs`로 분리 — 기존 `SceneSetupEditor.cs`/`UISetupEditor.cs`/`MonsterSetupEditor.cs`처럼 관심사별 `*SetupEditor.cs`를 두는 프로젝트 관례를 따름
+
+**dev 에이전트 구현**
+- `CharacterAimController.cs`: `_weaponLength`(기본값 `0.6612f`), `BodyPosition`/`WeaponLength` 프로퍼티 추가, `MonoBehaviour` → `Singleton<CharacterAimController>` 상속으로 변경
+- `BallLauncher.cs`: 고정 `_launchPoint`(Transform) 필드와 `LaunchPoint` 프로퍼티 삭제, `LaunchOrigin`/`ReturnPoint` 계산 프로퍼티 신설, `LaunchRosterEntry()`의 스폰 위치 참조 변경
+- `Ball.cs`(도착 판정, `ReturnToLaunchPoint()` 내부)와 `TrajectoryPreview.cs`(궤적 원점)의 `LaunchPoint` 참조를 각각 `ReturnPoint`/`LaunchOrigin`으로 변경
+- `WallFitter.cs`: `_launchPoint`→`_character`, `_nativeLaunchPointY`→`_nativeCharacterY` 리네이밍, `Apply()` 내부 재배치 로직도 함께 변경
+- `SceneSetupEditor.cs`: `Step8_ConnectBallLauncherRefs()`의 `LaunchPoint` GameObject 생성/연결 코드, `Step6_SetupWallFitter()`의 `_launchPoint`/`_nativeLaunchPointY` 연결 코드, `Step11_SetupCharacterVisual()`의 `LaunchPoint` 탐색 및 위치 복사(`localPosition = launchPoint.localPosition`) 코드를 삭제(그 외 로직은 그대로 유지)
+- 신규 `Assets/_Project/Scripts/Editor/CharacterLaunchOrbitSetupEditor.cs`(`PurpleCow/Setup/Character LaunchPoint Orbit Setup` 메뉴) 작성: `Character`의 초기 로컬 좌표를 기존 `LaunchPoint` 기본값과 동일한 `(0, -8, 0)`으로 지정하고, `WallFitter._character` 필드에 `Character` Transform을 연결
+
+**오케스트레이터 추가 정리**
+- `LaunchPoint`→`ReturnPoint`로 역할이 바뀐 뒤 남아있던 옛 이름(변수 `toLaunchPoint`→`toReturnPoint`, 메서드 `ReturnToLaunchPoint()`→`ReturnToCharacter()`, 관련 주석들, `SceneSetupEditor.cs`의 스테일 주석)을 로직 변경 없이 리네이밍
+
+**qa 에이전트 검토**
+- `LaunchOrigin` 계산식과 `CharacterAimController`의 무기 회전 공식(`aimAngle = Atan2(dir.y, dir.x) * Rad2Deg - 90f`)이 회전행렬로 봤을 때 수학적으로 정확히 일치함을 검증
+- `Singleton<T>` 전환도 기존 `Awake()` 부재로 충돌 없음을 확인
+- Major 1건(`CharacterLaunchOrbitSetupEditor`가 `Character`를 못 찾은 경우에도 `WallFitter._character`를 null로 덮어쓸 수 있던 문제) 발견 → 즉시 수정 완료
+
+**범위 및 미완료 사항**
+- `CharacterManager.cs`(HP/XP 로직), 볼의 물리/충돌/데미지 판정 로직은 전혀 수정하지 않음
+- 원격 환경에 Unity 에디터가 없어 코드 수정만으로는 `SampleScene.unity`에 자동 반영되지 않으며, 사용자가 로컬 Unity에서 (1) `PurpleCow/Setup/Scene Setup` 재실행, (2) 씬에 남아있는 구 `LaunchPoint` GameObject 수동 정리(필요 시), (3) 신규 `PurpleCow/Setup/Character LaunchPoint Orbit Setup` 메뉴 실행이 필요하다
+- `WallFitter` 필드 리네이밍으로 로컬에서 튜닝했던 값이 초기화될 수 있어 재설정이 필요할 수 있다
+- 실제 조준 시 무기 끝에서 볼이 발사되는 것처럼 보이는지, 귀환 시 캐릭터 몸통으로 들어오는지는 사용자의 로컬 실제 플레이 테스트로 검증 필요

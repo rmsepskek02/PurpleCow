@@ -717,3 +717,21 @@
 - ProjectSettings.asset 필드명 불일치(`defaultInterfaceOrientation` vs 실제 `defaultScreenOrientation`)는 사용자가 명시적으로 요청한 6개 항목에는 없었지만, "실제 코드 상태와 대조하며 교차검증"이라는 상위 지시를 따라 발견 즉시 plan.md에 짧은 정정 문단으로 반영 — 다만 이는 사용자가 지시한 6개 최종 확정 항목과는 성격이 다르므로(실제 동작 변경이 아니라 기존 문서의 오기 정정) 별도 "참고" 문단으로 분리해 6개 항목과 섞이지 않도록 함
 - plan.md 7단계는 기존 1~6단계를 전혀 수정하지 않고 그 뒤에 새 섹션으로만 추가 — "기존 문서를 새로 쓰지 말고 최종 확정 내용을 반영하는 섹션을 추가"라는 사용자 지시를 그대로 따름
 - AGENTS.md는 이번에도 갱신하지 않음: 새로 생성된 문서 파일이 없고(기존 4개 문서 편집만 수행) AGENTS.md는 개별 task 폴더를 별도 인덱싱하지 않는 기존 방침이 이번에도 그대로 적용됨을 Grep으로 재확인
+
+---
+
+## 2026-07-04 (추가)
+
+### 작업 내용
+- "LaunchPoint 궤도화 재설계" task(`_Task/2026-07-04/09-41_launchpoint-character-orbit`) 완료 내용을 `ProjectStatus.md`, `ProjectHistory.md`에 반영
+- 작성 전 해당 task의 `research.md`(LaunchPoint의 4가지 겸직 역할, Character가 씬 설정 시점에 한 번만 위치를 복사해 WallFitter 런타임 재배치를 못 따라가는 원인 분석)와 `plan.md`(계산 프로퍼티 방식 채택 등 5가지 확정사항, dev 1~7단계, qa 8단계 계획)를 Read로 전량 확인
+- 기존 문서의 "캐릭터 비주얼 구현"/"볼 발사 메커닉 재설계" 항목 서술 방식(research→plan→dev 구현→qa 검토→범위/미완료 순으로 한 문단에 응축) 그대로 답습
+
+### 결과
+- `ProjectStatus.md`: "현재 상태" 단계 문구를 "LaunchPoint 궤도화 재설계 완료 — 로컬 씬 반영 및 실제 플레이 테스트 대기 중"으로 갱신. 직전 "캐릭터 비주얼 구현" 항목 말미의 미해결 참고 메모("별도 후속 수정 필요")를 "이후 LaunchPoint 궤도화 재설계 task로 해결됨"으로 정정. 그 바로 뒤에 신규 완료 항목 추가(재설계 배경, 확정 설계, dev 구현 상세, 오케스트레이터 리네이밍 정리, qa 검토/버그 수정, 범위 및 미완료 사항 포함). "다음 작업 순서" 3개 항목 중 1번(해결된 문제 수정)을 제거하고 로컬 반영 절차(Scene Setup 재실행, 구 LaunchPoint 정리, 신규 Character LaunchPoint Orbit Setup 메뉴 실행)로 교체, 2번은 실제 플레이 테스트 확인 항목으로 재작성, 3번은 기존 문구 그대로 유지
+- `ProjectHistory.md`: 기존 "## 2026-07-04" 섹션의 "main 병합 후 발견: WallFitter-Character 위치 연동 누락" 소제목 바로 뒤에 "### LaunchPoint 궤도화 재설계" 신규 소제목 추가 — research.md 조사 결과, plan.md 확정 사항(5가지), dev 에이전트 구현 상세(`CharacterAimController`/`BallLauncher`/`Ball.cs`/`TrajectoryPreview.cs`/`WallFitter.cs`/`SceneSetupEditor.cs`/신규 `CharacterLaunchOrbitSetupEditor.cs`), 오케스트레이터 리네이밍 정리, qa 검토(수학적 검증 + Major 1건 수정), 범위 및 미완료 사항 순으로 기존 섹션들과 동일한 서술 형식 유지
+
+### 주요 결정사항
+- 새 완료 항목을 "캐릭터 비주얼 구현" 항목 바로 다음에 삽입해 두 task가 인과관계(직전 작업에서 발견된 문제 → 이번 작업에서 해결)로 이어짐을 문서 순서로도 드러나게 함
+- "다음 작업 순서" 1번을 단순 삭제하지 않고 "이미 해결된 문제"에서 "로컬 반영 절차 안내"로 성격을 바꿔 재사용 — 사용자가 실제로 다음에 해야 할 행동(Scene Setup 재실행 등 3단계)이 여전히 남아 있으므로 항목 자체는 유지
+- 코드/에셋 파일은 전혀 건드리지 않고 문서 2개(`ProjectStatus.md`, `ProjectHistory.md`)만 수정
