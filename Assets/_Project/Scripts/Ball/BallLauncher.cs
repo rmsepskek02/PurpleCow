@@ -8,7 +8,6 @@ public class BallLauncher : Singleton<BallLauncher>
     [SerializeField] private Ball _ballPrefab;
     [SerializeField] private Transform _poolParent;
     [SerializeField] private int _initialPoolSize = 10;
-    [SerializeField] private Transform _launchPoint;
     [SerializeField] private int _normalBallCount = 5;
     [SerializeField] private float _rosterLaunchInterval = 0.1f;
 
@@ -21,8 +20,12 @@ public class BallLauncher : Singleton<BallLauncher>
 
     public static event Action OnAllBallsReturned;
 
-    public Transform LaunchPoint     => _launchPoint;
-    public Vector2   LaunchDirection => _launchDirection;
+    public Vector2 LaunchDirection => _launchDirection;
+
+    public Vector2 LaunchOrigin => (Vector2)CharacterAimController.Instance.transform.position
+        + LaunchDirection.normalized * CharacterAimController.Instance.WeaponLength;
+
+    public Vector2 ReturnPoint => CharacterAimController.Instance.BodyPosition;
 
     // 로스터 항목: 볼 개체 1개가 영구적으로 유지하는 타입 정체성.
     // SkillData가 null이면 노말볼, 아니면 해당 특수볼 타입(스킬)을 의미한다.
@@ -92,7 +95,7 @@ public class BallLauncher : Singleton<BallLauncher>
 
     private void LaunchRosterEntry(BallRosterEntry entry, Vector2 direction)
     {
-        entry.Ball.transform.position = _launchPoint.position;
+        entry.Ball.transform.position = LaunchOrigin;
         entry.Ball.Launch(direction);
         ApplyRosterSkill(entry);
         _activeBallCount++;

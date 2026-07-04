@@ -907,3 +907,33 @@
 - `SetY`/`SetX` 헬퍼가 이미 null 방어 처리되어 있어 재사용만 함 (신규 로직 없음)
 - 요청받지 않은 다른 필드(`_nativeLeftX` 등)는 변경하지 않음
 - 커밋/푸시 미수행 (요청에 따라 파일 수정만 진행)
+
+---
+
+## 2026-07-04
+
+### 작업: LaunchPoint → Character Orbit 재설계 (발사 시작점/귀환 목적지 분리)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-04/09-41_launchpoint-character-orbit/plan.md` (사용자 승인 완료, 1~7단계 그대로 구현)
+- 기존 파일 6개 수정 + 신규 파일 1개 생성
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs` — 클래스 선언 `MonoBehaviour` → `Singleton<CharacterAimController>` 상속으로 변경(기존 `Awake()` 오버라이드 없어 `base.Awake()` 호출 불필요, 그대로 상속), `[SerializeField] private float _weaponLength = 0.6612f;` 필드 추가, `public Vector2 BodyPosition => _bodyRenderer.transform.position;` / `public float WeaponLength => _weaponLength;` 프로퍼티 추가. `Update()`/`Start()` 로직은 그대로 유지
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` — `_launchPoint`(Transform) 필드와 `LaunchPoint` 프로퍼티 삭제, `public Vector2 LaunchOrigin => (Vector2)CharacterAimController.Instance.transform.position + LaunchDirection.normalized * CharacterAimController.Instance.WeaponLength;` / `public Vector2 ReturnPoint => CharacterAimController.Instance.BodyPosition;` 계산 프로퍼티 2개 추가, `LaunchRosterEntry()` 내 스폰 위치를 `LaunchOrigin`으로 교체
+- `Assets/_Project/Scripts/Ball/Ball.cs` — 도착 판정(`FixedUpdate()`)과 `ReturnToLaunchPoint()` 내부의 `BallLauncher.Instance.LaunchPoint.position` 참조 2곳을 `BallLauncher.Instance.ReturnPoint`로 교체 (메서드명 `ReturnToLaunchPoint()`, 지역변수명 `toLaunchPoint`, 관련 주석은 plan.md 범위 외라 리네이밍하지 않음)
+- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` — `UpdateTrajectory()` 내 궤적 원점을 `BallLauncher.Instance.LaunchOrigin`으로 교체
+- `Assets/_Project/Scripts/Core/WallFitter.cs` — `_launchPoint`(Transform)→`_character`, `_nativeLaunchPointY`(-6.0f)→`_nativeCharacterY`(동일 기본값)로 필드명 변경, `Apply()` 내 `SetY(_character, _nativeCharacterY * scaleY);`로 교체
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — 죽은 코드만 삭제(그 외 로직 그대로 유지):
+  - `Step8_ConnectBallLauncherRefs()`: `LaunchPoint` GameObject 생성 및 `_launchPoint` 연결 블록 삭제 (`_ballPrefab`/`_poolParent` 연결은 유지)
+  - `Step6_SetupWallFitter()`: `Transform launchPoint = FindTransformOrWarn("LaunchPoint");` / `so.FindProperty("_launchPoint")...` / `so.FindProperty("_nativeLaunchPointY")...` 3줄 삭제 (`_wallLeft`/`_wallRight`/`_wallTop`/`_ground`/카메라/배경 연결은 유지)
+  - `Step11_SetupCharacterVisual()`: `LaunchPoint` Transform 탐색·경고 블록과 `characterObj.transform.localPosition = launchPoint.localPosition;` 삭제, 관련 주석을 "Character는 BallLauncher의 자식 오브젝트다. 초기 위치는 CharacterLaunchOrbitSetupEditor가 담당한다."로 수정 (Body/Head/Weapon 생성 및 `CharacterAimController` 참조 연결 로직은 그대로 유지)
+
+**신규 생성 파일:**
+- `Assets/_Project/Scripts/Editor/CharacterLaunchOrbitSetupEditor.cs` — `[MenuItem("PurpleCow/Setup/Character LaunchPoint Orbit Setup")]`, `BallLauncher` 자식 `Character`를 찾아 `localPosition = (0, -8, 0)`으로 설정(없으면 경고 후 스킵), `Camera.main`의 `WallFitter`를 찾아 `SerializedObject`로 `_character` 필드에 연결(없으면 경고 후 스킵). `SceneSetupEditor.cs`의 `private static` 헬퍼는 재사용 불가하므로 최소한의 탐색 로직을 자체적으로 작성
+
+**주요 결정사항:**
+- `CharacterManager.cs`와 볼의 물리/충돌/데미지 로직은 요청 범위 외라 전혀 수정하지 않음
+- `Ball.cs`/`BallLauncher.cs`의 `ReturnToLaunchPoint()` 메서드명, `toLaunchPoint` 지역변수명, 관련 주석 문구는 plan.md가 명시적으로 리네이밍을 요청하지 않아 그대로 유지 (참조 표현식만 교체)
+- `SceneSetupEditor.cs`의 `SetupScene()` 상단 주석("WallFitter는 Step8에서 생성되는 LaunchPoint를 참조해야 하므로...")은 plan.md 6단계가 명시한 삭제 대상(Step8/Step6/Step11 세 메서드 내부)에 포함되지 않아 손대지 않음 — 다만 이제 Step8이 LaunchPoint를 생성하지 않으므로 이 주석은 현재 사실과 어긋난 상태로 남아있음(사용자/QA 확인 필요)
+- 커밋/푸시 미수행 (오케스트레이터가 처리 예정)

@@ -76,7 +76,7 @@ public class Ball : MonoBehaviour, IPoolable
 
         if (_isReturning)
         {
-            Vector2 toLaunchPoint = (Vector2)BallLauncher.Instance.LaunchPoint.position - (Vector2)transform.position;
+            Vector2 toLaunchPoint = BallLauncher.Instance.ReturnPoint - (Vector2)transform.position;
             if (toLaunchPoint.magnitude <= RETURN_ARRIVAL_DISTANCE)
             {
                 _isReturning = false;
@@ -211,7 +211,7 @@ public class Ball : MonoBehaviour, IPoolable
     // LaunchPoint에 도달하면 FixedUpdate()에서 재발사(BallLauncher.RelaunchBall)를 트리거한다.
     private void ReturnToLaunchPoint()
     {
-        Vector2 direction = ((Vector2)BallLauncher.Instance.LaunchPoint.position - (Vector2)transform.position).normalized;
+        Vector2 direction = (BallLauncher.Instance.ReturnPoint - (Vector2)transform.position).normalized;
         _rigidbody.linearVelocity = direction * _ballData.Speed;
         _isReturning = true;
     }

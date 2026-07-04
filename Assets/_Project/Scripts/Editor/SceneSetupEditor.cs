@@ -312,21 +312,13 @@ public static class SceneSetupEditor
             return;
         }
 
-        Transform launchPoint = launcherObj.transform.Find("LaunchPoint");
-        if (launchPoint == null)
-        {
-            Debug.LogWarning("[SceneSetupEditor] LaunchPoint를 찾을 수 없어 Character 배치를 건너뜁니다.");
-            return;
-        }
-
-        // Character는 LaunchPoint와 동일한 부모(BallLauncher)의 형제 오브젝트로, 동일한 localPosition에 배치한다.
+        // Character는 BallLauncher의 자식 오브젝트다. 초기 위치는 CharacterLaunchOrbitSetupEditor가 담당한다.
         Transform characterTransform = launcherObj.transform.Find("Character");
         GameObject characterObj;
         if (characterTransform == null)
         {
             characterObj = new GameObject("Character");
             characterObj.transform.SetParent(launcherObj.transform);
-            characterObj.transform.localPosition = launchPoint.localPosition;
             Debug.Log("[SceneSetupEditor] Character 생성 완료.");
         }
         else
@@ -517,7 +509,6 @@ public static class SceneSetupEditor
         Transform wallRight = FindTransformOrWarn("Wall_Right");
         Transform wallTop = FindTransformOrWarn("Wall_Top");
         Transform ground = FindTransformOrWarn("Ground");
-        Transform launchPoint = FindTransformOrWarn("LaunchPoint");
 
         SerializedObject so = new SerializedObject(fitter);
         so.FindProperty("_targetCamera").objectReferenceValue = mainCamera;
@@ -526,12 +517,10 @@ public static class SceneSetupEditor
         so.FindProperty("_wallRight").objectReferenceValue = wallRight;
         so.FindProperty("_wallTop").objectReferenceValue = wallTop;
         so.FindProperty("_ground").objectReferenceValue = ground;
-        so.FindProperty("_launchPoint").objectReferenceValue = launchPoint;
         so.FindProperty("_nativeLeftX").floatValue = -6.5f;
         so.FindProperty("_nativeRightX").floatValue = 6.3f;
         so.FindProperty("_nativeTopY").floatValue = 6.0f;
         so.FindProperty("_nativeBottomY").floatValue = -6.5f;
-        so.FindProperty("_nativeLaunchPointY").floatValue = -6.0f;
         so.FindProperty("_zoomFactor").floatValue = 1.3f;
         so.ApplyModifiedPropertiesWithoutUndo();
 
@@ -625,18 +614,6 @@ public static class SceneSetupEditor
         }
 
         so.FindProperty("_poolParent").objectReferenceValue = poolRoot.transform;
-
-        // Create or find LaunchPoint as child of BallLauncher
-        Transform launchPoint = launcherObj.transform.Find("LaunchPoint");
-        if (launchPoint == null)
-        {
-            GameObject lpObj = new GameObject("LaunchPoint");
-            lpObj.transform.SetParent(launcherObj.transform);
-            lpObj.transform.localPosition = new Vector3(0f, -8f, 0f);
-            launchPoint = lpObj.transform;
-            Debug.Log("[SceneSetupEditor] LaunchPoint 생성 완료.");
-        }
-        so.FindProperty("_launchPoint").objectReferenceValue = launchPoint;
 
         so.ApplyModifiedPropertiesWithoutUndo();
 

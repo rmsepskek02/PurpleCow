@@ -67,7 +67,7 @@ public class TrajectoryPreview : MonoBehaviour
         if (direction.sqrMagnitude < 0.0001f)
             return;
 
-        Vector2 origin = BallLauncher.Instance.LaunchPoint.position;
+        Vector2 origin = BallLauncher.Instance.LaunchOrigin;
 
         if (!TryBlockingRaycast(origin, direction, out RaycastHit2D hit1))
         {

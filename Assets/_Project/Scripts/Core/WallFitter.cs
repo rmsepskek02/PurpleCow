@@ -9,12 +9,12 @@ public class WallFitter : MonoBehaviour
     [SerializeField] private Transform _wallRight;
     [SerializeField] private Transform _wallTop;
     [SerializeField] private Transform _ground;
-    [SerializeField] private Transform _launchPoint;
+    [SerializeField] private Transform _character;
     [SerializeField] private float _nativeLeftX = -6.5f;
     [SerializeField] private float _nativeRightX = 6.3f;
     [SerializeField] private float _nativeTopY = 6.0f;
     [SerializeField] private float _nativeBottomY = -6.5f;
-    [SerializeField] private float _nativeLaunchPointY = -6.0f;
+    [SerializeField] private float _nativeCharacterY = -6.0f;
     [SerializeField] private float _zoomFactor = 1.3f;
 
     private void Start()
@@ -42,7 +42,7 @@ public class WallFitter : MonoBehaviour
         SetX(_wallRight, _nativeRightX * scaleX);
         SetY(_wallTop, _nativeTopY * scaleY);
         SetY(_ground, _nativeBottomY * scaleY);
-        SetY(_launchPoint, _nativeLaunchPointY * scaleY);
+        SetY(_character, _nativeCharacterY * scaleY);
     }
 
     private static void SetX(Transform t, float x)

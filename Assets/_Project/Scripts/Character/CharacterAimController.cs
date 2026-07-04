@@ -3,19 +3,23 @@ using UnityEngine;
 // BallLauncher.LaunchDirection(조준 방향)을 매 프레임 읽어 캐릭터 파츠(Body/Head/Weapon)의
 // 좌우 반전과 회전을 갱신한다. 반전은 SpriteRenderer.flipX만 사용하며 회전 각도 계산에는
 // 관여하지 않는다(localScale 반전 금지 — 반전/회전 부호 충돌 방지를 위한 확정된 설계).
-public class CharacterAimController : MonoBehaviour
+public class CharacterAimController : Singleton<CharacterAimController>
 {
     [SerializeField] private SpriteRenderer _bodyRenderer;
     [SerializeField] private SpriteRenderer _headRenderer;
     [SerializeField] private SpriteRenderer _weaponRenderer;
     [SerializeField] private float _headDampFactor = 0.25f;
     [SerializeField] private float _flipDeadzone = 0.05f;
+    [SerializeField] private float _weaponLength = 0.6612f;
 
     private bool _facingRight = true;
 
     private Vector3 _headBasePosition;
     private Vector3 _bodyBasePosition;
     private Vector3 _weaponBasePosition;
+
+    public Vector2 BodyPosition => _bodyRenderer.transform.position;
+    public float   WeaponLength => _weaponLength;
 
     private void Start()
     {
