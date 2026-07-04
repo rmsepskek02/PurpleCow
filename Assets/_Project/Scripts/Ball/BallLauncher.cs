@@ -27,6 +27,8 @@ public class BallLauncher : Singleton<BallLauncher>
 
     public Vector2 ReturnPoint => CharacterAimController.Instance.BodyPosition;
 
+    public Vector2 CharacterPosition => CharacterAimController.Instance.transform.position;
+
     // 로스터 항목: 볼 개체 1개가 영구적으로 유지하는 타입 정체성.
     // SkillData가 null이면 노말볼, 아니면 해당 특수볼 타입(스킬)을 의미한다.
     private class BallRosterEntry

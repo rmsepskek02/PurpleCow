@@ -735,3 +735,65 @@
 - 새 완료 항목을 "캐릭터 비주얼 구현" 항목 바로 다음에 삽입해 두 task가 인과관계(직전 작업에서 발견된 문제 → 이번 작업에서 해결)로 이어짐을 문서 순서로도 드러나게 함
 - "다음 작업 순서" 1번을 단순 삭제하지 않고 "이미 해결된 문제"에서 "로컬 반영 절차 안내"로 성격을 바꿔 재사용 — 사용자가 실제로 다음에 해야 할 행동(Scene Setup 재실행 등 3단계)이 여전히 남아 있으므로 항목 자체는 유지
 - 코드/에셋 파일은 전혀 건드리지 않고 문서 2개(`ProjectStatus.md`, `ProjectHistory.md`)만 수정
+
+---
+
+### 작업 내용 (추가)
+- Ball Trajectory Aim Fix task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/research.md`
+- 작성 전 `InputHandler.cs`, `TrajectoryPreview.cs`, `BallLauncher.cs`, `GameplayMechanics.md` 섹션 1/2, `UIRules.md` 섹션 11을 Read로 재확인
+
+### 결과
+- research.md 생성 완료: 두 이슈(궤적이 터치할 때만 표시됨 / 터치 조준 정확도 저하) 각각 현재 코드 구조와 원인을 분석
+- 이슈 1: `TrajectoryPreview`가 `OnAimBegin`/`OnDrag`/`OnRelease` 이벤트에만 반응하는 순수 이벤트 기반 구조라 터치가 없는 프레임에는 갱신 트리거가 없음을 확인. 몬스터가 볼 사이클과 무관하게 항상 이동한다는 `GameplayMechanics.md` 섹션 2 근거를 들어, 터치 여부와 무관한 상시 표시 + `Update()` 기반 매 프레임 재계산(터치 중엔 드래그 방향, 비터치 중엔 `BallLauncher.LaunchDirection` 기준)으로의 구조 변경이 결론으로 확정됨. `UIRules.md` 섹션 11의 "조준 중에만 표시" 문구도 함께 갱신 필요하다고 명시
+- 이슈 2: `InputHandler.cs` 53행의 `(currentPos - _dragStartPosition).normalized`가 스크린(픽셀) 좌표 차이를 스크린→월드 변환 없이 그대로 정규화해 조준 방향으로 쓰고 있다는 점을 원인으로 특정. 구체적 해결책(`ScreenToWorldPoint` 등)은 plan.md로 이월한다고만 명시하고 research.md에는 포함하지 않음
+- "관련 파일 및 의존성" 섹션에 `InputHandler.cs`/`TrajectoryPreview.cs`/`BallLauncher.cs`/`GameplayMechanics.md`(섹션 1)/`UIRules.md`(섹션 11) 5개 항목 정리
+
+### 주요 결정사항
+- 사용자 지시대로 plan.md는 이번에 작성하지 않음, 코드/문서(UIRules.md 등) 실제 수정도 하지 않음(research.md 1개 파일만 생성)
+- AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 갱신하지 않음
+
+---
+
+### 작업 내용 (추가)
+- Ball Trajectory Aim Fix task plan.md 신규 생성 (research.md 기반)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/plan.md`
+- research.md 재확인 결과 이슈가 실제로는 3개(궤적 상시 표시, 터치 조준 정확도, 궤적 프리뷰 색상/크기)임을 확인 — 직전 세션의 research.md 완료 기록에 "두 이슈"로만 요약된 것은 3번째 이슈(색상/크기) 서술이 누락된 것으로 판단, 이번 plan.md는 research.md 원문 그대로 세 이슈 전부를 대상으로 작성
+- 작성 전 `TrajectoryPreview.cs`, `InputHandler.cs`, `BallLauncher.cs`(`LaunchDirection`/`LaunchPoint` 정의부), `UIRules.md` 섹션 11, `DevRules.md`(네이밍/Awake 캐싱 규칙)를 Read로 재확인
+
+### 결과
+- plan.md 생성 완료: 구현 목표 4개, 단계별 작업 계획을 이슈 1(궤적 상시 표시)→이슈 2(스크린→월드 변환)→이슈 3(색상/크기 조정)→문서 갱신 순으로 구성
+- 이슈 1: `TrajectoryPreview`의 `OnEnable`/`OnDisable` 이벤트 구독 제거, `HandleAimBegin`/`HandleDrag`/`HandleRelease` 삭제, `Update()` 신규 추가(`BallLauncher.Instance.LaunchDirection` 매 프레임 사용), `Awake()`의 `SetVisible(false)` → `SetVisible(true)`로 변경
+- 이슈 2: `InputHandler`에 `Camera.main` 캐싱용 `_mainCamera` 필드 + `Awake()` 신규 추가, `_dragStartPosition`과 드래그 방향 계산을 `ScreenToWorldPoint` 변환 후 델타 계산 방식으로 전환, orthographic 카메라에서는 z값이 결과에 영향 없다는 점 참고 메모 포함
+- 이슈 3: `_hitRing`을 `_hitColor` 대신 신규 `_ringColor` 필드(회백색 계열) 참조로 분리, `_hitColor` 기본값을 `Color.red`에서 `new Color32(206, 90, 82, 255)`로 변경, `_dotRadius` `0.08f`→`0.05f` 예시, `DASH_WORLD_SIZE` `0.3f`→`0.15f` 예시, `_lineColor`를 `Color.white`에서 `new Color32(225, 225, 220, 255)`로 변경. 모두 예시값이며 실제 화면에서 재조정 가능하다고 명시
+- 예상 변경 파일: `TrajectoryPreview.cs`, `InputHandler.cs`, `UIRules.md`(섹션 11) 3개, 신규 생성 파일 없음을 명시
+- 주의사항에 (1) 색상/크기 수치는 예시값, (2) `[SerializeField]` 인스펙터 오버라이드 우선 적용 가능성, (3) `Camera.main` 사용을 위한 `MainCamera` 태그 확인 필요, (4) `DevRules.md` 네이밍/캐싱 컨벤션 준수 4가지 명시
+
+### 주요 결정사항
+- 사용자가 이슈별로 구체적 구현 방향(메서드/필드 단위)을 이미 확정해서 제공했으므로, plan.md는 그 지시를 그대로 단계별 작업 계획으로 구조화하는 데 집중하고 임의 해석/추가 설계를 하지 않음
+- research.md는 이번 세션에서 전혀 수정하지 않음(사용자 지시대로 plan.md만 신규 작성)
+- AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 갱신하지 않음
+- 코드(`TrajectoryPreview.cs`, `InputHandler.cs`) 및 `UIRules.md`는 계획 문서 성격상 실제로 수정하지 않고 Read만 수행
+
+---
+
+## 2026-07-04
+
+### 작업 내용
+- Ball Trajectory Aim Fix task(이슈 1~5)가 전부 구현 완료되고 사용자가 유니티 에디터에서 직접 플레이 테스트를 마쳐 "조작감에 불편함이 없고 매우 좋다"고 확인해준 최종 완료 상태를 관련 문서 5곳에 반영
+- 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/research.md`, `.../plan.md`, `Assets/_Project/Docs/GameplayMechanics.md`, `Assets/_Project/Docs/ProjectStatus.md`, `Assets/_Project/Docs/ProjectHistory.md`
+- 작성 전 `InputHandler.cs`, `TrajectoryPreview.cs`(최신 코드 — `ComputeAimDirection` 헬퍼, `Update()` 기반 궤적 갱신, `_isDragging` 상태 기반 시작 판정 모두 반영되어 있음을 확인), 두 task 문서 전문, `UIRules.md` 섹션 11(이미 "항상 표시" + `_ringColor` 행까지 최신 반영되어 있어 이번엔 손대지 않음), 배경/해상도 대응 task의 research.md/plan.md(완료 문구 톤 참고용) 전부 Read로 재확인
+- GameplayMechanics.md, ProjectStatus.md, ProjectHistory.md도 편집 전 전문을 Read로 재확인
+
+### 결과
+- `research.md`: "결론" 섹션 맨 끝에 "### 최종 구현 및 실제 플레이 테스트 완료" 소제목 신규 추가 — 이슈 1~5가 `InputHandler.cs`/`TrajectoryPreview.cs`에 전부 구현되어 main에 반영됐고, 사용자가 유니티 에디터에서 직접 플레이 테스트로 조작감 만족을 확인했다는 사실만 간결히 기록(배경/해상도 대응 research.md의 "최종 구현 및 실기기 검증 완료" 문단과 동일한 톤)
+- `plan.md`: 이슈 1~5 각 섹션 제목 끝에 " — (구현 완료)" 표시 추가, "예상 변경/생성 파일 목록" 제목에 "(최종 구현 상태 — 이슈 1~5 전부 구현 완료)" 추가하고 각 파일 항목을 "(수정)" → "(수정 완료)"로 변경하며 실제 최종 변경 내용(스크린→월드 변환, 절대 조준 모델 전환, `_isDragging` 상태 기반 재구성 등)을 요약 반영, 목록 하단에 최종 테스트 확인 문장 추가
+- `GameplayMechanics.md`: 섹션 1 "구현 현황"에 새 bullet 추가 — `_Task/2026-07-03/15-41_ball-trajectory-aim-fix`로 반영된 5개 변경사항(궤적 상시 표시 전환, 스크린→월드 보정, 색상/크기 조정, 절대 조준 모델 전환, 터치 시작 폴링 누락 수정)을 요약하고, 이슈 4 research.md 분석(기존 스펙 문구 "터치하는 순간 조준 방향이 즉시 정해진다"/"드래그 위치를 목표로 실시간으로 따라간다"가 절대 조준 모델과 더 잘 맞음)을 근거로 위쪽 "확정된 스펙 서술" 원문은 그대로 유지하면서 구현 현황 쪽에서 부합 여부만 확인하는 방식으로 처리(스펙 문구 자체는 수정하지 않음)
+- `ProjectStatus.md`: "완료된 작업" 체크리스트에 "볼 궤적 조준 개선(`_Task/2026-07-03/15-41_ball-trajectory-aim-fix`)" 항목 신규 추가 — 5개 이슈와 플레이 테스트 확인 결과를 한 문장으로 요약
+- `ProjectHistory.md`: 기존 "## 2026-07-03" 섹션 맨 하단(배경/해상도 대응 다음)에 "### 볼 궤적 조준 개선" 소제목 신규 추가 — 배경(이슈 1~3 선행 구현 후 실 플레이 테스트에서 이슈 4, 이슈 4 구현 후 이슈 5가 순차 재발견된 경위)/이슈별 원인·해결 요약(1~5 각각)/검증(main 반영 + 실제 플레이 테스트 확인) 순서로 기존 섹션들과 동일한 서술 형식 유지
+
+### 주요 결정사항
+- UIRules.md 섹션 11은 Read로 확인한 결과 이미 "터치 여부와 무관하게 항상 표시" 문구 + `_ringColor` Inspector 표 행까지 최신 반영되어 있어, plan.md의 "예상 변경/생성 파일 목록"에서도 "(수정 완료)"로만 표시하고 실제 파일은 건드리지 않음
+- GameplayMechanics.md 섹션 1 상단의 "확정된 스펙 서술"(원본 게임 확인 내용) 문구 자체는 사용자 지시대로 삭제/재작성하지 않고 그대로 유지 — 이슈 4 research.md에서 이미 이 문구가 절대 조준 모델과 더 잘 맞는다고 분석이 끝난 상태이므로, 별도 문구 수정 없이 "구현 현황"에서 이 부합 사실만 확인하는 방식으로 처리(문구를 다시 쓰면 오히려 원본 확인 기록의 원문성이 훼손된다고 판단)
+- 기존 내용은 어디에도 삭제/재작성하지 않고 "완료" 상태를 반영하는 문장만 각 문서에 추가하는 방식으로만 편집(사용자가 명시적으로 요청한 제약)
+- AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 이번에도 갱신하지 않음

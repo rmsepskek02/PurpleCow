@@ -1,18 +1,19 @@
 using UnityEngine;
 
-// 조준 중(OnAimBegin~OnRelease) 1차/2차 충돌 지점을 계산해
+// 터치 여부와 무관하게 매 프레임 1차/2차 충돌 지점을 계산해
 // 점선 궤적과 2차 충돌 지점의 레드닷/원형 궤적선을 표시하는 궤적 프리뷰.
 // GameplayMechanics.md 섹션 1 스펙을 그대로 따른다(2단계 점선 + 2차 지점 레드닷/링, 3차 충돌 이후 미표시).
 public class TrajectoryPreview : MonoBehaviour
 {
     private const float MAX_RAY_DISTANCE = 50f;
     private const int   CIRCLE_SEGMENTS  = 24;
-    private const float DASH_WORLD_SIZE  = 0.3f;
+    private const float DASH_WORLD_SIZE  = 0.15f;
 
     [SerializeField] private float _lineWidth  = 0.05f;
-    [SerializeField] private Color _lineColor  = Color.white;
-    [SerializeField] private Color _hitColor   = Color.red;
-    [SerializeField] private float _dotRadius  = 0.08f;
+    [SerializeField] private Color _lineColor  = new Color32(225, 225, 220, 255);
+    [SerializeField] private Color _hitColor   = new Color32(206, 90, 82, 255);
+    [SerializeField] private Color _ringColor  = new Color32(225, 225, 220, 255);
+    [SerializeField] private float _dotRadius  = 0.05f;
     [SerializeField] private float _ringRadius = 0.3f;
 
     private static readonly string[] _blockingTags = { "Wall", "Ground", "Monster" };
@@ -24,42 +25,20 @@ public class TrajectoryPreview : MonoBehaviour
     private void Awake()
     {
         _trajectoryLine = CreateLineRenderer("TrajectoryLine", _lineWidth, _lineColor, CreateDashTexture());
-        _hitDot         = CreateLineRenderer("HitDot",  _dotRadius * 1.6f, _hitColor, CreateSolidTexture());
-        _hitRing        = CreateLineRenderer("HitRing", _lineWidth,        _hitColor, CreateSolidTexture());
+        _hitDot         = CreateLineRenderer("HitDot",  _dotRadius * 1.6f, _hitColor,  CreateSolidTexture());
+        _hitRing        = CreateLineRenderer("HitRing", _lineWidth,        _ringColor, CreateSolidTexture());
         _hitDot.loop  = true;
         _hitRing.loop = true;
 
-        SetVisible(false);
-    }
-
-    private void OnEnable()
-    {
-        InputHandler.OnAimBegin += HandleAimBegin;
-        InputHandler.OnDrag     += HandleDrag;
-        InputHandler.OnRelease  += HandleRelease;
-    }
-
-    private void OnDisable()
-    {
-        InputHandler.OnAimBegin -= HandleAimBegin;
-        InputHandler.OnDrag     -= HandleDrag;
-        InputHandler.OnRelease  -= HandleRelease;
-    }
-
-    private void HandleAimBegin()
-    {
         SetVisible(true);
+    }
+
+    // 터치 여부와 무관하게 매 프레임 궤적을 재계산한다.
+    // BallLauncher.LaunchDirection은 터치 중에는 드래그 방향, 터치하지 않을 때는
+    // 마지막 조준 방향(기본값 Vector2.up)을 담고 있어 별도 상태 분기가 필요 없다.
+    private void Update()
+    {
         UpdateTrajectory(BallLauncher.Instance.LaunchDirection);
-    }
-
-    private void HandleDrag(Vector2 direction)
-    {
-        UpdateTrajectory(direction);
-    }
-
-    private void HandleRelease()
-    {
-        SetVisible(false);
     }
 
     private void UpdateTrajectory(Vector2 direction)

@@ -954,6 +954,58 @@
 
 ---
 
+### 작업: 볼 궤적 프리뷰 상시 표시 + 조준 정확도 + 색상/크기 수정
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/plan.md` (research.md 포함, 사용자 승인 완료)
+- 기존 파일 4개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs`
+  - 이슈1: `OnEnable`/`OnDisable`의 `InputHandler.OnAimBegin`/`OnDrag`/`OnRelease` 구독 제거, `HandleAimBegin`/`HandleDrag`/`HandleRelease` 삭제, `Update()` 신규 추가(`UpdateTrajectory(BallLauncher.Instance.LaunchDirection)` 매 프레임 호출), `Awake()`의 `SetVisible(false)` → `SetVisible(true)`
+  - 이슈3: `_hitRing`이 새 필드 `_ringColor`(기본값 `Color32(225,225,220,255)`)를 참조하도록 분리, `_hitColor` 기본값 `Color32(206,90,82,255)`로 톤다운, `_dotRadius` `0.08f`→`0.05f`, `DASH_WORLD_SIZE` `0.3f`→`0.15f`, `_lineColor` 기본값 `Color32(225,225,220,255)`로 변경
+  - 클래스 상단 주석도 `OnAimBegin~OnRelease` 언급을 "터치 여부와 무관하게 매 프레임" 문구로 함께 수정 (plan.md에 직접 명시되지 않았으나 방금 제거한 로직을 그대로 서술하던 주석이라 부정확해져 함께 수정 — 관련 있는 범위로 판단)
+- `Assets/_Project/Scripts/Core/InputHandler.cs`
+  - 이슈2: `private Camera _mainCamera;` 필드 추가, `protected override void Awake() { base.Awake(); _mainCamera = Camera.main; }` 추가(단순 `private void Awake()`가 아니라 `Singleton<InputHandler>.Awake()`를 오버라이드+`base.Awake()` 호출하는 형태로 구현 — plan.md는 단순 `Awake()` 추가라고만 적었지만, `InputHandler`가 `Singleton<T>`를 상속하므로 `base.Awake()`를 호출하지 않으면 `Instance` 할당이 씹히는 문제를 방지하기 위한 필수 보정)
+  - `_dragStartPosition` 저장을 `_mainCamera.ScreenToWorldPoint(pressedPos.Value)`로, `OnDrag` 방향 계산을 `(ScreenToWorldPoint(currentPos.Value) - _dragStartPosition).normalized`로 변경
+- `Assets/_Project/Docs/UIRules.md` 섹션 11 — "조준 중에만 표시" 문구를 "터치 여부와 무관하게 항상 표시, 매 프레임 갱신" 취지로 수정, Inspector 조절 값 표에 `_ringColor` 행 추가(`_hitColor` 설명도 "레드닷/원형 궤적선 색상"→"레드닷 색상"으로 정정)
+- `Assets/Scenes/SampleScene.unity` — **plan.md의 예상 변경 파일 목록에는 없었으나 "주의사항" 섹션에서 명시적으로 요구한 사항**: `TrajectoryPreview` 컴포넌트의 기존 인스펙터 오버라이드 값(`_lineColor` white, `_hitColor` red, `_dotRadius` 0.08)이 코드 기본값 변경을 그대로 덮어써 화면에 반영되지 않는 것을 확인하고, YAML을 새 기본값과 동일하게 직접 갱신(`_ringColor` 필드도 새로 추가). 코드 기본값과 씬의 실제 값을 일치시키지 않으면 이슈3 변경이 시각적으로 전혀 반영되지 않기 때문.
+
+**주요 결정사항:**
+- `InputHandler.Awake()`는 `private`이 아닌 `protected override` + `base.Awake()`로 구현 — `Singleton<T>` 상속 클래스에서 `Awake()`를 새로 정의할 때 `base.Awake()` 누락 시 `Instance`가 설정되지 않는 문제를 다른 클래스(`BallLauncher` 등)와 동일한 패턴으로 방지
+- 씬 파일(`SampleScene.unity`)의 `TrajectoryPreview` 인스펙터 오버라이드 값을 코드 기본값과 동일하게 직접 갱신 — plan.md 예상 파일 목록에는 없었지만 "주의사항" 섹션의 명시적 지시(오버라이드 확인 후 필요 시 리셋/재적용)에 따른 조치. 이전 작업(볼 천장 이탈 버그 수정)과 달리 이번엔 plan.md가 씬 값 확인/재적용을 직접 요구했으므로 직접 편집함
+- `TrajectoryPreview.cs` 클래스 상단 주석 수정은 plan.md에 명시되지 않았지만, 방금 제거한 이벤트 기반 로직을 그대로 서술하던 부정확한 주석이라 같은 변경 범위로 판단해 함께 수정
+- git 커밋/푸시는 수행하지 않음 (사용자가 별도 처리 예정)
+
+---
+
+## 2026-07-04
+
+### 작업: 이슈 4 — 조준 모델 전환 (상대 드래그 → 절대 조준, `InputHandler.cs`)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/plan.md` "이슈 4" 섹션 (research.md 이슈 4 포함, 사용자 승인 완료). 이슈 1~3은 이미 구현 완료 상태였고 이번엔 이슈 4만 추가 구현.
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/InputHandler.cs`
+  - `_dragStartPosition` 필드 제거 (상대 드래그 기준점 개념 삭제)
+  - `private Vector2 ComputeAimDirection(Vector2 screenPos)` 헬퍼 메서드 추가 — `_mainCamera.ScreenToWorldPoint(screenPos)`로 구한 월드 좌표에서 `BallLauncher.Instance.LaunchPoint.position`을 뺀 뒤 `.normalized` 반환
+  - `pressedPos.HasValue` 분기: `_isDragging = true; OnAimBegin?.Invoke();`에 이어 `OnDrag?.Invoke(ComputeAimDirection(pressedPos.Value));`를 즉시 발행하도록 추가 (터치 시작 프레임부터 궤적이 반응하도록 수정)
+  - `currentPos.HasValue && _isDragging` 분기: 기존 "월드 currentPos - 월드 dragStartPosition" 델타 계산을 제거하고 `OnDrag?.Invoke(ComputeAimDirection(currentPos.Value));`로 교체 (발사 지점 → 현재 손가락 위치의 절대 방향을 매 프레임 재계산)
+  - `released && _isDragging` 분기는 `_dragStartPosition`을 참조하지 않아 수정 불필요 (plan.md 예상대로)
+
+**사전 확인 사항 (주의사항 대응):**
+- `BallLauncher`도 `Singleton<BallLauncher>` 상속이며 `Awake()`에서 `base.Awake()`로 `Instance` 할당. `InputHandler`는 `BallLauncher.Instance`를 `Awake()`/`Start()`가 아닌 `Update()`(그것도 `ComputeAimDirection` 호출 시점, 즉 터치 발생 프레임)에서만 참조하므로, 모든 오브젝트의 `Awake()`가 끝난 뒤 `Update()`가 도는 Unity 생명주기상 스크립트 실행 순서와 무관하게 안전함을 코드 레벨에서 확인
+- `Assets/Scenes/SampleScene.unity`에서 `BallLauncher` 컴포넌트의 `_launchPoint: {fileID: 859741423}`가 실제로 연결되어 있어 `LaunchPoint`가 null이 아님을 씬 YAML 직접 확인
+
+**주요 결정사항:**
+- plan.md에 기술된 구현 순서(헬퍼 메서드 추가 위치, 각 분기 수정 내용)를 그대로 따름, 별도 해석/추가 변경 없음
+- `UIRules.md`, `TrajectoryPreview.cs` 등 이슈 1~3 관련 파일은 이번 범위에 포함되지 않으므로 손대지 않음
+- git 커밋/푸시는 수행하지 않음 (사용자가 별도 처리 예정)
+
+---
+
 ## 2026-07-04
 
 ### 작업: SceneSetupEditor → CharacterLaunchOrbitSetupEditor 로직 이관 (Character/WallFitter 코드 위치 재정리)
@@ -1004,3 +1056,50 @@
 **주요 결정사항:**
 - `character`가 null이라 조기 return되는 경로에는 저장 호출 없음 — 정상 완료된 경우에만 저장 (기존 `SceneSetupEditor.SetupScene()`과 동일 패턴)
 - 커밋/푸시는 하지 않음 (오케스트레이터 처리 예정)
+
+---
+
+### 작업: 이슈 5 — 터치 시작(Began) 단계 폴링 누락 대응, `_isDragging` 상태 기반 판정으로 재구성 (`InputHandler.cs`)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/plan.md` "이슈 5" 섹션 (research.md 이슈 5 포함, 사용자 승인 완료). 이슈 1~4는 이미 구현 완료 상태였고 이번엔 이슈 5만 추가 구현.
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Core/InputHandler.cs`
+  - `Update()` 내부 `Vector2? pressedPos`/`Vector2? currentPos` 두 지역 변수를 `Vector2? touchPos` 하나로 통합
+  - 터치 phase 분기: `Began`/`Moved`/`Stationary` 세 경우를 하나의 조건으로 묶어 `touchPos = touch.position.ReadValue();`로 채우도록 변경. `Ended`/`Canceled`일 때만 `released = true` 유지
+  - 마우스 분기: `wasPressedThisFrame` 기반으로 별도 `pressedPos`를 채우던 코드 제거, `Mouse.current.leftButton.isPressed`일 때 `touchPos = Mouse.current.position.ReadValue();`로 통일. `wasReleasedThisFrame`일 때 `released = true`는 그대로 유지
+  - `pressedPos.HasValue` 블록과 `currentPos.HasValue && _isDragging` 블록을 `if (touchPos.HasValue) { if (!_isDragging) { _isDragging = true; OnAimBegin?.Invoke(); } OnDrag?.Invoke(ComputeAimDirection(touchPos.Value)); }` 하나로 통합 (plan.md 4번 코드 그대로)
+  - `released && _isDragging` 블록은 변경 없음
+  - `ComputeAimDirection(Vector2 screenPos)` 헬퍼(이슈 4에서 추가)는 수정 없이 그대로 재사용
+
+**주의사항 확인 결과:**
+- 일반적인 터치 시나리오(Began이 정상 관측되는 경우)의 동작 불변 확인: `!_isDragging` 조건이 여전히 시작 프레임에서만 참이 되므로 `OnAimBegin`은 정확히 1회, 그 직후 `OnDrag`도 즉시 1회 발행됨 — 기존 동작과 로직상 동일하며, Began이 누락되는 예외 프레임만 추가로 안전하게 처리됨
+- 마우스 분기 통일로 사라진 클릭 첫 프레임의 `OnDrag` 중복 발행에 의존하는 코드가 없는지 확인: 코드 전체에서 `InputHandler.OnDrag`를 구독하는 곳은 `BallLauncher.HandleDrag(Vector2 direction) { _launchDirection = direction; }` 한 곳뿐이며(`TrajectoryPreview`는 이슈 1에서 이미 `Update()` 기반으로 전환되어 `OnDrag` 구독 안 함), 단순 필드 대입으로 완전히 멱등(idempotent)이라 중복 호출 제거로 인한 영향 없음을 grep으로 확인
+- `pressedPos`/`currentPos` 변수명/주석 잔존 여부 확인: `Assets/_Project` 전체 grep 결과 두 이름 모두 InputHandler.cs를 포함한 코드에서 완전히 제거되었고, 문서(plan.md/research.md 등 task 문서)에만 과거 기록으로 남아있음을 확인(문서는 수정 대상 아님)
+
+**주요 결정사항:**
+- plan.md에 기술된 코드 스니펫(4번)을 그대로 적용, 별도 해석/추가 변경 없음
+- git 커밋/푸시는 수행하지 않음 (사용자가 별도 처리 예정)
+
+---
+
+## 2026-07-04
+
+### 작업: 병합 컴파일 오류 수정 — InputHandler.ComputeAimDirection의 삭제된 BallLauncher.LaunchPoint 참조 교체
+
+**작업 내용:**
+- origin/main 병합 후 발생한 컴파일 오류 수정 (task 문서 없이 오케스트레이터 직접 지시로 진행 — 범위가 2개 파일의 특정 라인으로 명확히 한정된 긴급 수정 건)
+- 배경: main의 "볼 궤적 조준 개선" 작업이 추가한 `InputHandler.ComputeAimDirection()`이 `BallLauncher.Instance.LaunchPoint.position`을 참조했으나, 같은 브랜치의 직전 작업("LaunchPoint 궤도화 재설계")에서 `BallLauncher.LaunchPoint`(Transform 프로퍼티)가 삭제되고 `LaunchOrigin`/`ReturnPoint`(Vector2 계산 프로퍼티)로 대체되어 컴파일 깨짐
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` — `ReturnPoint` 프로퍼티 바로 아래에 `public Vector2 CharacterPosition => CharacterAimController.Instance.transform.position;` 계산 프로퍼티 신규 추가
+- `Assets/_Project/Scripts/Core/InputHandler.cs` — `ComputeAimDirection()`: 주석을 `BallLauncher.Instance.CharacterPosition` 기준으로 수정, `BallLauncher.Instance.LaunchPoint.position` → `BallLauncher.Instance.CharacterPosition`으로 교체, 지역변수명 `launchPointPos` → `characterPos`로 정리
+
+**주요 결정사항:**
+- 기준점으로 `LaunchOrigin`(무기 끝 위치, `LaunchDirection`에 의존하는 파생값)을 쓰지 않고 `Character` 고정 위치(`CharacterAimController.Instance.transform.position`)를 새 프로퍼티로 노출해 사용 — `ComputeAimDirection()`이 계산해서 만들어내는 값(`LaunchDirection`)에서 파생된 위치를 다시 기준점으로 삼는 순환 의존(1프레임 지연) 회피
+- `TrajectoryPreview.cs`는 이미 `LaunchOrigin`을 올바르게 쓰고 있어 손대지 않음
+- `InputHandler.cs`의 다른 로직(터치/마우스 처리, `_isDragging` 상태 판정 등)은 전혀 수정하지 않음 — `LaunchPoint` 참조 부분만 교체
+- `Assets/_Project/Scripts` 전체에서 `\.LaunchPoint\b` 재검색 결과 잔여 참조 없음 확인
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
