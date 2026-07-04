@@ -22,8 +22,7 @@ public class BallLauncher : Singleton<BallLauncher>
 
     public Vector2 LaunchDirection => _launchDirection;
 
-    public Vector2 LaunchOrigin => (Vector2)CharacterAimController.Instance.transform.position
-        + LaunchDirection.normalized * CharacterAimController.Instance.WeaponLength;
+    public Vector2 LaunchOrigin => CharacterAimController.Instance.transform.position;
 
     public Vector2 ReturnPoint => CharacterAimController.Instance.BodyPosition;
 
