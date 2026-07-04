@@ -29,7 +29,7 @@ public class CharacterAimController : Singleton<CharacterAimController>
         else if (direction.x < -_flipDeadzone)
             _facingRight = false;
 
-        _bodyRenderer.flipX = _headRenderer.flipX = _weaponRenderer.flipX = !_facingRight;
+        _bodyRenderer.flipX = _headRenderer.flipX = _weaponRenderer.flipX = _facingRight;
 
         // Weapon: 감쇠 없이 조준 방향을 거의 그대로 따라간다.
         _weaponRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, aimAngle);

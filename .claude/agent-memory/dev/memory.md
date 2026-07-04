@@ -1145,3 +1145,54 @@
 - 이 파일 1개만 수정, `BallLauncher.cs`/`SceneSetupEditor.cs`/`CharacterLaunchOrbitSetupEditor.cs` 등 다른 파일은 건드리지 않음 (grep 재확인 결과 실제로 참조하는 곳이 없어 보고할 항목 없음)
 - 삭제 후 파일 전체를 재확인하여 CS0414 등 컴파일 경고가 남지 않음을 확인
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+---
+
+## 2026-07-04
+
+### 작업: CharacterAimController Weapon flipX 반전 제거 (조준 방향 반대 버그 수정)
+
+**작업 내용:**
+- 사용자가 실제 플레이 테스트에서 Weapon(무기)이 조준 방향과 반대로 향하는 버그를 발견 — 원인은 무기 스프라이트(갈고리 모양)가 회전축(그립, custom pivot) 기준 좌우 비대칭인데 `flipX`로 반전시키면 비대칭 모양이 회전축 반대쪽으로 넘어가 회전 각도는 맞아도 시각적으로 잘못된 방향을 향하게 됨. Body/Head는 좌우 대칭이라 문제없고 Weapon만 이 현상을 겪음
+- 오케스트레이터 직접 지시로 진행 (flipX 대입 줄 1곳만 변경하는 명확히 한정된 수정 건)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs` — `Update()` 내부 `_bodyRenderer.flipX = _headRenderer.flipX = _weaponRenderer.flipX = !_facingRight;` 한 줄을 다음 두 줄로 변경:
+  ```csharp
+  _bodyRenderer.flipX = _headRenderer.flipX = !_facingRight;
+  _weaponRenderer.flipX = false;
+  ```
+  (Weapon은 항상 `flipX = false` 고정, Body/Head는 기존과 동일하게 `!_facingRight` 반전 유지)
+
+**주요 결정사항:**
+- `_facingRight` 판정 로직(데드존 비교)은 그대로 유지 — Body/Head 반전 판정에는 계속 필요
+- Weapon의 회전 로직(`Quaternion.Euler(0f, 0f, aimAngle)`)과 Head의 감쇠 회전 로직은 그대로 유지 — `aimAngle`이 `Atan2`로 360도 전체를 표현하므로 flipX 없이도 조준 방향을 그대로 따라감
+- Body는 회전 없음 그대로 유지
+- 이 파일 1개만 수정, flipX 대입 줄만 변경 (다른 로직/네이밍 변경 없음)
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+### 작업: flipX 부호 재반전 버그 수정 + Weapon 회전 피벗 캐릭터 중심 이동 (승인된 2건 동시 반영)
+
+**배경:**
+- 위 2026-07-04 항목의 "Weapon flipX 항상 false 고정" 수정은 승인 없이 이뤄진 임시방편이었고, 참고 이미지(`Assets/_Project/Docs/targetUI/KakaoTalk_20260704_181516769_01.jpg`, `KakaoTalk_20260701_190324151_01.jpg`) 픽셀 분석 결과 잘못된 접근으로 확인됨. 진짜 원인은 flipX 부호 자체가 반대(`!_facingRight`가 아니라 `_facingRight`여야 함)였던 것.
+- 오케스트레이터가 "둘다 문서반영해서 수정해서 푸시해"로 명시 승인.
+
+**수정 1 — flipX 부호 반전 버그:**
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs` — 기존 uncommitted 임시 수정(`_weaponRenderer.flipX = false;` 별도 대입 줄)을 되돌리고, 다음 한 줄로 통일:
+  ```csharp
+  _bodyRenderer.flipX = _headRenderer.flipX = _weaponRenderer.flipX = _facingRight;
+  ```
+  (기존 `!_facingRight`에서 `!`만 제거. 기본 스프라이트가 flipX=false일 때 "왼쪽 조준" 포즈이므로 `_facingRight`(오른쪽 조준 시 true)와 flipX를 그대로 일치시켜야 함이 픽셀 분석으로 확인됨)
+
+**수정 2 — Weapon 회전 피벗 캐릭터 중심 기준으로 이동:**
+- `Assets/_Project/Sprites/Character/Character_main_weapon.png.meta` — `spritePivot`(52행 근처)과 `pivot`(123행 근처) 두 곳을 `{x: 0.39, y: 0.43}` → `{x: 0.09, y: 0.12}`로 변경 (스태프 밑동/손잡이 쪽으로 피벗 이동, 픽셀 분석 기반 추정치). `alignment`(9, Custom)는 변경 없음.
+- `Assets/_Project/Scripts/Editor/CharacterLaunchOrbitSetupEditor.cs` — `CreateCharacterPart(..., "Weapon", ..., Vector3.zero)` 호출의 마지막 인자를 `new Vector3(-0.192f, -0.36f, 0f)`로 변경. 피벗 이동으로 인한 rest-pose(회전 0도) 시각적 정렬 어긋남을 보정하기 위한 값 (`spriteSize(0.64,1.16) * deltaPivot(-0.30,-0.31)` 계산 결과).
+
+**검증:**
+- grep으로 `_weaponRenderer.flipX` 및 weapon local position 참조 확인 — 두 수정 파일 외 활성 코드에서 참조 없음 (나머지는 `.claude/agent-memory/`, `Docs/_Task/` 등 과거 기록 문서뿐, 코드 아님).
+
+**주요 결정사항:**
+- 이번 작업은 지정된 3개 파일(`CharacterAimController.cs`, `Character_main_weapon.png.meta`, `CharacterLaunchOrbitSetupEditor.cs`)만 수정, 그 외 일절 손대지 않음.
+- 두 수치(`spritePivot`/`pivot` 값, Weapon localPosition 보정값)는 오케스트레이터가 참고 이미지 픽셀 분석으로 산출한 추정치이며, **Unity Editor에서의 실제 시각 확인은 아직 이뤄지지 않음** — 사용자가 직접 에디터에서 확인 필요.
+- 참고로 `Character_main_weapon.png.meta`의 실제 sprite rect width는 59px(52행 근처 spriteSheet에 명시)이나, 오케스트레이터가 제시한 계산식은 64px 기준으로 산출됨 — 이 차이는 보정하지 않고 지시받은 값 그대로 적용함 (오케스트레이터에게 참고용으로 보고).
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 docs 에이전트 작업과 함께 확인 후 직접 처리 예정).

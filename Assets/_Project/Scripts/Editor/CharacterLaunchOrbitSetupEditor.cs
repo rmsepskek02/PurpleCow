@@ -53,7 +53,7 @@ public static class CharacterLaunchOrbitSetupEditor
 
         SpriteRenderer bodyRenderer   = CreateCharacterPart(characterObj.transform, "Body",   "Assets/_Project/Sprites/Character/Character_Main_body.png",  0, new Vector3(0.42f, -0.75f, 0f));
         SpriteRenderer headRenderer   = CreateCharacterPart(characterObj.transform, "Head",   "Assets/_Project/Sprites/Character/Character_Main_head.png",  1, new Vector3(0.51f, -0.23f, 0f));
-        SpriteRenderer weaponRenderer = CreateCharacterPart(characterObj.transform, "Weapon", "Assets/_Project/Sprites/Character/Character_main_weapon.png", 2, Vector3.zero);
+        SpriteRenderer weaponRenderer = CreateCharacterPart(characterObj.transform, "Weapon", "Assets/_Project/Sprites/Character/Character_main_weapon.png", 2, new Vector3(-0.177f, -0.36f, 0f));
 
         CharacterAimController aimController = characterObj.GetComponent<CharacterAimController>();
         if (aimController == null)
