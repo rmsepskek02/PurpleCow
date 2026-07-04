@@ -194,3 +194,15 @@ Assets/_Project/Scripts/
 - **이슈 4 (조준 모델의 괴리감, 이슈 2 구현 완료 후 재발견)**: 이슈 2 반영 이후 실 플레이 테스트에서, 터치 시작 지점을 고정 기준점으로 삼아 그로부터의 상대 이동량을 방향으로 쓰는 기존 "상대 드래그" 모델 자체가 손가락과 궤적 사이의 괴리감을 유발한다는 점이 확인되었다. `BallLauncher.Instance.LaunchPoint`(발사 지점)에서 현재 손가락 위치를 향하는 절대 방향을 매 프레임(터치 시작 프레임 포함) 계산하는 "절대 조준" 모델로 전환하였다(`ComputeAimDirection` 헬퍼 신설). `GameplayMechanics.md` 섹션 1의 기존 스펙 문구("터치하는 순간 조준 방향이 즉시 정해진다", "드래그 위치를 목표로 실시간으로 따라간다")가 상대 드래그 모델보다 이 절대 조준 모델과 더 정확히 부합한다는 점도 확인되어, 해당 스펙 서술 자체는 그대로 유지하였다.
 - **이슈 5 (터치 시작 폴링 누락, 이슈 4 구현 완료 후 재발견)**: 이슈 4 반영 이후 실 플레이 테스트에서, 터치를 대자마자 바로 살짝 움직이면 같은 프레임에 `TouchPhase.Began`과 `Moved`가 뭉개져 `Began`이 관측되지 않고 곧바로 드래그로 인식되는 버그가 발견되었다. `TouchPhase.Began` 값 자체에 의존하던 시작 판정을 "아직 드래그 중이 아닌 상태(`!_isDragging`)에서 터치가 감지되면 phase와 무관하게 그 자체를 시작으로 취급"하는 `_isDragging` 상태 기반 판정으로 재구성하였다. 이 과정에서 마우스 분기도 터치와 동일한 구조로 통일하여, 기존 클릭 첫 프레임의 `OnDrag` 중복 발행 문제도 함께 정리되었다.
 - **검증**: 이슈 1~5 모두 `InputHandler.cs`/`TrajectoryPreview.cs`에 구현되어 main에 반영되었으며, 사용자가 유니티 에디터에서 직접 플레이 테스트를 진행해 조작감에 불편함이 없고 매우 좋다고 확인하였다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-03/15-41_ball-trajectory-aim-fix/research.md`, `plan.md` 참고.
+
+---
+
+## 2026-07-04
+
+### 배경 격자 정사각형 보정 (`_Task/2026-07-04/16-40_background-square-grid-fix`)
+
+몬스터 시스템 개편(4종 랜덤 웨이브, 종류별 고정 블록 크기 기반 정사각형 그리드 점유 체크)의 선행 작업으로 진행하였다.
+
+- **문제**: research.md에서 배경 텍스처(`Background_1_Stage.png`)를 픽셀 단위로 실측한 결과, 장식용 격자가 140×85px(비정사각형, 약 1.65:1)로 그려져 있음을 확인하였다. 몬스터/블록 스프라이트(`Fluffy`/`Spider`/`Block_1x1` 등)는 정사각형 1유닛 체계로 제작되어 있고, 원본 게임 실제 플레이 레퍼런스 스크린샷을 동일하게 실측하면 격자선 간격이 가로/세로 모두 약 97px로 정사각형이라, 우리 프로젝트 배경 에셋만 비정사각형인 상태였다.
+- **해결**: `BackgroundFitter.cs`/`WallFitter.cs`가 채택 중이던 "기기별 독립 scaleX/scaleY Stretch" 방식을 "텍스처 고유 비율 보정(`_cellAspectCorrection ≈ 1.647`, 고정값) + 격자 영역 기준 균일 Cover 배율" 2단계 공식으로 교체하였다. 신규 필드(`_cellAspectCorrection`, `_gridAreaWidth = 14.53`, `_gridAreaHeight = 10.16`) 주입은 기존 `SceneSetupEditor.cs`를 건드리지 않고 신규 `BackgroundGridFitSetupEditor.cs`(별도 메뉴 `PurpleCow/Setup/Background Grid Fit Setup`)로 분리하였다. 리소스(PNG)는 수정하지 않고 순수 코드 변경으로만 처리하였다.
+- **실기기 검증**: 사용자가 로컬에서 여러 실기기(Galaxy Note 10 등)로 테스트한 결과 격자가 정사각형으로 정상 렌더링됨을 확인하였다. 다만 새 계산식(격자 영역 기준 Cover)이 기존 방식(이미지 전체 기준 Stretch)보다 필요 배율이 커서, 기존 `_zoomFactor` 기본값 1.3을 그대로 쓰면 화면이 과도하게 확대되는 문제가 발견되었다. 에디터 미리보기(Free Aspect)에서는 0.6, 실기기(Note 10 포함 복수 기기)에서는 0.5가 적절함을 확인하여 `BackgroundFitter.cs`/`WallFitter.cs`의 `_zoomFactor` 기본값을 0.5로 최종 갱신하였다(커밋 완료). 에디터 미리보기와 실기기 결과가 다를 수 있는 이유(세이프 에어리어/노치/펀치홀 카메라, 정확한 해상도 재현 한계)도 함께 논의되었으며, 실기기 테스트 결과를 최종 기준으로 삼았다. `_nativeLeftX` 등 5개 벽 기준값 자체의 재조정 여부는 이번 대화에서 사용자가 별도 문제를 보고하지 않아 기존 값을 유지한 채 마무리되었다(사용자가 확인 완료; 이번에 정확히 확정된 조정 사항은 `_zoomFactor` 값뿐이다). 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-04/16-40_background-square-grid-fix/research.md`, `plan.md` 참고.
