@@ -13,7 +13,7 @@
 
 ## 단계별 작업 계획
 
-### 이슈 1: 궤적 상시 표시 + 매 프레임 실시간 갱신 (`TrajectoryPreview.cs`)
+### 이슈 1: 궤적 상시 표시 + 매 프레임 실시간 갱신 (`TrajectoryPreview.cs`) — (구현 완료)
 
 1. `OnEnable()`/`OnDisable()`에서 `InputHandler.OnAimBegin`/`OnDrag`/`OnRelease`를 구독/해제하는 코드를 전부 제거한다. 더 이상 이벤트 기반으로 갱신하지 않기 때문이다.
 2. `HandleAimBegin()`, `HandleDrag(Vector2 direction)`, `HandleRelease()` 세 메서드를 제거한다. 이 메서드들이 하던 일(방향 결정 + `UpdateTrajectory` 호출)을 새 `Update()`가 대체한다.
@@ -24,7 +24,7 @@
 5. `UpdateTrajectory()` 내부 로직(레이캐스트, 반사, 점 좌표 계산 등)은 수정하지 않는다. `Update()`가 매 프레임 이 메서드를 호출하는 것만으로, 몬스터가 이동해도 그 프레임의 최신 위치를 기준으로 레이캐스트가 다시 계산되어 레드닷/링이 몬스터를 따라가는 효과가 자연스럽게 나온다(부수 효과, 별도 구현 불필요).
 6. `HandleRelease()` 삭제로 인해 더 이상 `SetVisible(false)`가 호출되는 지점이 없어지므로, 궤적은 항상 켜진 상태로 유지된다.
 
-### 이슈 2: 터치 조준 정확도 — 스크린→월드 변환 적용 (`InputHandler.cs`)
+### 이슈 2: 터치 조준 정확도 — 스크린→월드 변환 적용 (`InputHandler.cs`) — (구현 완료)
 
 1. `Camera.main`을 매 프레임 조회하지 않도록 `private Camera _mainCamera;` 필드를 추가하고, `Awake()`를 새로 만들어 `_mainCamera = Camera.main;`으로 캐싱한다(`DevRules.md`의 `Awake()`에서 컴포넌트 캐싱 규칙 준수).
 2. `pressedPos.HasValue`로 `_dragStartPosition`을 저장하는 부분(현재 46행)을, 스크린 좌표를 바로 저장하는 대신 `_mainCamera.ScreenToWorldPoint(pressedPos.Value)`로 변환한 월드 좌표를 저장하도록 바꾼다. `_dragStartPosition`의 의미 자체가 "스크린 좌표"에서 "월드 좌표"로 바뀌므로 필드 주석/타입은 `Vector2`로 유지하되 저장 값의 의미가 달라짐을 코드 주석으로 명시한다.
@@ -33,7 +33,7 @@
 4. `ScreenToWorldPoint`에 넘기는 스크린 좌표는 `Vector3`가 필요하므로, z값은 카메라와 게임 평면 사이 거리(또는 기존에 카메라가 orthographic이면 임의의 고정값, 예: 0이나 `-_mainCamera.transform.position.z`)를 사용한다. 카메라가 orthographic이면 평행 투영이라 z값이 x, y 결과에 영향을 주지 않으므로 어떤 고정값을 넣어도 무방하다(참고용 메모, 실제 프로젝트 카메라가 orthographic인지 구현 단계에서 확인 필요).
 5. `pressedPos`/`currentPos`를 읽어오는 `Touchscreen`/`Mouse` 폴링 로직 자체(20~42행)는 변경하지 않는다. 스크린 좌표를 읽어오는 지점은 그대로 두고, 그 값을 쓰는 시점(월드 변환 후 델타 계산)만 바꾼다.
 
-### 이슈 3: 궤적 프리뷰 색상/크기 조정 (`TrajectoryPreview.cs`)
+### 이슈 3: 궤적 프리뷰 색상/크기 조정 (`TrajectoryPreview.cs`) — (구현 완료)
 
 1. `_hitRing`이 `_hitColor`를 참조하는 부분(현재 `Awake()` 28행)을 새 필드로 분리한다.
    - `[SerializeField] private Color _ringColor = new Color32(225, 225, 220, 255);` 형태의 흰색 계열 필드를 새로 추가한다(아래 `_lineColor` 조정값과 동일 계열로 통일).
@@ -44,7 +44,7 @@
 4. `_lineColor` 기본값을 `Color.white`에서 살짝 톤 다운된 회백색으로 변경한다. 예: `[SerializeField] private Color _lineColor = new Color32(225, 225, 220, 255);`.
 5. 위 필드는 모두(또는 `DASH_WORLD_SIZE` 제외) `[SerializeField]`이므로, 코드의 기본값만으로는 화면에 반영되지 않을 수 있다. 씬/프리팹 인스펙터에 이미 개별 오버라이드 값이 저장되어 있는 경우 그 값이 우선 적용되므로, 구현 단계에서 실제 씬/프리팹의 인스펙터 값도 함께 확인하고 필요 시 리셋 또는 재적용해야 한다.
 
-### 이슈 4: 조준 모델 전환 — 상대 드래그(relative drag) → 절대 조준(absolute aim) (`InputHandler.cs`)
+### 이슈 4: 조준 모델 전환 — 상대 드래그(relative drag) → 절대 조준(absolute aim) (`InputHandler.cs`) — (구현 완료)
 
 이슈 2 수정(스크린→월드 변환)이 구현 완료되어 main에 반영된 이후 실제 플레이 테스트에서 재발견된 문제다(research.md 이슈 4 참고). 터치 시작 지점을 고정 기준점으로 삼아 그로부터의 상대적 이동량을 방향으로 쓰는 현재 모델 대신, 발사 지점(`BallLauncher.Instance.LaunchPoint`)에서 현재 손가락 위치를 향하는 절대 방향을 매 순간 계산하는 모델로 조준 방식 자체를 전환한다.
 
@@ -55,7 +55,7 @@
 5. `released && _isDragging` 분기(릴리즈)는 `_dragStartPosition`을 참조하지 않으므로 별도 수정이 필요 없다.
 6. `Camera.main` 캐싱(`_mainCamera` 필드, `Awake()`)은 이슈 2에서 이미 구현되어 있으므로 그대로 재사용한다. 이번 변경으로 새로 추가되는 의존성은 `BallLauncher.Instance.LaunchPoint` 하나뿐이다.
 
-### 이슈 5: 터치 시작(Began) 단계 폴링 누락 — phase 값 대신 `_isDragging` 상태 기반으로 시작 판정 재구성 (`InputHandler.cs`)
+### 이슈 5: 터치 시작(Began) 단계 폴링 누락 — phase 값 대신 `_isDragging` 상태 기반으로 시작 판정 재구성 (`InputHandler.cs`) — (구현 완료)
 
 이슈 4(절대 조준 모델 전환) 구현이 완료되어 main에 반영된 이후 실제 플레이 테스트에서 재발견된 문제다(research.md 이슈 5 참고). `TouchPhase.Began`이라는 특정 phase 값이 관측되어야만 조준 시작으로 인식하는 현재 구조 대신, "아직 드래그 중이 아닌 상태에서 터치/클릭이 감지되면 그 자체를 시작으로 인식"하는 상태 기반 판정으로 재구성한다. 터치와 마우스를 동일한 구조로 통일한다(아래 근거 참고).
 
@@ -90,12 +90,14 @@
 1. "조준 중(터치 시작~릴리즈)에만 표시되고, 조준하지 않을 때는 숨겨진다." 문구를, "터치 여부와 무관하게 항상 표시되며, 매 프레임 실시간으로 갱신된다(터치 중에는 드래그 방향을, 터치하지 않을 때는 마지막 조준 방향을 기준으로 갱신)."는 취지로 수정한다.
 2. Inspector 조절 값 표에 이슈 3에서 새로 추가되는 `_ringColor` 필드를 행으로 추가한다.
 
-## 예상 변경/생성 파일 목록
+## 예상 변경/생성 파일 목록 (최종 구현 상태 — 이슈 1~5 전부 구현 완료)
 
-- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` (수정) — 이벤트 구독 제거, `Update()` 추가, `Awake()`의 `SetVisible(true)` 변경, `_hitColor`/`_ringColor`/`_dotRadius`/`_lineColor`/`DASH_WORLD_SIZE` 값 조정.
-- `Assets/_Project/Scripts/Core/InputHandler.cs` (수정) — `Camera.main` 캐싱용 `Awake()` 추가, `_dragStartPosition`/드래그 방향 계산을 스크린→월드 변환 기반으로 변경.
-- `Assets/_Project/Docs/UIRules.md` (수정) — 섹션 11 "궤적 프리뷰 시각 규칙" 문구 및 Inspector 조절 값 표 갱신.
-- 새로 생성되는 파일은 없다.
+- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` (수정 완료) — 이벤트 구독 제거, `Update()` 추가, `Awake()`의 `SetVisible(true)` 변경, `_hitColor`/`_ringColor`/`_dotRadius`/`_lineColor`/`DASH_WORLD_SIZE` 값 조정.
+- `Assets/_Project/Scripts/Core/InputHandler.cs` (수정 완료) — `Camera.main` 캐싱용 `Awake()` 추가, 스크린→월드 변환 기반 조준 방향 계산(`ComputeAimDirection`), 상대 드래그 → 절대 조준 모델 전환(`_dragStartPosition` 제거), `_isDragging` 상태 기반 터치 시작 판정으로 재구성(이슈 5).
+- `Assets/_Project/Docs/UIRules.md` (수정 완료) — 섹션 11 "궤적 프리뷰 시각 규칙" 문구 및 Inspector 조절 값 표(`_ringColor` 포함) 갱신.
+- 새로 생성된 파일은 없다.
+
+이슈 1~5 모두 구현이 완료되어 main에 반영되었으며, 이후 사용자가 유니티 에디터에서 직접 플레이 테스트를 진행해 조작감에 불편함이 없고 매우 좋다고 확인했다. 상세 확인 내용은 `research.md`의 "최종 구현 및 실제 플레이 테스트 완료" 참고.
 
 ## 주의사항
 
