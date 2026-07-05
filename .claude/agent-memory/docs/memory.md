@@ -1,3 +1,25 @@
+## 2026-07-05 (몬스터 로스터+컨베이어 스폰 plan.md에 A/B/C/D 추가 섹션 append)
+
+### 작업 내용
+- 기존 task 문서 `plan.md`에 플레이테스트 피드백(A/B/C/D) 반영 섹션을 append(기존 내용 보존, 끝에 추가만)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-21_monster-roster-conveyor-spawn/plan.md`
+- 작업 전 기존 plan.md 전체, `MonsterRules.md` 2장/6장(방금 갱신된 A/B/C/D 확정 내용), 실제 코드 `WaveManager.cs`/`ObjectPool.cs`를 읽어 설계가 코드/문서와 어긋나지 않는지 확인 후 진행
+
+### 결과
+- 신규 섹션 `## 추가 확정 사항 반영 (2026-07-05 플레이테스트 피드백: A/B/C/D)`를 plan.md 끝에 추가
+- **A(프리팹 풀 분리)**: `_monsterPrefab`/`_monsterPool` 제거 → `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab` 4개 필드 + `Dictionary<MonsterData, ObjectPool<MonsterBase>> _poolByData`로 교체. `Awake()`에서 `_waveTable`의 4종 `MonsterData`를 키로 4개 풀 생성. `PlaceMonster`는 `_poolByData[data].Get()`, `CheckGameOver()`/`HandleMonsterDied()`는 `_poolByData[monster.Data].Return(monster)` 사용(기존 `MonsterBase.Data` 프로퍼티 재사용, 추가 변경 불필요)
+- **B(상단 1행 트리거)+C(틱당 3~7 제한)**: `TryDispenseRoster()`를 `topRow = _gridRows - 1` 한 줄만 스캔하도록 재작성. `belowRow = _gridRows - 2`는 `OneByTwo` 배치 직전 `IsCellFree(col, belowRow)` 사전 확인 용도로만 사용. `maxThisTick = Random.Range(3, 8)`(3~7)와 `placedThisTick` 카운터로 틱당 배치 수 제한. 전체 메서드 코드 스니펫으로 구체화해 반영
+- **D(웨이브 0 전체 배치)**: `SpawnWave()` 마지막 단계를 `if (index == 0) SpawnRosterAcrossFullGrid(); else TryDispenseRoster();`로 분기. 신규 `SpawnRosterAcrossFullGrid()` 메서드는 그리드 전체(5행)를 `bool[,] free`로 관리하며, 로스터가 빌 때까지 (rosterIndex, col, row) 후보 전부 나열 → 무작위 선택 → 배치를 반복하는 코드로 구체화
+- 예상 변경 파일 목록/주의사항 섹션도 이번 추가분 기준으로 갱신(동일 파일 `WaveManager.cs`, 4개 프리팹 Inspector 연결은 사용자가 Unity 에디터에서 직접 확인 필요, `SpawnRosterAcrossFullGrid()`는 웨이브 0에서만 호출되어 성능 우려 없음, 틱당 3~7 제한으로 소진 시간 길어지는 것은 의도된 동작임을 명시)
+- `.cs` 파일은 읽기만 하고 수정하지 않음, AGENTS.md 인덱스 변경 불필요(기존 task 폴더 내 파일 갱신이므로 신규 문서 아님)
+
+### 주요 결정사항
+- 사용자가 제공한 A/B/C/D 설계를 그대로 반영하고 임의 대안 제시 없음(설계는 이미 확정된 것으로 간주)
+- 기존 plan.md의 1~9번 계획은 이미 구현 완료로 간주하고 중복 서술 없이 "기존 계획 O번 항목을 다음과 같이 수정" 형식으로 참조
+- 코드 스니펫은 계획 수준으로만 작성(실제 구현은 dev 에이전트가 별도 진행)
+
+---
+
 ## 2026-07-05 (MonsterRules.md 몬스터 스폰 조건 대폭 갱신 — 로스터+컨베이어 방식)
 
 ### 작업 내용

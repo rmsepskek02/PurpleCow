@@ -193,3 +193,262 @@ private void CheckGameOver()
 - 로스터 소진 후 `_activeMonsters.Count == 0`이 되는 마지막 구간에서 `CheckGameOver()`가 정상적으로 `CheckWaveCleared()`를 호출하는지, 마지막 웨이브(`_totalWaves`)의 `OnAllWavesCleared` 발행 타이밍이 기존과 동일하게 유지되는지 플레이 테스트로 확인이 필요하다.
 - `TryDispenseRoster()`의 한 스캔 패스 내에서 이미 이번 틱에 배치를 확정한 셀을 "사용됨"으로 표시해 중복 배치를 막아야 한다(패스 도중 `IsCellFree`를 매번 다시 호출하면, 방금 배치한 몬스터가 아직 실제로 이동하지 않은 상태이므로 최신 `_activeMonsters` 리스트를 즉시 반영해 정상적으로 "비어있지 않음"으로 판정되긴 하지만, 구현 시 이 순서 의존성을 명확히 인지하고 작성해야 한다).
 - 이 문서는 계획 문서 작성 단계이며, 실제 `WaveManager.cs` 코드 수정은 사용자의 명시적 승인 후 별도로 진행한다.
+
+---
+
+## 추가 확정 사항 반영 (2026-07-05 플레이테스트 피드백: A/B/C/D)
+
+플레이테스트 결과 4가지 문제/개선사항이 추가로 확정되어 `MonsterRules.md`(2장/6장)에 이미 반영되었다. 이 섹션은 그 확정 사항을 `WaveManager.cs` 구현 단위로 구체화한다. 아래 설계는 이미 사용자와 논의를 마치고 확정된 내용이므로 그대로 반영하며, 임의로 다른 대안을 제안하지 않는다. 위 1~9번 계획(로스터/컨베이어 골격, `IsCellFree`, `GridToWorldPosition`, `CheckWaveCleared`, `CheckGameOver` 버그 수정 등)은 이미 구현 완료된 것으로 간주하고, 이 섹션에서는 그 위에 추가/변경되는 부분만 기술한다.
+
+### A. 몬스터 종류별 프리팹 풀 분리
+
+**원인**: 현재 `WaveManager`는 `_monsterPrefab` 필드 1개 + `_monsterPool`(`ObjectPool<MonsterBase>`) 1개만 가지므로, 로스터에서 어떤 `MonsterData`를 뽑든 항상 같은 프리팹 인스턴스가 스폰된다. `MonsterBase.ApplyData()`는 스탯/콜라이더/HP바만 갱신하고 캐릭터 스프라이트는 바꾸지 않기 때문이다.
+
+**수정 내용**:
+
+1. 필드 교체: `_monsterPrefab`(`MonsterBase`)과 `_monsterPool`(`ObjectPool<MonsterBase>`)을 제거하고, 아래로 대체한다.
+
+```csharp
+[SerializeField] private MonsterBase _fluffyPrefab;
+[SerializeField] private MonsterBase _spiderPrefab;
+[SerializeField] private MonsterBase _stoneBugPrefab;
+[SerializeField] private MonsterBase _forestDeerPrefab;
+
+private Dictionary<MonsterData, ObjectPool<MonsterBase>> _poolByData;
+```
+
+2. `Awake()`에서 딕셔너리 키를 `_waveTable`이 참조하는 실제 4종 `MonsterData` 에셋으로 채운다.
+
+```csharp
+protected override void Awake()
+{
+    base.Awake();
+
+    _poolByData = new Dictionary<MonsterData, ObjectPool<MonsterBase>>
+    {
+        { _waveTable.FluffyData, new ObjectPool<MonsterBase>(_fluffyPrefab, _poolParent, _initialPoolSize) },
+        { _waveTable.SpiderData, new ObjectPool<MonsterBase>(_spiderPrefab, _poolParent, _initialPoolSize) },
+        { _waveTable.StoneBugData, new ObjectPool<MonsterBase>(_stoneBugPrefab, _poolParent, _initialPoolSize) },
+        { _waveTable.ForestDeerData, new ObjectPool<MonsterBase>(_forestDeerPrefab, _poolParent, _initialPoolSize) },
+    };
+}
+```
+
+3. `PlaceMonster(MonsterData data, int col, int row)`에서 풀 참조를 교체한다.
+
+```csharp
+private void PlaceMonster(MonsterData data, int col, int row)
+{
+    MonsterBase monster = _poolByData[data].Get();
+    if (data != null)
+        monster.ApplyData(data);
+
+    monster.transform.position = GridToWorldPosition(col, row);
+    _activeMonsters.Add(monster);
+
+    OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
+}
+```
+
+4. `CheckGameOver()`와 `HandleMonsterDied()`에서 반납 시 `monster.Data`(반납 시점의 실제 데이터)로 올바른 풀을 찾아 반납한다.
+
+```csharp
+// CheckGameOver() 내부
+_activeMonsters.RemoveAt(i);
+_poolByData[monster.Data].Return(monster);
+OnMonsterReachedBottom?.Invoke(monster);
+...
+
+// HandleMonsterDied() 내부
+_activeMonsters.Remove(monster);
+_poolByData[monster.Data].Return(monster);
+...
+```
+
+`MonsterBase.Data`(`public MonsterData Data => _monsterData;`)는 이미 존재하는 프로퍼티이므로 추가 변경이 필요 없다.
+
+### B. 스폰 트리거를 상단 1행(topRow)으로 단순화 + 세로 2칸 사전 확인
+
+기존 계획 5번 항목(`TryDispenseRoster()`)을 다음과 같이 수정한다. `midRow`/`topRow` 두 줄을 모두 스캔하던 방식을 폐기하고, `topRow = _gridRows - 1` 한 줄만 스캔한다. `belowRow = _gridRows - 2`(기존 `midRow`와 같은 행 번호)는 더 이상 스폰 트리거가 아니며, 세로 2칸(`OneByTwo`) 배치 시 사전 확인 용도로만 사용한다.
+
+- 모든 배치(`OneByOne`/`TwoByOne`/`OneByTwo`)의 앵커 좌표는 항상 `topRow`다.
+- 열 `col`에 대해 `topRow`가 비어있을 때의 후보 판별:
+  - `OneByOne`: 그 칸(`col`, `topRow`)만 비어있으면 배치 가능.
+  - `TwoByOne`(StoneBug, 가로 2칸): 같은 행에서 인접한 두 열(`col`, `col+1`)이 모두 비어있어야 배치 가능(기존과 동일, `topRow` 기준으로만 확인).
+  - `OneByTwo`(ForestDeer, 세로 2칸): `topRow`의 그 칸이 비어있는 것에 더해, **배치 직전에 `IsCellFree(col, belowRow)`를 호출해 바로 아래 칸(row 3, 같은 열)도 비어있는지 사전 확인**한다. 비어있지 않으면 이번 틱엔 그 칸에 `OneByTwo`를 배치하지 않는다. `oneByOneFits`/`twoByOneFits`는 `belowRow`와 무관하게 그대로 `topRow` 기준으로 판정한다.
+
+C(틱당 3~7 제한)도 같은 메서드에 함께 반영되므로, `TryDispenseRoster()` 전체를 아래처럼 재작성한다.
+
+```csharp
+private void TryDispenseRoster()
+{
+    if (_waveRoster.Count == 0)
+        return;
+
+    int belowRow = _gridRows - 2;
+    int topRow = _gridRows - 1;
+
+    // C. 이번 틱에 배치할 최대 수를 3~7 사이 무작위로 결정 (Random.Range(int,int)는 min 포함, max 미포함)
+    int maxThisTick = UnityEngine.Random.Range(3, 8);
+    int placedThisTick = 0;
+
+    bool[] topRowFree = new bool[_gridColumns];
+    for (int col = 0; col < _gridColumns; col++)
+        topRowFree[col] = IsCellFree(col, topRow);
+
+    for (int col = 0; col < _gridColumns; col++)
+    {
+        if (_waveRoster.Count == 0 || placedThisTick >= maxThisTick)
+            return;
+
+        if (!topRowFree[col])
+            continue;
+
+        bool oneByOneFits = true;
+        bool twoByOneFits = col + 1 < _gridColumns && topRowFree[col + 1];
+
+        List<int> fittingIndices = new List<int>();
+        for (int i = 0; i < _waveRoster.Count; i++)
+        {
+            BlockSize size = _waveRoster[i].BlockSize;
+            if (size == BlockSize.OneByOne && oneByOneFits)
+                fittingIndices.Add(i);
+            else if (size == BlockSize.TwoByOne && twoByOneFits)
+                fittingIndices.Add(i);
+            else if (size == BlockSize.OneByTwo)
+            {
+                // B. 세로 2칸은 배치 직전 바로 아래 칸(belowRow)을 사전 확인
+                if (IsCellFree(col, belowRow))
+                    fittingIndices.Add(i);
+            }
+        }
+
+        if (fittingIndices.Count == 0)
+            continue;
+
+        int rosterIndex = fittingIndices[UnityEngine.Random.Range(0, fittingIndices.Count)];
+        MonsterData data = _waveRoster[rosterIndex];
+
+        PlaceMonster(data, col, topRow);
+        _waveRoster.RemoveAt(rosterIndex);
+        placedThisTick++;
+
+        switch (data.BlockSize)
+        {
+            case BlockSize.OneByOne:
+                topRowFree[col] = false;
+                break;
+            case BlockSize.TwoByOne:
+                topRowFree[col] = false;
+                topRowFree[col + 1] = false;
+                break;
+            case BlockSize.OneByTwo:
+                topRowFree[col] = false;
+                break;
+        }
+    }
+}
+```
+
+- `OneByTwo`가 배치되어도 `belowRow`는 스캔 대상이 아니므로 `topRowFree` 캐시만 갱신하면 된다(같은 스캔 패스 내에서 `belowRow`를 다시 조회할 일이 없음).
+- 배치가 `maxThisTick`에 도달하면 그 틱의 스캔을 즉시 종료한다(로스터가 남아있고 빈 칸이 더 있어도 다음 틱까지 대기).
+
+### C. 틱당 스폰 수 3~7 무작위 제한
+
+B 항목의 `TryDispenseRoster()` 재작성 코드에 이미 통합 반영했다(`maxThisTick = UnityEngine.Random.Range(3, 8)`, `placedThisTick` 카운터). `Random.Range(int, int)`는 min 포함, max 미포함이므로 `Range(3, 8)`이 3~7 사이 정수를 반환함에 유의한다. 별도의 추가 메서드는 없다.
+
+### D. 웨이브 인덱스 0(게임 전체 최초 웨이브) 전체 그리드 즉시 배치
+
+기존 계획 2번 항목(`SpawnWave(int index)`)의 마지막 단계("메서드 마지막에서 `TryDispenseRoster();`를 한 번 즉시 호출")를 다음과 같이 분기 처리한다.
+
+```csharp
+// SpawnWave(int index) 마지막 단계 수정
+if (index == 0)
+    SpawnRosterAcrossFullGrid();
+else
+    TryDispenseRoster();
+```
+
+신규 메서드 `SpawnRosterAcrossFullGrid()`를 추가한다. 그리드 전체(열 0~`_gridColumns-1`, 행 0~`_gridRows-1`)를 대상으로 하는 로컬 `bool[,] free` 배열을 전부 `true`로 초기화(웨이브 0 시점엔 활성 몬스터가 없으므로 안전)한 뒤, 로스터가 빌 때까지 반복한다.
+
+```csharp
+private void SpawnRosterAcrossFullGrid()
+{
+    bool[,] free = new bool[_gridColumns, _gridRows];
+    for (int col = 0; col < _gridColumns; col++)
+        for (int row = 0; row < _gridRows; row++)
+            free[col, row] = true;
+
+    while (_waveRoster.Count > 0)
+    {
+        // (rosterIndex, col, row) 후보 조합을 전부 나열
+        List<(int rosterIndex, int col, int row)> candidates = new List<(int, int, int)>();
+
+        for (int i = 0; i < _waveRoster.Count; i++)
+        {
+            BlockSize size = _waveRoster[i].BlockSize;
+
+            for (int col = 0; col < _gridColumns; col++)
+            {
+                for (int row = 0; row < _gridRows; row++)
+                {
+                    bool fits = size switch
+                    {
+                        BlockSize.OneByOne => free[col, row],
+                        BlockSize.TwoByOne => col + 1 < _gridColumns && free[col, row] && free[col + 1, row],
+                        BlockSize.OneByTwo => row + 1 < _gridRows && free[col, row] && free[col, row + 1],
+                        _ => false,
+                    };
+
+                    if (fits)
+                        candidates.Add((i, col, row));
+                }
+            }
+        }
+
+        if (candidates.Count == 0)
+            break; // 이론상 그리드 용량 클램프 덕분에 발생하지 않아야 함
+
+        var (rosterIndex, chosenCol, chosenRow) = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        MonsterData data = _waveRoster[rosterIndex];
+
+        PlaceMonster(data, chosenCol, chosenRow);
+        _waveRoster.RemoveAt(rosterIndex);
+
+        switch (data.BlockSize)
+        {
+            case BlockSize.OneByOne:
+                free[chosenCol, chosenRow] = false;
+                break;
+            case BlockSize.TwoByOne:
+                free[chosenCol, chosenRow] = false;
+                free[chosenCol + 1, chosenRow] = false;
+                break;
+            case BlockSize.OneByTwo:
+                free[chosenCol, chosenRow] = false;
+                free[chosenCol, chosenRow + 1] = false;
+                break;
+        }
+    }
+}
+```
+
+이 메서드는 시간 지연 없이(같은 프레임 내에서) 로스터 전체를 소진시킨다. 실행 후 `_waveRoster.Count`는 0이 되므로, 이후 `Update()`의 컨베이어 스캔은 자연히 스킵된다(추가 처리 불필요).
+
+## 예상 변경 파일 목록 (이번 추가분 반영)
+
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` (수정, 위 1~9번 계획에 이어 동일 파일에 추가 변경)
+  - 필드 제거: `_monsterPrefab`(`MonsterBase`), `_monsterPool`(`ObjectPool<MonsterBase>`)
+  - 필드 추가: `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab`(각 `MonsterBase`), `_poolByData`(`Dictionary<MonsterData, ObjectPool<MonsterBase>>`)
+  - `Awake()` 수정 — 4개 프리팹으로 `_poolByData` 채우기(A)
+  - `PlaceMonster(MonsterData, int, int)` 수정 — `_poolByData[data].Get()` 사용(A)
+  - `CheckGameOver()`, `HandleMonsterDied()` 수정 — `_poolByData[monster.Data].Return(monster)` 사용(A)
+  - `TryDispenseRoster()` 재작성 — `topRow` 한 줄만 스캔, `OneByTwo` 사전 확인(`belowRow`), 틱당 3~7 무작위 제한(B, C)
+  - `SpawnWave(int index)` 수정 — 마지막 단계를 `index == 0` 분기로 교체(D)
+  - `SpawnRosterAcrossFullGrid()` 신규 메서드 추가 — 웨이브 0 전용 그리드 전체 즉시 배치(D)
+
+## 주의사항 (이번 추가분)
+
+- 4개 풀 생성 시 각 프리팹 필드(`_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab`)가 Inspector에서 실제 올바른 프리팹(Fluffy/Spider/StoneBug/ForestDeer)으로 연결되어야 하며, 이는 Unity 에디터에서 사용자가 직접 확인/연결해야 한다(이 원격 환경엔 Unity 에디터가 없음).
+- `SpawnRosterAcrossFullGrid()`는 웨이브 인덱스 0에서만 호출되므로 매 프레임 반복 실행되는 로직이 아니며, 성능 우려는 없다.
+- 틱당 3~7 제한(C)과 상단 1행 트리거 변경(B)으로 인해, 로스터가 큰 웨이브에서 로스터 전체가 소진되기까지 걸리는 시간이 기존보다 길어질 수 있다(의도된 동작이며 버그가 아님).

@@ -5,7 +5,10 @@ using UnityEngine;
 public class WaveManager : Singleton<WaveManager>
 {
     [SerializeField] private WaveTableData _waveTable;
-    [SerializeField] private MonsterBase _monsterPrefab;
+    [SerializeField] private MonsterBase _fluffyPrefab;
+    [SerializeField] private MonsterBase _spiderPrefab;
+    [SerializeField] private MonsterBase _stoneBugPrefab;
+    [SerializeField] private MonsterBase _forestDeerPrefab;
     [SerializeField] private Transform _poolParent;
     [SerializeField] private int _initialPoolSize = 20;
     [SerializeField] private Transform _spawnRoot;
@@ -15,7 +18,7 @@ public class WaveManager : Singleton<WaveManager>
     [SerializeField] private float _bottomBoundaryY;
     [SerializeField] private int _killCountForSkill = 5;
 
-    private ObjectPool<MonsterBase> _monsterPool;
+    private Dictionary<MonsterData, ObjectPool<MonsterBase>> _poolByData;
     private List<MonsterBase> _activeMonsters = new List<MonsterBase>();
     private List<MonsterData> _waveRoster = new List<MonsterData>();
     private float _spawnCheckTimer;
@@ -36,7 +39,14 @@ public class WaveManager : Singleton<WaveManager>
     protected override void Awake()
     {
         base.Awake();
-        _monsterPool = new ObjectPool<MonsterBase>(_monsterPrefab, _poolParent, _initialPoolSize);
+
+        _poolByData = new Dictionary<MonsterData, ObjectPool<MonsterBase>>
+        {
+            { _waveTable.FluffyData, new ObjectPool<MonsterBase>(_fluffyPrefab, _poolParent, _initialPoolSize) },
+            { _waveTable.SpiderData, new ObjectPool<MonsterBase>(_spiderPrefab, _poolParent, _initialPoolSize) },
+            { _waveTable.StoneBugData, new ObjectPool<MonsterBase>(_stoneBugPrefab, _poolParent, _initialPoolSize) },
+            { _waveTable.ForestDeerData, new ObjectPool<MonsterBase>(_forestDeerPrefab, _poolParent, _initialPoolSize) },
+        };
     }
 
     private void Start()
@@ -114,8 +124,11 @@ public class WaveManager : Singleton<WaveManager>
         OnWaveStarted?.Invoke(index + 1);
         OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
 
-        // 8. 웨이브 시작과 동시에 첫 몬스터가 바로 나타나도록 즉시 1회 디스펜스
-        TryDispenseRoster();
+        // 8. 웨이브 인덱스 0(게임 전체 최초 웨이브)은 그리드 전체에 즉시 배치, 그 외에는 컨베이어 디스펜스
+        if (index == 0)
+            SpawnRosterAcrossFullGrid();
+        else
+            TryDispenseRoster();
     }
 
     private void TryDispenseRoster()
@@ -123,69 +136,126 @@ public class WaveManager : Singleton<WaveManager>
         if (_waveRoster.Count == 0)
             return;
 
-        int midRow = _gridRows - 2;
+        int belowRow = _gridRows - 2;
         int topRow = _gridRows - 1;
 
-        bool[] midRowFree = new bool[_gridColumns];
+        // C. 이번 틱에 배치할 최대 수를 3~7 사이 무작위로 결정 (Random.Range(int,int)는 min 포함, max 미포함)
+        int maxThisTick = UnityEngine.Random.Range(3, 8);
+        int placedThisTick = 0;
+
         bool[] topRowFree = new bool[_gridColumns];
         for (int col = 0; col < _gridColumns; col++)
-        {
-            midRowFree[col] = IsCellFree(col, midRow);
             topRowFree[col] = IsCellFree(col, topRow);
-        }
 
-        int[] rows = { midRow, topRow };
-        foreach (int row in rows)
+        for (int col = 0; col < _gridColumns; col++)
         {
-            bool[] rowFree = row == midRow ? midRowFree : topRowFree;
+            if (_waveRoster.Count == 0 || placedThisTick >= maxThisTick)
+                return;
 
-            for (int col = 0; col < _gridColumns; col++)
+            if (!topRowFree[col])
+                continue;
+
+            bool oneByOneFits = true;
+            bool twoByOneFits = col + 1 < _gridColumns && topRowFree[col + 1];
+
+            List<int> fittingIndices = new List<int>();
+            for (int i = 0; i < _waveRoster.Count; i++)
             {
-                if (_waveRoster.Count == 0)
-                    return;
-
-                if (!rowFree[col])
-                    continue;
-
-                bool oneByOneFits = true;
-                bool twoByOneFits = col + 1 < _gridColumns && rowFree[col + 1];
-                bool oneByTwoFits = row == midRow && topRowFree[col];
-
-                List<int> fittingIndices = new List<int>();
-                for (int i = 0; i < _waveRoster.Count; i++)
+                BlockSize size = _waveRoster[i].BlockSize;
+                if (size == BlockSize.OneByOne && oneByOneFits)
+                    fittingIndices.Add(i);
+                else if (size == BlockSize.TwoByOne && twoByOneFits)
+                    fittingIndices.Add(i);
+                else if (size == BlockSize.OneByTwo)
                 {
-                    BlockSize size = _waveRoster[i].BlockSize;
-                    if (size == BlockSize.OneByOne && oneByOneFits)
-                        fittingIndices.Add(i);
-                    else if (size == BlockSize.TwoByOne && twoByOneFits)
-                        fittingIndices.Add(i);
-                    else if (size == BlockSize.OneByTwo && oneByTwoFits)
+                    // B. 세로 2칸은 배치 직전 바로 아래 칸(belowRow)을 사전 확인
+                    if (IsCellFree(col, belowRow))
                         fittingIndices.Add(i);
                 }
+            }
 
-                if (fittingIndices.Count == 0)
-                    continue;
+            if (fittingIndices.Count == 0)
+                continue;
 
-                int rosterIndex = fittingIndices[UnityEngine.Random.Range(0, fittingIndices.Count)];
-                MonsterData data = _waveRoster[rosterIndex];
+            int rosterIndex = fittingIndices[UnityEngine.Random.Range(0, fittingIndices.Count)];
+            MonsterData data = _waveRoster[rosterIndex];
 
-                PlaceMonster(data, col, row);
-                _waveRoster.RemoveAt(rosterIndex);
+            PlaceMonster(data, col, topRow);
+            _waveRoster.RemoveAt(rosterIndex);
+            placedThisTick++;
 
-                switch (data.BlockSize)
+            switch (data.BlockSize)
+            {
+                case BlockSize.OneByOne:
+                    topRowFree[col] = false;
+                    break;
+                case BlockSize.TwoByOne:
+                    topRowFree[col] = false;
+                    topRowFree[col + 1] = false;
+                    break;
+                case BlockSize.OneByTwo:
+                    topRowFree[col] = false;
+                    break;
+            }
+        }
+    }
+
+    private void SpawnRosterAcrossFullGrid()
+    {
+        bool[,] free = new bool[_gridColumns, _gridRows];
+        for (int col = 0; col < _gridColumns; col++)
+            for (int row = 0; row < _gridRows; row++)
+                free[col, row] = true;
+
+        while (_waveRoster.Count > 0)
+        {
+            // (rosterIndex, col, row) 후보 조합을 전부 나열
+            List<(int rosterIndex, int col, int row)> candidates = new List<(int, int, int)>();
+
+            for (int i = 0; i < _waveRoster.Count; i++)
+            {
+                BlockSize size = _waveRoster[i].BlockSize;
+
+                for (int col = 0; col < _gridColumns; col++)
                 {
-                    case BlockSize.OneByOne:
-                        rowFree[col] = false;
-                        break;
-                    case BlockSize.TwoByOne:
-                        rowFree[col] = false;
-                        rowFree[col + 1] = false;
-                        break;
-                    case BlockSize.OneByTwo:
-                        midRowFree[col] = false;
-                        topRowFree[col] = false;
-                        break;
+                    for (int row = 0; row < _gridRows; row++)
+                    {
+                        bool fits = size switch
+                        {
+                            BlockSize.OneByOne => free[col, row],
+                            BlockSize.TwoByOne => col + 1 < _gridColumns && free[col, row] && free[col + 1, row],
+                            BlockSize.OneByTwo => row + 1 < _gridRows && free[col, row] && free[col, row + 1],
+                            _ => false,
+                        };
+
+                        if (fits)
+                            candidates.Add((i, col, row));
+                    }
                 }
+            }
+
+            if (candidates.Count == 0)
+                break; // 이론상 그리드 용량 클램프 덕분에 발생하지 않아야 함
+
+            var (rosterIndex, chosenCol, chosenRow) = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+            MonsterData data = _waveRoster[rosterIndex];
+
+            PlaceMonster(data, chosenCol, chosenRow);
+            _waveRoster.RemoveAt(rosterIndex);
+
+            switch (data.BlockSize)
+            {
+                case BlockSize.OneByOne:
+                    free[chosenCol, chosenRow] = false;
+                    break;
+                case BlockSize.TwoByOne:
+                    free[chosenCol, chosenRow] = false;
+                    free[chosenCol + 1, chosenRow] = false;
+                    break;
+                case BlockSize.OneByTwo:
+                    free[chosenCol, chosenRow] = false;
+                    free[chosenCol, chosenRow + 1] = false;
+                    break;
             }
         }
     }
@@ -215,7 +285,7 @@ public class WaveManager : Singleton<WaveManager>
 
     private void PlaceMonster(MonsterData data, int col, int row)
     {
-        MonsterBase monster = _monsterPool.Get();
+        MonsterBase monster = _poolByData[data].Get();
         if (data != null)
             monster.ApplyData(data);
 
@@ -233,7 +303,7 @@ public class WaveManager : Singleton<WaveManager>
             if (monster.transform.position.y <= _bottomBoundaryY)
             {
                 _activeMonsters.RemoveAt(i);
-                _monsterPool.Return(monster);
+                _poolByData[monster.Data].Return(monster);
                 OnMonsterReachedBottom?.Invoke(monster);
                 OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
 
@@ -245,7 +315,7 @@ public class WaveManager : Singleton<WaveManager>
     private void HandleMonsterDied(MonsterBase monster)
     {
         _activeMonsters.Remove(monster);
-        _monsterPool.Return(monster);
+        _poolByData[monster.Data].Return(monster);
 
         _totalKillCount++;
         CheckSkillUnlock();

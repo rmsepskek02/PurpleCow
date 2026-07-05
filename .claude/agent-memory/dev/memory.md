@@ -1155,4 +1155,22 @@
 - `SceneSetupEditor.cs`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음 — `WaveManager`가 이미 싱글톤이라 별도 참조 연결이 불필요
 - 이 원격 환경엔 Unity 에디터가 없어 실제 clamp 동작(터치 위치가 기준선 아래로 내려갈 때 조준 방향이 실제로 잘리는지)을 시각적으로 검증하지 못함 — C# 문법과 로직만 재확인함. 최종 검증은 사용자 로컬 플레이 테스트 필요
 - git 커밋/푸시는 수행하지 않음
-- git 커밋/푸시는 수행하지 않음
+
+### 작업: 몬스터 로스터/컨베이어 스폰 방식 플레이테스트 피드백 반영 (A/B/C/D)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-21_monster-roster-conveyor-spawn/plan.md`("추가 확정 사항 반영 (2026-07-05 플레이테스트 피드백: A/B/C/D)" 섹션)
+- 기존 파일 1개(`WaveManager.cs`)만 수정 (신규 파일 없음), 사용자가 이미 검토/승인 완료한 계획을 그대로 반영
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs`
+  - A. `_monsterPrefab`/`_monsterPool`(단일 풀) 제거 → `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab`(각 `MonsterBase`) + `_poolByData`(`Dictionary<MonsterData, ObjectPool<MonsterBase>>`)로 교체. `Awake()`에서 `_waveTable.FluffyData/SpiderData/StoneBugData/ForestDeerData`를 키로 4개 풀 생성. `PlaceMonster()`는 `_poolByData[data].Get()`, `CheckGameOver()`/`HandleMonsterDied()`는 `_poolByData[monster.Data].Return(monster)` 사용
+  - B+C. `TryDispenseRoster()` 전면 재작성 — `midRow`/`topRow` 두 줄 스캔 방식 폐기, `topRow = _gridRows - 1` 한 줄만 스캔. `belowRow = _gridRows - 2`는 `OneByTwo`(ForestDeer) 배치 시 `IsCellFree(col, belowRow)` 사전 확인 용도로만 사용. `int maxThisTick = UnityEngine.Random.Range(3, 8)`로 틱당 배치 상한(3~7)을 두고 `placedThisTick`이 도달하면 스캔 즉시 종료
+  - D. `SpawnWave(int index)` 마지막 디스펜스 호출을 `if (index == 0) SpawnRosterAcrossFullGrid(); else TryDispenseRoster();` 분기로 교체. 신규 `SpawnRosterAcrossFullGrid()` 추가 — 그리드 전체를 로컬 `bool[,] free` 배열로 관리하며 로스터가 빌 때까지 (rosterIndex, col, row) 후보 조합 전체를 나열해 무작위로 하나씩 배치(웨이브 0 전용, 시간 지연 없이 같은 프레임에 전체 배치)
+  - `IsCellFree`/`GridToWorldPosition`/`CheckWaveCleared`/`GetWeakestMonster`/`GetMonstersInRow`/`CheckSkillUnlock`/`AdvanceToNextWave`/이벤트 시그니처/`BottomBoundaryY`는 요청대로 변경하지 않음
+
+**주요 결정사항:**
+- plan.md에 명시된 코드 스니펫을 그대로 반영, 임의 설계 변경 없음
+- `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab` Inspector 연결은 사용자가 Unity 에디터에서 직접 확인/연결 필요(이 원격 환경엔 Unity 에디터 없음)
+- 컴파일 가능 여부는 코드 리딩(참조하는 프로퍼티/타입명 존재 확인)으로만 검증, 실제 Unity 컴파일/플레이 테스트는 사용자 로컬 환경에서 필요
+- 커밋/푸시는 수행하지 않음
