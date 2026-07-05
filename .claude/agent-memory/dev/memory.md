@@ -1071,3 +1071,33 @@
 - `GameplayMechanics.md`/`UIRules.md`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음(요청사항 명시)
 - 이 원격 환경엔 Unity가 없어 실제 시각 결과(4개 호가 정확히 보이는지) 검증 불가 — C# 문법(`Gradient`/`GradientColorKey`/`GradientAlphaKey`는 `UnityEngine` 네임스페이스 포함, 별도 using 불필요)과 로직만 재확인함, 최종 시각 검증은 사용자 로컬 플레이 테스트 필요
 - git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: TrajectoryPreview 고리(_hitRing) colorGradient 방식 재폐기, 텍스처 반복 방식으로 재구현 (목표 호 4개, loop 미의존 명시적 원 닫기)
+
+**배경:** 바로 이전(같은 날) colorGradient로 교체한 결과, 사용자가 원본 게임 레퍼런스(`targetUI/circle.jpg`)와 비교해보니 부드러운 그라데이션 페이드가 레퍼런스의 "경계 선명한 끊어진 호"와 느낌이 다르다고 판단. 텍스처 반복 방식으로 재복귀하되, 과거 시도(목표 10개 → 실제 2개로 보임)의 원인으로 추정되는 `loop = true` + `textureMode = Tile` 조합을 이번엔 `_hitRing`에 한해 배제하고, `DrawCircle()`이 명시적으로 원을 닫는 정점을 추가하는 방식으로 대체.
+
+**수정 파일 (`Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` 1개만):**
+- `Awake()`의 `_hitRing.colorGradient = BuildRingDashGradient(_ringColor);` 호출 라인 제거, `BuildRingDashGradient(Color ringColor)` static 메서드 전체(Gradient 8-alphaKeys 방식) 완전 삭제
+- 신규 상수 `RING_DASH_COUNT = 4` 추가
+- 신규 메서드 `CreateRingDashTexture()` 추가 — `CreateDashTexture()`와 동일하게 4px 텍스처, 앞쪽 절반(픽셀 0-1) 불투명·뒤쪽 절반(픽셀 2-3) 완전투명인 50:50 비율(레퍼런스 대비 호가 간격보다 두꺼워 보이는 것과 맞아떨어지는 무난한 값으로 판단, `wrapMode = Repeat`, `filterMode = Point`)
+- `CreateLineRenderer()` 시그니처에 `float textureScaleX` 파라미터 추가(기존엔 항상 `1f / DASH_WORLD_SIZE` 고정값을 내부에서 계산했으나, 이제 호출부마다 다른 스케일이 필요해져 외부에서 주입받는 방식으로 변경) — `_trajectoryLine`은 기존과 동일하게 `1f / DASH_WORLD_SIZE` 전달(동작 변경 없음), `_hitDot`은 `1f`(솔리드 텍스처라 스케일 무의미) 전달, `_hitRing`은 `RING_DASH_COUNT / (2π × _ringRadius)`로 계산한 값을 전달
+- `_hitDot.loop = true;`는 그대로 유지, `_hitRing.loop = false;`로 명시(기존엔 `_hitRing.loop = true;`였음) — 주석으로 loop+Tile 조합의 알려진 이슈 정황과 이번 회피 전략을 기록
+- `DrawCircle()` 시그니처에 `bool explicitClose = false` 파라미터 추가(기본값 false로 `_hitDot` 호출부는 무변경). `explicitClose = true`(= `_hitRing` 전용 신규 호출)일 때 `positionCount = CIRCLE_SEGMENTS + 1`로 만들고, 루프 중 인덱스 0에서 계산한 `firstPoint`(회전 오프셋이 이미 반영된 위치)를 마지막 인덱스(`CIRCLE_SEGMENTS`)에 그대로 복사해 명시적으로 원을 닫음. `_hitDot` 호출부(`DrawCircle(_hitDot, hit2.point, _dotRadius);`)는 변경하지 않았고 `_hitRing` 호출부만 `DrawCircle(_hitRing, hit2.point, _ringRadius, ringRotationOffsetDeg, explicitClose: true);`로 확장
+- `CreateSolidTexture()` 위 주석을 "레드닷(_hitDot) 전용 단색 텍스처"로 갱신(고리는 더 이상 이 텍스처를 쓰지 않으므로)
+
+**이번 변경과 지난번(목표 10 → 실제 2) 시도의 구체적 차이:**
+- 지난번엔 `_hitRing.loop = true`로 두고 Unity가 "마지막 정점(23번) → 첫 정점(0번)" 구간을 자동으로 이어 원을 닫도록 맡겼음. 이번엔 `_hitRing.loop = false`로 바꾸고, `DrawCircle()`이 24개가 아니라 25개(`CIRCLE_SEGMENTS + 1`) 정점을 만들어 마지막 정점을 0번 정점과 동일한 위치로 명시적으로 채움 — Unity가 자동으로 처리하는 "숨은 닫힘 구간"을 없애고, 폴리라인에 실제로 그려지는 모든 구간(24개 선분)을 코드가 직접 정의
+- 텍스처 스케일 계산 공식(`RING_DASH_COUNT / 둘레길이`) 자체는 지난번과 동일하게 재사용했지만, 지난번엔 `loop=true`로 인해 "총 폴리라인 길이"가 실제 렌더링 시 둘레 길이와 정확히 일치하지 않았을 가능성이 있음(자동 닫힘 구간 길이가 텍스처 타일링 누적 계산에 반영되지 않는 경우). 이번엔 정점을 명시적으로 닫아 폴리라인이 24개 선분으로 완전히 구성되고 총 길이가 정확히 `2π × _ringRadius`(둘레)와 일치하도록 만들어, 스케일 공식의 전제(총 길이 = 둘레)가 실제로 성립하게 함
+- `_hitDot`은 이번에도 완전히 손대지 않음 — 여전히 `CIRCLE_SEGMENTS`개 정점 + `loop = true` + `CreateSolidTexture()`
+
+**주요 결정사항:**
+- `DrawCircle()`을 `_hitRing` 전용 메서드로 완전히 분리하지 않고 `explicitClose` 파라미터로 확장하는 방향 채택 — 이미 `rotationOffsetDeg` 파라미터가 있어 자연스러운 확장이라 판단했고, `_hitDot`/`_hitRing` 호출부가 여전히 하나의 메서드를 공유해 회전 각도 계산(`(i / CIRCLE_SEGMENTS) * 2π - offsetRad`) 로직 중복을 피함
+- 불투명:투명 비율은 정확한 수치 지정 없이 "극단적으로 얇지 않은" 재량 범위 내에서 기존 `CreateDashTexture()`와 동일한 50:50을 그대로 재사용 — 레퍼런스와 별도로 비교 검증할 방법이 이 원격 환경에는 없어, 이미 궤적선에서 검증된 비율을 그대로 채택하는 것이 안전하다고 판단
+- `CreateLineRenderer()`의 텍스처 스케일 계산을 메서드 내부 고정값에서 외부 주입 파라미터로 바꿈 — `_trajectoryLine` 호출부는 동일한 값을 그대로 전달해 동작 변경 없음을 보장
+- `GameplayMechanics.md`/`UIRules.md`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음(요청사항 명시, 오케스트레이터가 실제 diff 확인 후 문서는 별도 갱신 예정)
+- 이 원격 환경엔 Unity가 없어 실제 렌더링 결과(정확히 4개로 보이는지, loop=false 전환이 실제로 문제를 해결하는지)는 이번에도 검증 불가 — C# 문법과 기하학적 로직(정점 개수, 닫힘 위치, 텍스처 스케일 공식)만 재차 검토함. 사용자가 이 재시도의 실패 위험을 감수하고 진행하기로 한 상태이므로 최종 시각 검증은 반드시 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
