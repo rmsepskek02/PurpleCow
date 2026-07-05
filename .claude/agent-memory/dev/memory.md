@@ -1155,7 +1155,6 @@
 - `SceneSetupEditor.cs`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음 — `WaveManager`가 이미 싱글톤이라 별도 참조 연결이 불필요
 - 이 원격 환경엔 Unity 에디터가 없어 실제 clamp 동작(터치 위치가 기준선 아래로 내려갈 때 조준 방향이 실제로 잘리는지)을 시각적으로 검증하지 못함 — C# 문법과 로직만 재확인함. 최종 검증은 사용자 로컬 플레이 테스트 필요
 - git 커밋/푸시는 수행하지 않음
-- git 커밋/푸시는 수행하지 않음
 
 ---
 
@@ -1198,3 +1197,67 @@
 - `_headTransform.localRotation`의 `_headRotationRatio` 반영 로직은 수정하지 않음 — 고쳐진 `weaponAngle`을 그대로 참조하므로 자동으로 함께 수정됨
 - 오케스트레이터 지시대로 이 파일 1개만 수정, git status로 변경 범위 확인함(`CharacterAimView.cs`는 이전 세션부터 커밋되지 않은 신규 파일(untracked) 상태였고 그 안에서만 diff 발생, 다른 파일은 무관)
 - git 커밋/푸시는 수행하지 않음(오케스트레이터가 처리 예정)
+
+---
+
+## 2026-07-05
+
+### 작업: 몬스터 로스터/컨베이어 스폰 방식 플레이테스트 피드백 반영 (A/B/C/D)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-21_monster-roster-conveyor-spawn/plan.md`("추가 확정 사항 반영 (2026-07-05 플레이테스트 피드백: A/B/C/D)" 섹션)
+- 기존 파일 1개(`WaveManager.cs`)만 수정 (신규 파일 없음), 사용자가 이미 검토/승인 완료한 계획을 그대로 반영
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs`
+  - A. `_monsterPrefab`/`_monsterPool`(단일 풀) 제거 → `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab`(각 `MonsterBase`) + `_poolByData`(`Dictionary<MonsterData, ObjectPool<MonsterBase>>`)로 교체. `Awake()`에서 `_waveTable.FluffyData/SpiderData/StoneBugData/ForestDeerData`를 키로 4개 풀 생성. `PlaceMonster()`는 `_poolByData[data].Get()`, `CheckGameOver()`/`HandleMonsterDied()`는 `_poolByData[monster.Data].Return(monster)` 사용
+  - B+C. `TryDispenseRoster()` 전면 재작성 — `midRow`/`topRow` 두 줄 스캔 방식 폐기, `topRow = _gridRows - 1` 한 줄만 스캔. `belowRow = _gridRows - 2`는 `OneByTwo`(ForestDeer) 배치 시 `IsCellFree(col, belowRow)` 사전 확인 용도로만 사용. `int maxThisTick = UnityEngine.Random.Range(3, 8)`로 틱당 배치 상한(3~7)을 두고 `placedThisTick`이 도달하면 스캔 즉시 종료
+  - D. `SpawnWave(int index)` 마지막 디스펜스 호출을 `if (index == 0) SpawnRosterAcrossFullGrid(); else TryDispenseRoster();` 분기로 교체. 신규 `SpawnRosterAcrossFullGrid()` 추가 — 그리드 전체를 로컬 `bool[,] free` 배열로 관리하며 로스터가 빌 때까지 (rosterIndex, col, row) 후보 조합 전체를 나열해 무작위로 하나씩 배치(웨이브 0 전용, 시간 지연 없이 같은 프레임에 전체 배치)
+  - `IsCellFree`/`GridToWorldPosition`/`CheckWaveCleared`/`GetWeakestMonster`/`GetMonstersInRow`/`CheckSkillUnlock`/`AdvanceToNextWave`/이벤트 시그니처/`BottomBoundaryY`는 요청대로 변경하지 않음
+
+**주요 결정사항:**
+- plan.md에 명시된 코드 스니펫을 그대로 반영, 임의 설계 변경 없음
+- `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab` Inspector 연결은 사용자가 Unity 에디터에서 직접 확인/연결 필요(이 원격 환경엔 Unity 에디터 없음)
+- 컴파일 가능 여부는 코드 리딩(참조하는 프로퍼티/타입명 존재 확인)으로만 검증, 실제 Unity 컴파일/플레이 테스트는 사용자 로컬 환경에서 필요
+- 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: 몬스터 로스터/컨베이어 스폰 방식 플레이테스트 피드백 반영 2 (E/F/G)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-21_monster-roster-conveyor-spawn/plan.md`("추가 확정 사항 반영 2 (2026-07-05 플레이테스트 피드백: E/F/G)" 섹션)
+- A/B/C/D는 이미 구현 완료된 상태(위 항목) 위에 추가 변경. 기존 파일 1개(`WaveManager.cs`)만 수정 (신규 파일 없음), 사용자가 이미 검토/승인 완료한 계획을 그대로 반영
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs`
+  - E. `PlaceMonster(MonsterData data, int col, int row)` → `PlaceMonster(MonsterData data, Vector3 worldPosition)`로 시그니처 변경(내부는 `monster.transform.position = worldPosition;`만 사용). `TryDispenseRoster()`/`SpawnRosterAcrossFullGrid()` 양쪽 배치 호출부를 `BlockSize` `switch` 표현식으로 `worldPos` 계산 후 `PlaceMonster(data, worldPos)` 호출로 교체(`TryDispenseRoster()`는 `topRow`/`belowRow` 평균, `SpawnRosterAcrossFullGrid()`는 `chosenRow`/`chosenRow+1` 평균 — 두 메서드의 `OneByTwo` 평균 대상 행이 다름을 주석으로 명시). `IsCellFree()` 판정 반경을 `_gridCellSize / 2f` → `_gridCellSize * 0.55f`로 확대
+  - F. `TryDispenseRoster()`의 열 스캔을 고정 `for (int col = 0; ...)` → 매 틱 Fisher-Yates로 셔플된 `List<int> colOrder`를 `foreach (int col in colOrder)`로 순회하도록 변경. `topRowFree` 캐시 계산 자체는 `col=0`부터 순서대로 유지, 셔플은 배치 시도 순서에만 적용. 루프 내부 판정/후보 수집/무작위 선택/배치/캐시 갱신 로직은 변경하지 않음
+  - G. `SpawnWave(int index)` 마지막 분기를 `if (index == 0 || index == 10) SpawnRosterAcrossFullGrid(); else TryDispenseRoster();`로 확장(각 매직넘버 옆에 의미 주석 추가). 신규 `CheckRosterDepleted()` 메서드 추가 — 로스터가 비었고 마지막 웨이브도 아니고 10웨이브(index 9, 오버랩 예외)도 아니면 `AdvanceToNextWave()` 즉시 호출. `TryDispenseRoster()`/`SpawnRosterAcrossFullGrid()` 각각의 배치 루프 종료 직후(메서드 마지막)에 `CheckRosterDepleted()` 호출 추가. `CheckWaveCleared()`/`AdvanceToNextWave()`는 수정하지 않음
+
+**주요 결정사항:**
+- plan.md에 명시된 코드 스니펫을 그대로 반영, 임의 설계 변경 없음
+- (plan.md에 직접 언급되지 않았으나 G 구현을 위해 필요했던 조정) `TryDispenseRoster()`의 `foreach` 루프 내부 조기 종료 조건(`_waveRoster.Count == 0 || placedThisTick >= maxThisTick`)의 처리를 `return;`에서 `break;`로 변경 — plan.md F 섹션 스니펫은 `return;`을 그대로 두고 있으나, 그대로 두면 G가 요구하는 "메서드 마지막에서 `CheckRosterDepleted()` 호출"이 조기 `return`에 의해 스킵되는 문제가 있어 루프만 빠져나오고 메서드 끝의 호출까지 항상 도달하도록 수정. 루프 내부의 다른 판정/배치 로직은 그대로 둠
+- `CheckRosterDepleted()` → `AdvanceToNextWave()` → `SpawnWave()`(index 0/10이면 `SpawnRosterAcrossFullGrid()` 재호출 → 그 끝에서 다시 `CheckRosterDepleted()`) 형태의 재귀적 연쇄 호출이 발생할 수 있으나, 이는 plan.md 주석("초반 웨이브들은 오버랩이 연쇄적으로 일어나 웨이브 인덱스가 실제 체감 진행 속도보다 빠르게 올라갈 수 있다")에 명시된 의도된 동작이라 별도 방어 로직을 추가하지 않음
+- 컴파일 가능 여부는 코드 리딩(참조하는 프로퍼티/타입명/`_currentWaveIndex`/`_waveTable.TotalWaves` 등 기존 필드·프로퍼티 존재 확인)으로만 검증, 실제 Unity 컴파일/플레이 테스트는 사용자 로컬 환경에서 필요
+- 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: TryDispenseRoster() 틱당 스폰 수 min/max Inspector 노출
+
+**작업 내용:**
+- 문서 작성 없이 사용자가 바로 구현 승인. 기존 파일 1개(`WaveManager.cs`)만 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs`
+  - `_killCountForSkill` 필드 바로 아래에 `[SerializeField] private int _minSpawnPerTick = 3;` / `[SerializeField] private int _maxSpawnPerTick = 7;` 추가
+  - `TryDispenseRoster()` 내부 `int maxThisTick = UnityEngine.Random.Range(3, 8);` → `UnityEngine.Random.Range(_minSpawnPerTick, _maxSpawnPerTick + 1)`로 교체 (기존 3~7 포함 범위와 동일 의미 유지 위해 `+1` 사용)
+
+**주요 결정사항:**
+- 필드명/기본값은 사용자 지시 그대로 사용, 다른 로직 변경 없음
+- 커밋/푸시는 수행하지 않음
