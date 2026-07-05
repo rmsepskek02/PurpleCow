@@ -1329,4 +1329,25 @@
 
 **주요 결정사항:**
 - `transform.localScale` 좌우 반전 로직(`mirrored = direction.x > 0f`)은 그대로 유지 — 이번 수정은 회전 계산 방식만 교체, 반전 판정 자체는 손대지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView 수평 보정치(`_horizontalBiasDegrees`) 추가
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs` 이 파일 하나만 수정 (다른 파일 미변경)
+
+**변경 내용:**
+- `_headRotationRatio` 필드 바로 아래에 `[SerializeField] private float _horizontalBiasDegrees = 15f;` 필드 추가
+- `UpdateAim()`에서 `weaponRotation = Quaternion.FromToRotation(Vector3.up, localTargetDir)` 계산 직후, `_weaponPivot.localRotation` 대입 전에 `weaponRotation.ToAngleAxis(out angle, out axis)`로 각도/축을 뽑아 `horizontalness = Mathf.Clamp01(angle / 90f)` 비율을 구하고 `weaponRotation = Quaternion.AngleAxis(angle + _horizontalBiasDegrees * horizontalness, axis)`로 재계산하는 로직 추가
+- 완전 수직(각도 0)일 때는 보정 없음, 완전 수평(각도 90)에 가까울수록 최대 `_horizontalBiasDegrees`(기본 15도)만큼 같은 축으로 추가 회전 — 이후 `_weaponPivot.localRotation`과 `_headTransform.localRotation`(Slerp)은 보정이 반영된 `weaponRotation`을 그대로 참조하므로 별도 수정 불필요
+
+**Git:**
+- git status로 `CharacterAimView.cs` 1개 파일만 변경됨을 확인
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- 보정치는 Inspector에서 조절 가능하도록 `[SerializeField]` 필드로 노출 (하드코딩하지 않음)
 - `_weaponPivot`/`_headTransform` 필드 및 시그니처는 변경하지 않아 `CharacterSetupEditor.cs`를 포함한 다른 파일과의 참조 호환성 그대로 유지

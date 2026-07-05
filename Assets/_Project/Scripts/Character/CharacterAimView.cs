@@ -11,6 +11,7 @@ public class CharacterAimView : MonoBehaviour
     [SerializeField] private Transform _headTransform;
     [SerializeField] private Transform _weaponPivot;
     [SerializeField] private float _headRotationRatio = 0.25f;
+    [SerializeField] private float _horizontalBiasDegrees = 15f;
 
     private void Update()
     {
@@ -29,6 +30,12 @@ public class CharacterAimView : MonoBehaviour
         // 목표 방향의 x부호를 미리 뒤집어서 로컬 회전을 계산해야 최종 결과가 실제 조준 방향과 일치한다.
         Vector2 localTargetDir = mirrored ? new Vector2(-direction.x, direction.y) : direction;
         Quaternion weaponRotation = Quaternion.FromToRotation(Vector3.up, localTargetDir);
+
+        // 조준 방향이 수평에 가까울수록(Vector3.up에서 많이 벗어날수록) 지팡이가 조금 더 눕도록 추가 보정한다.
+        weaponRotation.ToAngleAxis(out float angle, out Vector3 axis);
+        float horizontalness = Mathf.Clamp01(angle / 90f);
+        weaponRotation = Quaternion.AngleAxis(angle + _horizontalBiasDegrees * horizontalness, axis);
+
         _weaponPivot.localRotation = weaponRotation;
 
         // 머리는 무기 회전의 일부 비율만 보조적으로 따라가도록 보간한다.
