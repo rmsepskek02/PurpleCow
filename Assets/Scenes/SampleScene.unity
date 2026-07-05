@@ -200,6 +200,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrajectoryPreview
   _lineWidth: 0.05
+  _dashLength: 0.12
+  _dashGap: 0.04
+  _dashScrollSpeed: 0.5
   _lineColor: {r: 0.5999999, g: 0.5999999, b: 0.5966037, a: 1}
   _hitColor: {r: 0.80784315, g: 0.3529412, b: 0.32156864, a: 1}
   _ringColor: {r: 1, g: 1, b: 1, a: 1}
