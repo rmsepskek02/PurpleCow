@@ -985,3 +985,119 @@
 - 블록 스프라이트 로드는 `AssetDatabase.LoadAssetAtPath<Sprite>` 대신 `AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().FirstOrDefault()` 사용 — Multiple 모드 스프라이트(서브에셋 이름이 파일명과 다름, 예: `Block_1x1_0`)를 안전하게 로드하기 위함.
 - 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/프리팹 GUI 편집/asset 재직렬화 검증 불가 — 문법/네이밍/직렬화 필드명(SerializedObject.FindProperty 대상 문자열) 일치 여부만 신중히 재확인함.
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
+
+---
+
+## 2026-07-05
+
+### 작업: PrismPanel(융합 시스템 잔재) 제거 — UISetupEditor.cs + SampleScene.unity
+
+**작업 내용:**
+- task 문서 없이 사용자 명시적 승인으로 즉시 진행 (오케스트레이터 지시에 명시됨)
+- 공식 스펙 PDF 구현 제외 항목(융합 시스템) 관련 빈 스텁 패널 `PrismPanel` 제거
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/UISetupEditor.cs` — `Step3_SetupPanelCanvas()` 내 `panelNames` 배열에서 `"PrismPanel"` 항목 제거 (`{ "LevelUpPanel", "PausePanel", "BallLevelUpPanel", "PrismPanel" }` → `{ "LevelUpPanel", "PausePanel", "BallLevelUpPanel" }`). 나머지 3개 패널은 그대로 유지.
+- `Assets/Scenes/SampleScene.unity` — YAML 텍스트 직접 편집으로 PrismPanel 관련 블록 3개 삭제:
+  - `!u!1 &1731188296` GameObject 블록 (`m_Name: PrismPanel`)
+  - `!u!224 &1731188297` RectTransform 블록 (m_Father: 849164776 = Canvas_Panel)
+  - `!u!225 &1731188298` CanvasGroup 블록
+  - 부모 `Canvas_Panel`의 RectTransform(`!u!224 &849164776`) `m_Children` 리스트에서 `- {fileID: 1731188297}` 참조 라인 1줄 제거 (나머지 3개 자식 LevelUpPanel/PausePanel/BallLevelUpPanel 참조는 유지)
+
+**검증:**
+- `grep -c "PrismPanel" SampleScene.unity` → 0
+- fileID 1731188296/1731188297/1731188298 참조 → 파일 전체에서 매치 없음 (완전 제거 확인)
+- `!u!1660057539 &9223372036854775807 SceneRoots`의 `- {fileID: 849164776}`는 Canvas_Panel 자체를 가리키는 무관한 참조이므로 건드리지 않음
+
+**주요 결정사항:**
+- Unity 에디터 없는 원격 환경이라 씬을 열어 직접 검증 불가 — YAML 텍스트 편집만 수행, fileID 참조 관계(부모 m_Children ↔ 자식 m_GameObject/m_Father)를 grep으로 교차 확인 후 진행
+- LevelUpPanel/PausePanel/BallLevelUpPanel 및 다른 모든 GameObject/컴포넌트는 전혀 건드리지 않음
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+---
+
+## 2026-07-05
+
+### 작업: 궤적 프리뷰 _hitRing 점선화 + 시계방향 회전 효과
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/plan.md` (사용자 승인 완료)
+- `TrajectoryPreview.cs` 단독 수정, `_hitRing`(2차 충돌 지점 레드닷을 감싸는 고리)을 실선 → 점선으로 교체하고 조준 여부와 무관하게 항상 시계방향으로 회전하는 효과 추가
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs`
+  - `[SerializeField] private float _ringRotationSpeed = 90f;` 필드 추가 (deg/sec, Inspector 노출) — 4초에 한 바퀴 도는 속도로, 너무 느려 밋밋하지도 너무 빨라 어지럽지도 않은 값으로 임의 결정(plan.md의 "60f 전후 참고" 문구보다 살짝 빠르게 설정해 애니메이션이 눈에 띄도록 함)
+  - `RING_DASH_COUNT = 10` 상수 추가 (고리 둘레에 배치할 점선 호 개수, plan.md가 제시한 8~12 범위의 중간값)
+  - `CreateRingDashTexture()` 신설 — 궤적선의 `CreateDashTexture()`(4px, 50:50 비율)와 별도로 5px 텍스처(2px 불투명/3px 투명 = 40% 비율)를 사용해 궤적선보다 간격이 넓은 "짧은 호 + 넓은 갭" 형태로 차별화. `CreateDashTexture()` 재사용이 아닌 신규 메서드를 선택한 이유: research.md/plan.md가 궤적선과 고리의 점선 비율이 다를 때 더 자연스럽다고 명시했고, 레퍼런스 이미지(`targetUI/KakaoTalk_20260701_190324151_02.jpg`)의 고리가 궤적선보다 끊김이 더 뚜렷했기 때문
+  - `CreateLineRenderer()` 시그니처에 `Vector2? textureScaleOverride = null` 선택적 파라미터 추가 — plan.md가 제시한 두 옵션(공용 헬퍼 파라미터 확장 vs `Awake()`에서 별도 재설정) 중 헬퍼 파라미터 확장을 선택(호출부 한 줄로 의도가 드러나고 `_trajectoryLine`/`_hitDot` 호출부는 그대로 유지되어 변경 범위가 더 작음). `Awake()`에서 `ringCircumference = 2π × _ringRadius`, `ringTextureScale = (RING_DASH_COUNT / ringCircumference, 1f)`로 계산해 전달 — 고리 둘레에 정확히 10개 점선이 이음새 없이 반복되도록 함(궤적선처럼 `DASH_WORLD_SIZE` 고정 스케일이 아닌, 고정 둘레 기준 정수 배 스케일 필요)
+  - `DrawCircle()` 시그니처에 `float rotationOffsetDeg = 0f` 파라미터 추가(plan.md 옵션 a 채택, 별도 메서드 분리보다 중복 코드가 적음). `angle = (i / CIRCLE_SEGMENTS) * 2π - rotationOffsetDeg(rad)`로 각도에서 오프셋을 빼는 방식 채택 — Unity 2D 좌표계(Y+ 위쪽)에서 `(cos(angle), sin(angle))`은 angle 증가 시 반시계 방향으로 이동하므로(예: angle=0의 (r,0) 지점에서 angle이 조금 커지면 y가 양수가 되어 위쪽, 즉 반시계 방향), 시계방향으로 보이려면 시간에 따라 angle을 감소시켜야 함. 반대로 검증하면 angle을 시간에 따라 "빼면"(offsetRad가 시간에 비례해 증가) (r,0) 지점이 y가 음수 쪽(아래)으로 이동 → 시계 방향(3시 방향에서 6시 방향으로 이동)과 일치함을 확인
+  - `UpdateTrajectory()`의 2차 충돌 분기에서 `float ringRotationOffsetDeg = Time.time * _ringRotationSpeed;` 계산 후 `DrawCircle(_hitRing, hit2.point, _ringRadius, ringRotationOffsetDeg)` 호출로 변경. `DrawCircle(_hitDot, hit2.point, _dotRadius)` 호출부는 그대로(기본값 0 사용)라 레드닷은 회전 미적용 유지
+  - `Update()`가 이미 터치 여부와 무관하게 매 프레임 실행되는 기존 구조(2026-07-03 수정)를 그대로 활용 — 회전 관련 로직에 터치 상태 체크를 별도로 추가하지 않음
+  - `CreateSolidTexture()` 위 주석을 "레드닷/원형 궤적선용" → "레드닷(_hitDot) 전용, 고리는 CreateRingDashTexture()로 분리됨"으로 정정(주석 정확성 유지 목적, 로직 변경 아님)
+
+**주요 결정사항:**
+- 텍스처 생성 방식: 신규 메서드(`CreateRingDashTexture()`) 신설 — `CreateDashTexture()` 재사용 대신 채택(이유는 위 수정 파일 항목 참고)
+- `DrawCircle()` 확장 vs 분리: 시그니처 확장(옵션 a) 채택 — `_hitDot` 호출부는 그대로 유지되어 하위 호환, 코드 중복 없음
+- `_ringRotationSpeed` 기본값: 90f(deg/sec, 약 4초/바퀴)
+- 시계방향 부호 처리: `angle - Mathf.Deg2Rad * Time.time * _ringRotationSpeed` (research.md 예시와 동일한 부호)
+- 점선 세그먼트 개수: `RING_DASH_COUNT = 10`, 비율은 40%(2px/5px) — 궤적선(50%)보다 간격이 넓어 시각적으로 구분됨
+- `GameplayMechanics.md`/`UIRules.md` 문서 갱신은 이번 작업 범위 밖(별도 docs 에이전트 담당)이라 손대지 않음
+- `Assets/Scenes/SampleScene.unity`는 수정하지 않음(신규 필드는 사용자 로컬에서 씬을 열 때 자동 직렬화됨)
+- 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/시각 결과(점선 간격/회전 방향/속도 체감)는 검증 불가 — C# 문법과 좌표 기하학적 논리만 재확인함, 최종 시각 검증은 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: TrajectoryPreview 고리(_hitRing) 점선 방식을 텍스처 타일링 → colorGradient로 교체 (QA 피드백 수정)
+
+**배경:** 2026-07-05 11-20 trajectory-ring-dash-rotate task의 텍스처 타일링 기반 구현(`CreateRingDashTexture()` + `mainTextureScale.x = RING_DASH_COUNT / 둘레길이`)을 사용자가 로컬 Unity에서 실제 테스트한 결과 의도한 10개가 아니라 호가 2개만 보이는 것으로 확인됨. 텍스처 타일링 계산과 `LineRenderer.textureMode = Tile`의 실제 렌더링 결과가 어긋난 것으로 추정. 정확한 개수를 보장하는 `LineRenderer.colorGradient` 방식으로 교체.
+
+**수정 파일 (`Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` 1개만):**
+- `RING_DASH_COUNT` 상수 제거
+- `CreateRingDashTexture()` 메서드 완전 제거(죽은 코드 방지)
+- `Awake()`에서 `_hitRing` 생성 시 `CreateRingDashTexture()` + `ringTextureScale` 계산 로직 제거 → `CreateSolidTexture()`로 되돌림(레드닷과 동일), 생성 직후 `_hitRing.colorGradient = BuildRingDashGradient(_ringColor);` 할당
+- `CreateLineRenderer()` 시그니처에서 `Vector2? textureScaleOverride = null` 파라미터 제거(호출부 3곳 모두 더 이상 필요 없어져 원래 시그니처로 복귀), `material.mainTextureScale`은 항상 `(1f / DASH_WORLD_SIZE, 1f)` 고정값 사용(이 부분은 기존 로직 그대로 유지, 이번 변경과 무관)
+- `BuildRingDashGradient(Color ringColor)` static 메서드 신설 — `GradientColorKey` 2개(t=0/t=1, RGB 둘 다 ringColor), `GradientAlphaKey` 8개(피크 t=0/0.25/0.5/0.75는 alpha 1, 골 t=0.125/0.375/0.625/0.875는 alpha 0, t 오름차순 배치)로 `gradient.SetKeys()` 호출 후 반환. 정확히 8개 키(Gradient alphaKeys 최대치)로 4등분+4중간점이 딱 맞아떨어져 텍스처 타일링 계산 없이 항상 정확히 4개 호 보장
+- `CreateSolidTexture()` 위 주석을 "레드닷/고리 공용, 고리의 점선 형태는 colorGradient로 표현"으로 갱신
+
+**회전 로직과의 호환성 확인:**
+- `DrawCircle()`의 `rotationOffsetDeg` 파라미터와 `Time.time * _ringRotationSpeed` 오프셋 로직은 변경하지 않음(요청사항대로) — `DrawCircle()`은 정점의 "월드 좌표 위치"를 회전시키는 반면, `colorGradient`는 LineRenderer 정점 "인덱스(순서, t=0~1)"를 기준으로 밝기를 매기므로 서로 독립적인 축. 정점이 회전해도 인덱스별 밝기 값은 인덱스에 고정된 채로 함께 회전하므로, 4개의 밝은 호가 고리 전체와 함께 계속 회전하는 것으로 동작할 것으로 판단(코드 변경 불필요, 그대로 유지)
+
+**주요 결정사항:**
+- `_ringColor`는 `[SerializeField]`라 런타임에 Inspector에서 바뀔 수 있지만, 기존 `startColor`/`endColor` 방식도 `Awake()` 시점 고정이었으므로 `BuildRingDashGradient()`도 동일한 수준(Awake 1회 계산)으로 유지 — 런타임 실시간 색상 반영은 범위 밖
+- `_hitDot`(레드닷)은 이번 변경 대상에서 완전히 제외 — 계속 `CreateSolidTexture()` 사용, colorGradient 미적용
+- `GameplayMechanics.md`/`UIRules.md`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음(요청사항 명시)
+- 이 원격 환경엔 Unity가 없어 실제 시각 결과(4개 호가 정확히 보이는지) 검증 불가 — C# 문법(`Gradient`/`GradientColorKey`/`GradientAlphaKey`는 `UnityEngine` 네임스페이스 포함, 별도 using 불필요)과 로직만 재확인함, 최종 시각 검증은 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: TrajectoryPreview 고리(_hitRing) colorGradient 방식 재폐기, 텍스처 반복 방식으로 재구현 (목표 호 4개, loop 미의존 명시적 원 닫기)
+
+**배경:** 바로 이전(같은 날) colorGradient로 교체한 결과, 사용자가 원본 게임 레퍼런스(`targetUI/circle.jpg`)와 비교해보니 부드러운 그라데이션 페이드가 레퍼런스의 "경계 선명한 끊어진 호"와 느낌이 다르다고 판단. 텍스처 반복 방식으로 재복귀하되, 과거 시도(목표 10개 → 실제 2개로 보임)의 원인으로 추정되는 `loop = true` + `textureMode = Tile` 조합을 이번엔 `_hitRing`에 한해 배제하고, `DrawCircle()`이 명시적으로 원을 닫는 정점을 추가하는 방식으로 대체.
+
+**수정 파일 (`Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` 1개만):**
+- `Awake()`의 `_hitRing.colorGradient = BuildRingDashGradient(_ringColor);` 호출 라인 제거, `BuildRingDashGradient(Color ringColor)` static 메서드 전체(Gradient 8-alphaKeys 방식) 완전 삭제
+- 신규 상수 `RING_DASH_COUNT = 4` 추가
+- 신규 메서드 `CreateRingDashTexture()` 추가 — `CreateDashTexture()`와 동일하게 4px 텍스처, 앞쪽 절반(픽셀 0-1) 불투명·뒤쪽 절반(픽셀 2-3) 완전투명인 50:50 비율(레퍼런스 대비 호가 간격보다 두꺼워 보이는 것과 맞아떨어지는 무난한 값으로 판단, `wrapMode = Repeat`, `filterMode = Point`)
+- `CreateLineRenderer()` 시그니처에 `float textureScaleX` 파라미터 추가(기존엔 항상 `1f / DASH_WORLD_SIZE` 고정값을 내부에서 계산했으나, 이제 호출부마다 다른 스케일이 필요해져 외부에서 주입받는 방식으로 변경) — `_trajectoryLine`은 기존과 동일하게 `1f / DASH_WORLD_SIZE` 전달(동작 변경 없음), `_hitDot`은 `1f`(솔리드 텍스처라 스케일 무의미) 전달, `_hitRing`은 `RING_DASH_COUNT / (2π × _ringRadius)`로 계산한 값을 전달
+- `_hitDot.loop = true;`는 그대로 유지, `_hitRing.loop = false;`로 명시(기존엔 `_hitRing.loop = true;`였음) — 주석으로 loop+Tile 조합의 알려진 이슈 정황과 이번 회피 전략을 기록
+- `DrawCircle()` 시그니처에 `bool explicitClose = false` 파라미터 추가(기본값 false로 `_hitDot` 호출부는 무변경). `explicitClose = true`(= `_hitRing` 전용 신규 호출)일 때 `positionCount = CIRCLE_SEGMENTS + 1`로 만들고, 루프 중 인덱스 0에서 계산한 `firstPoint`(회전 오프셋이 이미 반영된 위치)를 마지막 인덱스(`CIRCLE_SEGMENTS`)에 그대로 복사해 명시적으로 원을 닫음. `_hitDot` 호출부(`DrawCircle(_hitDot, hit2.point, _dotRadius);`)는 변경하지 않았고 `_hitRing` 호출부만 `DrawCircle(_hitRing, hit2.point, _ringRadius, ringRotationOffsetDeg, explicitClose: true);`로 확장
+- `CreateSolidTexture()` 위 주석을 "레드닷(_hitDot) 전용 단색 텍스처"로 갱신(고리는 더 이상 이 텍스처를 쓰지 않으므로)
+
+**이번 변경과 지난번(목표 10 → 실제 2) 시도의 구체적 차이:**
+- 지난번엔 `_hitRing.loop = true`로 두고 Unity가 "마지막 정점(23번) → 첫 정점(0번)" 구간을 자동으로 이어 원을 닫도록 맡겼음. 이번엔 `_hitRing.loop = false`로 바꾸고, `DrawCircle()`이 24개가 아니라 25개(`CIRCLE_SEGMENTS + 1`) 정점을 만들어 마지막 정점을 0번 정점과 동일한 위치로 명시적으로 채움 — Unity가 자동으로 처리하는 "숨은 닫힘 구간"을 없애고, 폴리라인에 실제로 그려지는 모든 구간(24개 선분)을 코드가 직접 정의
+- 텍스처 스케일 계산 공식(`RING_DASH_COUNT / 둘레길이`) 자체는 지난번과 동일하게 재사용했지만, 지난번엔 `loop=true`로 인해 "총 폴리라인 길이"가 실제 렌더링 시 둘레 길이와 정확히 일치하지 않았을 가능성이 있음(자동 닫힘 구간 길이가 텍스처 타일링 누적 계산에 반영되지 않는 경우). 이번엔 정점을 명시적으로 닫아 폴리라인이 24개 선분으로 완전히 구성되고 총 길이가 정확히 `2π × _ringRadius`(둘레)와 일치하도록 만들어, 스케일 공식의 전제(총 길이 = 둘레)가 실제로 성립하게 함
+- `_hitDot`은 이번에도 완전히 손대지 않음 — 여전히 `CIRCLE_SEGMENTS`개 정점 + `loop = true` + `CreateSolidTexture()`
+
+**주요 결정사항:**
+- `DrawCircle()`을 `_hitRing` 전용 메서드로 완전히 분리하지 않고 `explicitClose` 파라미터로 확장하는 방향 채택 — 이미 `rotationOffsetDeg` 파라미터가 있어 자연스러운 확장이라 판단했고, `_hitDot`/`_hitRing` 호출부가 여전히 하나의 메서드를 공유해 회전 각도 계산(`(i / CIRCLE_SEGMENTS) * 2π - offsetRad`) 로직 중복을 피함
+- 불투명:투명 비율은 정확한 수치 지정 없이 "극단적으로 얇지 않은" 재량 범위 내에서 기존 `CreateDashTexture()`와 동일한 50:50을 그대로 재사용 — 레퍼런스와 별도로 비교 검증할 방법이 이 원격 환경에는 없어, 이미 궤적선에서 검증된 비율을 그대로 채택하는 것이 안전하다고 판단
+- `CreateLineRenderer()`의 텍스처 스케일 계산을 메서드 내부 고정값에서 외부 주입 파라미터로 바꿈 — `_trajectoryLine` 호출부는 동일한 값을 그대로 전달해 동작 변경 없음을 보장
+- `GameplayMechanics.md`/`UIRules.md`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음(요청사항 명시, 오케스트레이터가 실제 diff 확인 후 문서는 별도 갱신 예정)
+- 이 원격 환경엔 Unity가 없어 실제 렌더링 결과(정확히 4개로 보이는지, loop=false 전환이 실제로 문제를 해결하는지)는 이번에도 검증 불가 — C# 문법과 기하학적 로직(정점 개수, 닫힘 위치, 텍스처 스케일 공식)만 재차 검토함. 사용자가 이 재시도의 실패 위험을 감수하고 진행하기로 한 상태이므로 최종 시각 검증은 반드시 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
