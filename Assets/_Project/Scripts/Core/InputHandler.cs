@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 public class InputHandler : Singleton<InputHandler>
@@ -11,6 +13,7 @@ public class InputHandler : Singleton<InputHandler>
     private Camera _mainCamera;
 
     private bool _isDragging;
+    private bool _isPointerBlockedByUI;
 
     protected override void Awake()
     {
@@ -36,21 +39,46 @@ public class InputHandler : Singleton<InputHandler>
         {
             var touch = Touchscreen.current.touches[0];
             var phase = touch.phase.ReadValue();
+            Vector2 position = touch.position.ReadValue();
 
-            if (phase == UnityEngine.InputSystem.TouchPhase.Began ||
+            bool isActiveTouch =
+                phase == UnityEngine.InputSystem.TouchPhase.Began ||
                 phase == UnityEngine.InputSystem.TouchPhase.Moved ||
-                phase == UnityEngine.InputSystem.TouchPhase.Stationary)
-                touchPos = touch.position.ReadValue();
+                phase == UnityEngine.InputSystem.TouchPhase.Stationary;
+
+            if (isActiveTouch && !_isDragging && !_isPointerBlockedByUI)
+                _isPointerBlockedByUI = IsPointerOverUI(position);
+
+            if (_isPointerBlockedByUI)
+            {
+                if (phase == UnityEngine.InputSystem.TouchPhase.Ended ||
+                    phase == UnityEngine.InputSystem.TouchPhase.Canceled)
+                    _isPointerBlockedByUI = false;
+
+                return;
+            }
+
+            if (isActiveTouch)
+                touchPos = position;
             else if (phase == UnityEngine.InputSystem.TouchPhase.Ended ||
                      phase == UnityEngine.InputSystem.TouchPhase.Canceled)
                 released = true;
         }
         else if (Mouse.current != null)
         {
-            if (Mouse.current.leftButton.isPressed)
-                touchPos = Mouse.current.position.ReadValue();
+            Vector2 position = Mouse.current.position.ReadValue();
+
+            if (Mouse.current.leftButton.wasPressedThisFrame)
+                _isPointerBlockedByUI = IsPointerOverUI(position);
+
+            if (Mouse.current.leftButton.isPressed && !_isPointerBlockedByUI)
+                touchPos = position;
+
             if (Mouse.current.leftButton.wasReleasedThisFrame)
-                released = true;
+            {
+                released = !_isPointerBlockedByUI;
+                _isPointerBlockedByUI = false;
+            }
         }
 
         if (touchPos.HasValue)
@@ -68,5 +96,26 @@ public class InputHandler : Singleton<InputHandler>
             _isDragging = false;
             OnRelease?.Invoke();
         }
+    }
+
+    private static bool IsPointerOverUI(Vector2 screenPosition)
+    {
+        if (EventSystem.current == null)
+            return false;
+
+        var eventData = new PointerEventData(EventSystem.current)
+        {
+            position = screenPosition
+        };
+        var results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(eventData, results);
+
+        foreach (RaycastResult result in results)
+        {
+            if (ExecuteEvents.GetEventHandler<IPointerClickHandler>(result.gameObject) != null)
+                return true;
+        }
+
+        return false;
     }
 }

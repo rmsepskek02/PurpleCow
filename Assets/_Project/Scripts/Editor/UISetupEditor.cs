@@ -2,6 +2,8 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 using TMPro;
 
@@ -10,6 +12,7 @@ public static class UISetupEditor
     [MenuItem("PurpleCow/Setup/Connect Player Active Skill Buttons")]
     private static void ConnectPlayerActiveSkillButtons()
     {
+        EnsureEventSystem();
         SkillSetupEditor.CreatePlayerActiveSkillDataAssets();
         Step14_SetupPlayerActiveSkills();
         AssetDatabase.SaveAssets();
@@ -21,6 +24,7 @@ public static class UISetupEditor
     private static void SetupUI()
     {
         EnsurePrefabFolders();
+        EnsureEventSystem();
 
         Canvas hudCanvas    = Step1_CreateCanvas("Canvas_HUD",   10);
         Canvas panelCanvas  = Step1_CreateCanvas("Canvas_Panel", 20);
@@ -44,6 +48,17 @@ public static class UISetupEditor
         AssetDatabase.Refresh();
         EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
         Debug.Log("[UISetupEditor] UI Setup 완료.");
+    }
+
+    private static void EnsureEventSystem()
+    {
+        if (Object.FindFirstObjectByType<EventSystem>() != null)
+            return;
+
+        GameObject eventSystemObj = new GameObject("EventSystem");
+        eventSystemObj.AddComponent<EventSystem>();
+        eventSystemObj.AddComponent<InputSystemUIInputModule>();
+        Debug.Log("[UISetupEditor] EventSystem with InputSystemUIInputModule created.");
     }
 
     private static void EnsurePrefabFolders()
