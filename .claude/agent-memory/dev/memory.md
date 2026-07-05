@@ -1280,3 +1280,29 @@
 - `_headTransform.localRotation` 계산 줄은 `weaponAngle` 변수를 그대로 참조하므로 수정 불필요 (자동 반영)
 - `facingLeft`/`flipX`/`pivotPos` 관련 좌우 반전 로직은 이번 버그와 무관하므로 변경하지 않음
 - 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView.cs 전면 재설계 (루트 좌우반전 방식으로 아키텍처 전환)
+
+**작업 내용:**
+- 오케스트레이터가 사용자와 논의해 확정한 새 설계로 `Assets/_Project/Scripts/Character/CharacterAimView.cs` 1개 파일만 전면 교체
+- `CharacterSetupEditor.cs` 등 다른 파일은 건드리지 않음 (사용자 지시)
+
+**변경 내용:**
+- 기존: `Body`/`Head` `SpriteRenderer.flipX` + `WeaponPivot.localPosition.x` 부호 수동 반전 방식 → 조준 방향 판정 자체가 반대로 되어 있어 "목표가 오른쪽인데 캐릭터가 왼쪽을 보는" 버그 발생
+- 신규: 캐릭터 기본 아트가 왼쪽 기준이므로, `direction.x > 0`(오른쪽 조준)일 때만 `transform.localScale = (-1, 1, 1)`로 **루트 전체**를 반전. 자식(Body/Head/Weapon)은 부모 스케일을 따라 자동 미러링되므로 개별 flipX/위치 보정 코드 전부 제거
+- 루트 반전 시 자식의 Z회전 표시 방향도 같이 뒤집히므로, `mirrored`일 때 `weaponAngle` 부호를 한 번 더 반전해서 보정
+- `WeaponPivot` 빈 부모 오브젝트 개념 폐기 — 무기 스프라이트 자체 피벗을 손잡이로 옮겨 무기 Transform이 곧 회전 앵커. 단, 필드명 `_weaponPivot`은 `CharacterSetupEditor.cs`의 `FindProperty("_weaponPivot")` 참조 때문에 그대로 유지 (사용자 명시 지시)
+- `_bodySpriteRenderer`/`_headSpriteRenderer` 필드도 동일한 이유로 선언은 유지, `UpdateAim()` 로직에서만 미사용으로 남김 (의도된 것)
+- `Awake()`, `_weaponPivotBaseLocalPosition` 필드, `pivotPos` 수동 위치 보정 코드 전부 삭제
+
+**Git:**
+- git status로 `CharacterAimView.cs` 1개 파일만 변경됨을 확인
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- 사용자가 로컬 Unity에서 프리팹 계층을 `Character > WeaponPivot > Weapon` → `Character > Weapon`으로 직접 재구성하고 `_weaponPivot` 슬롯에 새 `Weapon` 오브젝트를 재연결할 예정 — 코드 쪽은 필드명만 유지하면 되므로 스크립트 자체는 계층 변경과 무관하게 동작
+- `_bodySpriteRenderer`/`_headSpriteRenderer` 필드를 삭제하지 않고 미사용 상태로 남긴 이유는 `CharacterSetupEditor.cs`의 기존 참조 연결 코드 파손 방지 (그 파일은 건드리지 않기로 확정)
