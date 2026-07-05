@@ -49,3 +49,9 @@
 - 분신 복사볼은 원본 로스터 볼만 복사하며, 복사볼은 다시 복사하지 않는다.
 - 분신 복사볼은 클러스터 서브볼처럼 로스터 밖의 임시 볼로 취급하되, Ground 회수 후 최대 1회 더 재발사할 수 있다.
 - Unity 에디터에서 `PurpleCow/Setup/Skill System Setup` 및 `PurpleCow/Setup/UI Setup`을 재실행해야 신규 에셋/씬 참조가 반영된다.
+
+## 구현 결과
+
+- 계획한 런타임 코드, 데이터 구조, HUD 버튼, Setup Editor 확장을 구현했다.
+- `Assembly-CSharp.csproj`와 `Assembly-CSharp-Editor.csproj` 빌드 결과 신규 오류 0개를 확인했다.
+- 실제 볼 회수 순서, 버서크 속도 체감, 분신 2회 회수 소멸은 Unity 플레이 테스트가 남아 있다.

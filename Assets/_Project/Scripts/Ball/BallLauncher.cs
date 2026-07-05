@@ -110,7 +110,7 @@ public class BallLauncher : Singleton<BallLauncher>
         RegisterActiveBall(entry.Ball);
     }
 
-    // 귀환(Ground 충돌 후 LaunchPoint 도달)한 로스터 볼을 최신 조준 방향으로 재발사한다.
+    // 귀환한 원본/분신 볼을 FIFO 큐에 넣고 현재 조준 방향으로 순차 재발사한다.
     public void HandleBallRecovered(Ball ball)
     {
         ball.ParkAtLaunchPoint(_launchPoint.position);
