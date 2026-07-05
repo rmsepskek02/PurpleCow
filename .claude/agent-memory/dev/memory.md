@@ -1156,3 +1156,45 @@
 - 이 원격 환경엔 Unity 에디터가 없어 실제 clamp 동작(터치 위치가 기준선 아래로 내려갈 때 조준 방향이 실제로 잘리는지)을 시각적으로 검증하지 못함 — C# 문법과 로직만 재확인함. 최종 검증은 사용자 로컬 플레이 테스트 필요
 - git 커밋/푸시는 수행하지 않음
 - git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: 캐릭터 스프라이트 프리팹화 + 조준 방향 연동 회전 (CharacterAimView, CharacterSetupEditor)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-27_character-sprite-prefab/plan.md`
+- 신규 파일 2개 생성 (신규 폴더 `Scripts/Character/` 포함). 기존 파일은 단 한 줄도 수정하지 않음
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs` — `TrajectoryPreview.cs`와 동일한 폴링 패턴(`Update()`에서 `BallLauncher.Instance.LaunchDirection` 매 프레임 읽기, 이벤트 구독 아님)으로 구현. `_bodySpriteRenderer`/`_headSpriteRenderer`/`_headTransform`/`_weaponPivot`(SerializeField) 참조와 `_headRotationRatio`(기본 0.25f) 보유. 방향 벡터 `sqrMagnitude < 0.0001f`이면 가드로 스킵. 방향 x부호로 `flipX` 반전(몸통/머리) → `WeaponPivot` 로컬 위치 x부호 보정(`Awake()`에서 캐시한 `_weaponPivotBaseLocalPosition` 기준) → 반전 시 방향 벡터 x 미러링한 `effectiveDir`로 `Mathf.Atan2(...) * Mathf.Rad2Deg - 90f` 각도 계산 → `WeaponPivot.localRotation`에 적용 → `_headTransform.localRotation`에는 그 각도의 `_headRotationRatio` 비율만 적용
+- `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs` — `[MenuItem("PurpleCow/Setup/Character System Setup")]`. `Assets/_Project/Prefabs/Character` 폴더 생성 → `Character.prefab` 존재 시 로그만 남기고 스킵(멱등성) → `Body`/`Head`/`WeaponPivot`→`Weapon` 계층 구성(각 스프라이트를 `AssetDatabase.LoadAssetAtPath<Sprite>()`로 로드, 못 찾으면 `Debug.LogWarning`) → 초기 배치 수치(제안값): `Body(0,0,0)` sortingOrder 0, `Head(0,0.4,0)` sortingOrder 2, `WeaponPivot(0.2,0.15,0)`, `Weapon(0,0.4,0)`(WeaponPivot 자식) sortingOrder 1 → 루트에 `CharacterAimView` 부착 후 `SerializedObject`로 4개 참조 자동 연결 → `PrefabUtility.SaveAsPrefabAsset()` 저장 후 임시 GameObject `DestroyImmediate` → `GameObject.Find("LaunchPoint")`의 자식으로 `PrefabUtility.InstantiatePrefab()` + `localPosition = Vector3.zero` 배치(이미 자식으로 `Character`가 있으면 스킵) → 마지막에 `AssetDatabase.SaveAssets()`/`Refresh()`/`EditorSceneManager.SaveScene(...)`. 기존 `SceneSetupEditor.cs`의 `FindTransformOrWarn()`/`PlaceManager<T>()` 스타일을 참고했으나 코드 재사용 없이 이 새 파일 안에서 자체 유틸리티(`LoadSpriteOrWarn`)로 완결
+
+**주요 결정사항:**
+- 사용자 지시대로 `SceneSetupEditor.cs`, `BallSetupEditor.cs`, `MonsterSetupEditor.cs` 등 기존 에디터 스크립트는 참조조차 하지 않고 완전히 독립된 새 파일로만 작성 (git status로 새 파일 2개만 생성됐음을 확인)
+- `CharacterManager.cs`(HP/XP 로직 전용)에는 시각 회전 로직을 섞지 않고 `CharacterAimView.cs`로 완전히 분리 유지
+- 좌우 반전은 `SpriteRenderer.flipX`만 사용하고 `localScale.x` 부호 반전은 사용하지 않음(plan.md 지시대로)
+- 이 원격 환경에는 Unity 에디터가 없어 `Character.prefab`/`SampleScene.unity`는 직접 생성·검증 불가 — `.cs` 파일 2개만 산출물이며, 사용자가 로컬 Unity에서 `PurpleCow/Setup/Character System Setup` 메뉴를 실행해야 프리팹/씬 반영 및 파츠 위치·머리 회전 비율 등 초기 추정 수치의 육안 미세 조정이 필요함
+- `.prefab`/`.unity`/`.meta` 파일은 이번 작업에서 전혀 건드리지 않음
+- git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView.UpdateAim() 무기 회전 방향 버그 수정 (오케스트레이터 코드 리뷰 반영)
+
+**작업 내용:**
+- 오케스트레이터가 발견한 코드 리뷰 지적 사항 수정. 별도 plan.md 없이 기존 파일 1건 버그 수정만 진행
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs` — `UpdateAim()` 내 `effectiveDir`(방향 x부호 미러링) 변수와 관련 주석 삭제. `weaponAngle` 계산을 미러링 없는 원본 `direction` 기준으로 변경: `Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f`. `WeaponPivot`의 로컬 좌표계는 `SpriteRenderer.flipX`만 사용하는 반전 방식상 `facingLeft`와 무관하게 항상 월드 좌표계와 동일하다는 정확한 근거를 주석 1줄로 남김
+
+**주요 결정사항:**
+- 버그 원인: `facingLeft`일 때 `direction.x` 부호를 뒤집은 `effectiveDir`로 각도를 계산했으나, `WeaponPivot`은 `flipX`나 `localScale` 반전을 전혀 쓰지 않아 로컬 좌표계 자체가 뒤집히지 않으므로 미러링이 불필요했고, 오히려 실제 조준 방향과 반대 방향을 가리키는 결과를 낳았음(예: `direction=(-1,0)` → 수정 전 `weaponAngle=-90°`로 오른쪽을 가리킴, 수정 후 `weaponAngle=90°`로 왼쪽을 정확히 가리킴)
+- `_weaponPivot.localPosition.x` 부호 반전 로직은 회전과 무관한 앵커 위치 이동 목적이므로 그대로 유지
+- `_headTransform.localRotation`의 `_headRotationRatio` 반영 로직은 수정하지 않음 — 고쳐진 `weaponAngle`을 그대로 참조하므로 자동으로 함께 수정됨
+- 오케스트레이터 지시대로 이 파일 1개만 수정, git status로 변경 범위 확인함(`CharacterAimView.cs`는 이전 세션부터 커밋되지 않은 신규 파일(untracked) 상태였고 그 안에서만 diff 발생, 다른 파일은 무관)
+- git 커밋/푸시는 수행하지 않음(오케스트레이터가 처리 예정)
