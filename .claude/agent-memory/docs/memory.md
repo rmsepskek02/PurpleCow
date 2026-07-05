@@ -1,3 +1,224 @@
+## 2026-07-05 (UIRules.md 섹션 9 몬스터 HP바 갱신 — 피격 시 표출 신규 확정 + 발견된 버그 2건 기록)
+
+### 작업 내용
+- `UIRules.md` 섹션 9(몬스터 HP바) 갱신: (1) 사용자와 논의로 신규 확정된 "피격 시에만 HP바 표출" 설계 반영, (2) 코드/프리팹을 직접 읽어 확인한 버그 2건을 새 소섹션으로 기록, (3) 이미 구현 완료된 배치(블록 앞면 임베드) 관련 과거 "(구현 예정)" 문구 정정
+- 경로: `Assets/_Project/Docs/UIRules.md`
+- 작업 전 `MonsterHpBar.cs`, `MonsterBase.cs`, `Fluffy.prefab`을 직접 Read로 확인해 실제 코드/프리팹 상태 검증 후 반영, `.cs`/`.prefab` 파일은 읽기만 하고 수정하지 않음
+
+### 결과
+- "확정된 방식" 소섹션에 "(신규 확정 — 아직 코드 미반영)" 불릿 추가: 스폰 직후(만피) 숨김 → 최초 피격(현재 HP < 최대 HP) 시점부터 표출 → 죽거나 필드 이탈 전까지 표출 유지 → 풀 재사용 시 만피로 리셋되며 HP바도 숨김으로 리셋
+- 기존 "**(구현 예정 — 아직 코드 미반영)** 아래 배치 방식은 확정된 설계이며..." 문구 삭제, 실제로는 `Fluffy.prefab`의 `HpBarCanvas`가 이미 `BlockVisual` 자식으로 배치되어 앞면 하단에 앵커링(`m_AnchoredPosition: {x:0, y:-0.33}`)되어 있음을 직접 확인한 사실 기준으로 "이미 구현 완료"로 정정, "배치 방식" 소제목도 "— 구현 완료"로 변경하고 본문을 기존(폐기됨)/현재(구현 완료) 구조로 재서술 (`MonsterBase.ApplyBlockSize()`가 `HpBarWidthMap` 기준 폭 조정을 런타임에 담당한다는 사실도 명시)
+- 신규 "발견된 버그 (아직 코드 미반영)" 소섹션 추가: 버그 1(`MonsterHpBar.cs`의 `Start()`가 딱 한 번만 `OnHpChanged` 구독하고 `OnEnable()` 재구독 로직이 없어, 오브젝트 풀링으로 두 번째 재사용부터 HP바가 데미지에 반응 안 함), 버그 2(`Fluffy.prefab`/`StoneBug.prefab`의 `HpSlider`가 `m_FillRect`/`m_HandleRect` 모두 `{fileID: 0}`이고 Background/Fill/Handle 자식 오브젝트 자체가 없어 `Slider.value`가 바뀌어도 시각적으로 전혀 렌더링 안 됨). 두 버그 모두 수정은 별도 task 문서(research.md/plan.md)에서 진행할 것임을 명시하고 이번엔 기록만 함
+- "재사용 가능한 부분" 소섹션 및 문서의 1~8, 10~12 섹션은 이번 변경과 무관하므로 건드리지 않음
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 버그 수정 코드는 이번 작업 범위에 포함하지 않고 문서에 "(버그, 아직 코드 미반영)" 형태로 사실만 기록, 실제 수정은 이후 별도 task 문서에서 진행하기로 함
+- 배치(블록 앞면 임베드) 관련 서술은 추측이 아니라 프리팹 파일(`Fluffy.prefab`)을 직접 읽어 `m_Father`/`m_AnchoredPosition` 값으로 실제 구현 완료 여부를 검증한 후 정정
+
+---
+
+## 2026-07-05 (캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 — 최종 실기기/로컬 확인 반영 문서 갱신)
+
+### 작업 내용
+- 사용자의 로컬 Unity 실제 플레이 테스트로 최종 확인 완료된 캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 작업을 `ProjectStatus.md`/`ProjectHistory.md`/`GameplayMechanics.md`에 반영
+- plan.md(초기 설계: `WeaponPivot` 빈 부모 + `flipX` 반전)는 과거 계획 기록으로 그대로 두고 수정하지 않음, 대신 최종 실제 구현 내용을 기준으로 세 문서를 갱신
+- 경로: `Assets/_Project/Docs/ProjectStatus.md`, `Assets/_Project/Docs/ProjectHistory.md`, `Assets/_Project/Docs/GameplayMechanics.md`, `AGENTS.md`(설명 한 줄만 수정)
+
+### 결과
+- `ProjectStatus.md`: "완료된 작업" 목록에 신규 항목 추가(최종 구조/좌우 반전 확정 방식/`FromToRotation` 회전 방식/`_horizontalBiasDegrees` 고정 보정/의도적 미사용 필드/`CharacterManager.cs` 미수정 명시), 현재 상태 문단에 이번 작업의 사용자 검증 완료 사실 반영. "다음 작업 순서"에는 이 작업 관련 항목이 원래 없어 별도 제거 불필요
+- `ProjectHistory.md`: 2026-07-05 날짜 하위에 신규 섹션 추가, 시행착오 과정 전체(1차 WeaponPivot+flipX → 좌우반전 버그 → 루트 스케일 반전 재설계+WeaponPivot 제거 → Atan2 각도 계산 반복 실패 → Quaternion.FromToRotation 전면 교체 → 수평 보정치 고정값 미세조정) 시간 순으로 서술
+- `GameplayMechanics.md`: 섹션 2(몬스터, MonsterRules.md로 이관됨) 다음에 신규 "3. 캐릭터 조준 연동 시각 표현" 섹션 추가 — 좌우 반전 조건, `FromToRotation` 기반 회전(루트 반전 시 x부호 미리 뒤집기), 머리 추종 비율, `_horizontalBiasDegrees` 고정 보정, `WeaponPivot` 제거 및 무기 스프라이트 자체 피벗 재설정 사실을 모두 명시. "구현 현황" 하위 섹션도 추가
+- `AGENTS.md`: GameplayMechanics.md 설명 한 줄에 "캐릭터 조준 연동 시각 표현(좌우 반전, 무기/머리 회전)" 문구만 추가(신규 문서 추가가 아니므로 인덱스 신규 등록은 불필요)
+
+### 주요 결정사항
+- plan.md는 절대 수정하지 않고 과거 계획 기록으로 보존 — ProjectStatus.md/ProjectHistory.md/GameplayMechanics.md에만 최종 구현 기준 서술 반영
+- 코드 필드명(`_weaponPivot`, `_bodySpriteRenderer`, `_headSpriteRenderer`)이 실제 역할과 달라진/미사용된 이유(`CharacterSetupEditor.cs` 기존 참조 연결 코드를 건드리지 않기 위함)를 세 문서 모두에서 일관되게 명시해 향후 혼동 방지
+- `CharacterManager.cs`(HP/XP 로직)는 이번 작업과 무관함을 ProjectStatus.md/ProjectHistory.md 양쪽에 명시
+
+---
+
+## 2026-07-05 (캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 plan)
+
+### 작업 내용
+- research.md에서 열어둔 4가지 결정사항(배치 위치/무기 회전 피벗/계산 위치/신규 스크립트 경로)에 대해 오케스트레이터가 사용자와 논의해 확정한 방향을 반영, plan.md 신규 작성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-27_character-sprite-prefab/plan.md`
+- 참고를 위해 `SceneSetupEditor.cs`, `TrajectoryPreview.cs`, `UIRules.md`, `CharacterManager.cs`, `BallLauncher.cs`, 4개 캐릭터 스프라이트 `.meta` 전체를 직접 재확인
+
+### 결과
+- `Character.prefab` 계층 설계: `Character`(root, `CharacterAimView` 부착) → `Body`/`Head`(SpriteRenderer) + `WeaponPivot`(empty) → `Weapon`(SpriteRenderer). `LaunchPoint`(BallLauncher 자식) 밑에 인스턴스 배치해 `WallFitter`의 기존 반응형 리프레임을 그대로 상속
+- 무기 회전 피벗 문제는 스프라이트 임포트 설정(.meta) 미수정, `WeaponPivot` 빈 부모로 해결(`TrajectoryPreview`의 자식 구성 패턴과 일관)
+- `Character_Main_body/head/weapon.png` 3파츠 `.meta`를 전부 재확인한 결과 각각 독립 PNG 캔버스이고 rect가 전부 `x=0,y=0`이라 파츠 간 공유 좌표계 정보가 없음을 재확인 → 초기 배치 수치(WeaponPivot 오프셋, 머리 회전 비율 등)는 픽셀 크기 근거의 추정치일 뿐이며 로컬 Unity에서 `Character_Main.png` 합성본과 육안 대조하며 미세조정이 사실상 필수임을 주의사항에 명시
+- 신규 뷰 스크립트 `Assets/_Project/Scripts/Character/CharacterAimView.cs`(신규 폴더) 설계: `TrajectoryPreview`와 동일하게 `Update()`에서 `BallLauncher.Instance.LaunchDirection` 폴링 → `SpriteRenderer.flipX`로 좌우 반전(localScale 반전은 사용 안 함) → `WeaponPivot` 위치 x부호 보정 + 방향 미러링 후 회전각 계산 → 머리에 `_headRotationRatio`(Inspector 조절) 비율만 보조 회전 반영. `CharacterManager.cs`(HP/XP 전용, `Scripts/Core/`)에는 로직 미혼입
+- 신규 에디터 스크립트 `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs` 설계: 메뉴 `PurpleCow/Setup/Character System Setup`, 기존 `SceneSetupEditor.cs` 등 기존 에디터 스크립트는 전혀 미수정(사용자가 별도로 강하게 지시한 제약). 프리팹 조립 + `LaunchPoint` 자식 인스턴스화 담당
+- 예상 변경/생성 파일 목록에 `Character.prefab`/`SampleScene.unity` 반영은 로컬 Unity 메뉴 실행이 필요함(원격 환경 Unity 없음, `BallSetupEditor`/`MonsterOverhaulSetupEditor`와 동일한 기존 관례)을 명시
+
+### 주요 결정사항
+- 배치 위치: `LaunchPoint` 자식으로 확정(`LaunchPoint` 자체 역할/참조는 미변경)
+- 무기 회전: `WeaponPivot` 빈 부모 GameObject 방식으로 확정(스프라이트 임포트 설정 미변경)
+- 계산 위치: `CharacterManager.cs`가 아닌 신규 `CharacterAimView.cs`(뷰 전용)로 확정
+- 신규 스크립트 경로: `Scripts/Character/CharacterAimView.cs`(신규 도메인 폴더), `CharacterManager.cs`는 `Scripts/Core/`에서 이동하지 않음
+- 에디터 스크립트는 기존 파일 수정 금지, `CharacterSetupEditor.cs` 신규 파일로만 작성(사용자 명시 지시)
+- 이번 요청 범위는 plan.md 작성까지이며, 실제 `.cs`/`.prefab`/`.unity` 구현은 사용자의 명시적 승인 후 진행
+
+---
+
+## 2026-07-05 (캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 research)
+
+### 작업 내용
+- 캐릭터 스프라이트(몸통/머리/무기 분리본)를 프리팹으로 만들어 배치하고, 조준 방향에 따라 무기(+보조로 머리)가 회전하도록 구현하는 task의 research.md 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-27_character-sprite-prefab/research.md`
+
+### 결과
+- `Assets/_Project/Sprites/Character/` 4개 스프라이트(`Character_Main.png` 합성본 141x178, `_body.png` 48x48, `_head.png` 131x92, `_weapon.png` 59x116) 전부 `.meta` 직접 확인, 커스텀 피벗/보더 없이 임포트 기본값(`spritePivot 0.5,0.5`, `spriteBorder 0`) 그대로임을 확정 — 특히 무기 스프라이트가 손 위치가 아닌 스프라이트 중앙을 축으로 회전하게 될 위험 지적
+- `Assets/_Project/Prefabs/`에 `Ball/`, `Monster/`, `UI/`만 있고 `Character/` 폴더 없음 재확인, `SampleScene.unity`를 직접 grep해 캐릭터를 그리는 `SpriteRenderer` 오브젝트가 씬 어디에도 없음을 확정(`CharacterHP`/`CharacterXP`는 HUD, `CharacterManager`는 순수 로직, `LaunchPoint`는 Transform 하나뿐이고 자식 없음)
+- `LaunchPoint`가 `BallLauncher`의 자식이고 `WallFitter.Apply()`(라인 33-54)가 화면비 기준으로 Y좌표를 매번 재계산해 덮어씀을 확인(씬 파일 실측 로컬Y `-5.610236`, 코드 기본값 `-8`과 다름) → 캐릭터를 `LaunchPoint` 자식으로 붙일지 별도 Transform으로 둘지의 트레이드오프(리프레임 자동 상속 vs 책임 분리) 정리
+- `BallLauncher.LaunchDirection`(마지막 값 유지, 폴링 가능) vs `InputHandler.OnDrag`(터치 중에만 발행되는 이벤트) 차이를 근거로, `TrajectoryPreview.Update()`가 이미 쓰고 있는 매 프레임 폴링 패턴이 무기 회전에도 안전하게 재사용 가능함을 확인
+- `UIRules.md` 섹션 9/10/11/12 확인 결과 캐릭터 본체 스프라이트/회전 관련 기존 규칙 없음(충돌 없음), `CharacterManager.cs`가 HP/XP 로직 전용이라 시각 회전 로직을 섞지 않는 것이 기존 뷰/로직 분리 패턴(Ball vs TrajectoryPreview)과 일관됨을 결론에 명시
+
+### 주요 결정사항
+- plan.md는 작성하지 않음(사용자 확인 대기, TaskRules.md 워크플로우 준수), 코드/프리팹/스프라이트 임포트 설정은 읽기만 하고 수정하지 않음
+- 열린 질문(사용자 확인 필요): (1) 캐릭터를 LaunchPoint 자식으로 둘지 별도 Transform으로 둘지, (2) 무기 회전 피벗을 스프라이트 임포트 설정 수정으로 해결할지 빈 부모 GameObject 계층으로 해결할지, (3) 좌우 반전+회전각 보정을 어느 컴포넌트가 계산할지, (4) 새 뷰 전용 스크립트의 위치/이름
+
+---
+
+## 2026-07-05 (MonsterRules.md 6장 하드코딩 잔여 표현 정정 — Random.Range(3, 8) → 필드 기반)
+
+### 작업 내용
+- `MonsterRules.md` 6장(194행)에 남아있던 `maxThisTick = Random.Range(3, 8)` 하드코딩 표현을 실제 코드 기준으로 정정 (2장에는 이미 올바르게 반영되어 있었으나 6장 한 곳만 누락됨)
+- 경로: `Assets/_Project/Docs/MonsterRules.md`
+- 작업 전 `WaveManager.cs`를 읽어 실제 구현이 `int maxThisTick = UnityEngine.Random.Range(_minSpawnPerTick, _maxSpawnPerTick + 1);`이고, `_minSpawnPerTick`/`_maxSpawnPerTick`가 `[SerializeField] private int` 필드(기본값 3/7, Inspector 조절 가능)임을 재확인
+
+### 결과
+- 194행의 `maxThisTick = Random.Range(3, 8)`을 `maxThisTick = Random.Range(_minSpawnPerTick, _maxSpawnPerTick + 1)`(기본값 3~7, `[SerializeField]`로 Inspector 조절 가능)으로 수정, 문장의 나머지 부분과 문서의 다른 부분은 전혀 건드리지 않음
+- `.cs` 파일은 읽기만 하고 수정하지 않음
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 지시받은 한 문장(한 곳)만 정확히 정정하는 외과적 수정 원칙 준수, 주변 문맥이나 다른 장(2장 등)은 이미 올바른 상태라 손대지 않음
+
+---
+
+## 2026-07-05 (몬스터 로스터+컨베이어 스폰 plan.md에 A/B/C/D 추가 섹션 append)
+
+### 작업 내용
+- 기존 task 문서 `plan.md`에 플레이테스트 피드백(A/B/C/D) 반영 섹션을 append(기존 내용 보존, 끝에 추가만)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-21_monster-roster-conveyor-spawn/plan.md`
+- 작업 전 기존 plan.md 전체, `MonsterRules.md` 2장/6장(방금 갱신된 A/B/C/D 확정 내용), 실제 코드 `WaveManager.cs`/`ObjectPool.cs`를 읽어 설계가 코드/문서와 어긋나지 않는지 확인 후 진행
+
+### 결과
+- 신규 섹션 `## 추가 확정 사항 반영 (2026-07-05 플레이테스트 피드백: A/B/C/D)`를 plan.md 끝에 추가
+- **A(프리팹 풀 분리)**: `_monsterPrefab`/`_monsterPool` 제거 → `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab` 4개 필드 + `Dictionary<MonsterData, ObjectPool<MonsterBase>> _poolByData`로 교체. `Awake()`에서 `_waveTable`의 4종 `MonsterData`를 키로 4개 풀 생성. `PlaceMonster`는 `_poolByData[data].Get()`, `CheckGameOver()`/`HandleMonsterDied()`는 `_poolByData[monster.Data].Return(monster)` 사용(기존 `MonsterBase.Data` 프로퍼티 재사용, 추가 변경 불필요)
+- **B(상단 1행 트리거)+C(틱당 3~7 제한)**: `TryDispenseRoster()`를 `topRow = _gridRows - 1` 한 줄만 스캔하도록 재작성. `belowRow = _gridRows - 2`는 `OneByTwo` 배치 직전 `IsCellFree(col, belowRow)` 사전 확인 용도로만 사용. `maxThisTick = Random.Range(3, 8)`(3~7)와 `placedThisTick` 카운터로 틱당 배치 수 제한. 전체 메서드 코드 스니펫으로 구체화해 반영
+- **D(웨이브 0 전체 배치)**: `SpawnWave()` 마지막 단계를 `if (index == 0) SpawnRosterAcrossFullGrid(); else TryDispenseRoster();`로 분기. 신규 `SpawnRosterAcrossFullGrid()` 메서드는 그리드 전체(5행)를 `bool[,] free`로 관리하며, 로스터가 빌 때까지 (rosterIndex, col, row) 후보 전부 나열 → 무작위 선택 → 배치를 반복하는 코드로 구체화
+- 예상 변경 파일 목록/주의사항 섹션도 이번 추가분 기준으로 갱신(동일 파일 `WaveManager.cs`, 4개 프리팹 Inspector 연결은 사용자가 Unity 에디터에서 직접 확인 필요, `SpawnRosterAcrossFullGrid()`는 웨이브 0에서만 호출되어 성능 우려 없음, 틱당 3~7 제한으로 소진 시간 길어지는 것은 의도된 동작임을 명시)
+- `.cs` 파일은 읽기만 하고 수정하지 않음, AGENTS.md 인덱스 변경 불필요(기존 task 폴더 내 파일 갱신이므로 신규 문서 아님)
+
+### 주요 결정사항
+- 사용자가 제공한 A/B/C/D 설계를 그대로 반영하고 임의 대안 제시 없음(설계는 이미 확정된 것으로 간주)
+- 기존 plan.md의 1~9번 계획은 이미 구현 완료로 간주하고 중복 서술 없이 "기존 계획 O번 항목을 다음과 같이 수정" 형식으로 참조
+- 코드 스니펫은 계획 수준으로만 작성(실제 구현은 dev 에이전트가 별도 진행)
+
+---
+
+## 2026-07-05 (MonsterRules.md 몬스터 스폰 조건 대폭 갱신 — 로스터+컨베이어 방식)
+
+### 작업 내용
+- 몬스터 스폰 조건을 대대적으로 바꾸기로 사용자와 논의 완료 후, `MonsterRules.md`를 새 확정 설계에 맞춰 갱신 (순수 문서 작업, 코드 미반영 — 구현은 이후 별도 research.md/plan.md에서 진행 예정)
+- 경로: `Assets/_Project/Docs/MonsterRules.md`
+
+### 결과
+- 문서 헤더(서두 요약)에 이번 갱신 내용 한 문단 추가: "웨이브 시작 시 일괄 랜덤 배치 + 점유 체크" → "로스터(수량+종류) 사전 결정 + 그리드 상단 2줄 컨베이어 벨트 채움"으로 전면 대체, 웨이브 클리어 조건에 "로스터 전부 소진" 추가, 바닥 도달 시 웨이브클리어 체크 누락 버그 수정 방향 확정을 명시
+- 2장(몬스터 스폰 및 전진 메커닉): 기존 "한 번에 전부 스폰"/"웨이브 시작 시 일괄 랜덤 배치+점유체크" 서술을 로스터+컨베이어 방식으로 교체. 신규 확정 불릿 추가 — (1) 로스터 사전 결정 + 상단 2줄(row 3~4) 빈칸에 순차 채움, (2) 스폰 위치가 상단 2줄로 한정됨, (3) `spawnCheckInterval = _gridCellSize / MoveSpeed`(하드코딩 아님, `MonsterData.MoveSpeed` 실제 참조, 실측 예 0.85초), (4) 세로 2칸 몬스터(ForestDeer)가 상단 2줄 전체를 채우는 것은 의도된 정상 동작, (5) 웨이브 클리어 조건이 "활성 몬스터 0" AND "로스터 전부 소진" 두 조건으로 확장. 구현현황 하위섹션도 함께 갱신(현재 코드는 일괄 스폰 방식이며 새 규칙 미반영임을 명시, `CheckGameOver()`가 `CheckWaveCleared()`를 호출하지 않는 버그를 새로 명시)
+- 6장(웨이브 시스템): "데이터 구조" 문단에 로스터 개념(기존 spawnCount/twoCellWeight 공식 그대로 재사용, 좌표만 상단 2줄 빈칸 발생 시 그때그때 계산) 반영. "WaveManager 흐름"을 로스터+컨베이어 5단계 알고리즘으로 전면 교체하고, 현재 구현 인용문(`>`)에 `CheckGameOver()`가 `CheckWaveCleared()`를 호출하지 않는 버그 상세 설명 추가. 신규 "웨이브 클리어 조건 — 신규 확정" 소섹션을 추가해 조건 변경과 바닥 도달 버그 수정 방향을 한곳에 정리
+- 3장(몬스터 종류/스탯)/4장(HP 관리)/5장(상태이상)은 이번 변경과 무관하므로 건드리지 않음
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- `WaveManager.cs`/`WaveTableData.cs`/`MonsterBase.cs` 현재 코드를 직접 Read로 재확인해 "현재 구현" 서술의 정확성 검증(9열×5행 그리드 전체 점유체크, `CheckGameOver()`가 매 프레임 실행되지만 `CheckWaveCleared()` 미호출, `HandleMonsterDied()`만 호출하는 구조를 코드 라인 기준으로 재확인)
+- 로스터 수량/종류 결정 공식(`BaseSpawnCount`/`SpawnCountPerWave`/`BaseTwoCellWeight`/`TwoCellWeightPerWave`)은 이번 설계 변경으로 바뀌지 않음을 여러 곳에서 명확히 구분 서술(바뀐 것은 배치 방식뿐)
+- 아직 코드 미반영이므로 관련 서술 전체에 "(구현 예정 — 아직 코드 미반영)" 또는 "(현재 구현 — 아직 새 규칙 미반영)" 표시를 일관되게 유지, 새 규칙은 "(확정)"으로 표시
+- task 문서(research.md/plan.md)는 이번 문서 갱신 범위에 포함하지 않음(사용자 지시대로 순수 문서 작업으로 한정, 구현 단계에서 별도 작성 예정)
+
+---
+
+## 2026-07-05 (조준 방향 Y 하한 제한 research)
+
+### 작업 내용
+- 볼 조준(터치 드래그) 시 목표 지점 Y좌표가 격자(그리드) 밑변보다 아래로 내려가지 못하게 제한하는 task의 research.md 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/18-30_aim-direction-y-clamp/research.md`
+
+### 결과
+- `InputHandler.ComputeAimDirection`(22~27행)에 Y좌표 제한이 전혀 없음을 재확인, 호출 지점이 `Update()`의 `OnDrag?.Invoke(ComputeAimDirection(...))`(62행) 한 곳뿐임을 확인
+- `WallFitter._ground`가 private 필드(11행)라 외부에서 직접 접근 불가함을 확인, `BallLauncher.LaunchPoint => _launchPoint` 같은 프로퍼티 노출 패턴이 `WallFitter`에는 없다는 점을 근거로 참조 확보 방식 후보 3가지(A: InputHandler에 `_ground` 직접 연결, B: WallFitter에 `GroundY` 프로퍼티 추가 후 참조, C: `FindFirstObjectByType<WallFitter>()` 자동 탐색) 정리
+- `WaveManager._bottomBoundaryY`(SampleScene.unity 720행, 하드코딩 `-5`)는 `WallFitter`가 디바이스별로 재계산하는 `Ground`의 실제 위치와 동기화되지 않는 별개 값임을 씬 파일 실측(Ground 실제 로컬 Y `-6.397638`, 677행)으로 재확인, 기준점으로 부적절함을 명시
+- `SceneSetupEditor.cs`의 `Step5_PlaceWallsAndGround`(392행, `GameObject.Find`/태그 둘 다로 조회 가능)와 `Step6_SetupWallFitter`(419~462행, `WallFitter._ground` 연결) 확인, `InputHandler`에는 대응하는 `Step*_ConnectInputHandlerRefs`가 없어 새 참조 필드 추가 시 수동 연결 또는 신규 Step 코드가 필요함을 지적
+- clamp 적용 위치 후보 (a) `worldPos.y`를 `Ground` Y 이상으로 clamp 후 방향 계산 vs (b) 방향 벡터 계산 후 사후 보정, (a)가 더 단순함을 언급하되 최종 결정은 plan.md로 유보
+- `LaunchPoint`가 `Ground`보다 항상 위에 위치하는 구조(`_nativeLaunchPointY=-6.0` vs `_nativeBottomY=-6.5`)를 근거로, 이 제한이 수평 조준까지는 방해하지 않고 그보다 더 아래(뒤쪽/바닥 방향)만 차단하는 비교적 좁은 범위의 제약이 될 것으로 기하학적 설명 정리
+- `GameplayMechanics.md` 섹션 1 기존 서술과 직접적인 모순은 없으나, 구현 완료 후 새 규칙을 문서에 추가해야 함을 결론에 명시 (이번 단계에서는 문서 미수정)
+
+### 주요 결정사항
+- plan.md는 작성하지 않음(사용자 확인 대기, TaskRules.md 워크플로우 준수), 코드는 읽기만 하고 수정하지 않음
+- 열린 질문(사용자 확인 필요): (1) Ground 참조 방식 A/B/C 중 선택, (2) SceneSetupEditor.cs에 연결 코드 추가 여부, (3) GameplayMechanics.md 문서화 시점(구현과 동시 vs 후속)
+
+---
+
+## 2026-07-05 (볼-볼 충돌 버그 research)
+
+### 작업 내용
+- 볼-볼 물리 충돌 버그 task research.md 생성 (오케스트레이터가 사전 조사한 원인을 코드/설정 파일 직접 열람으로 검증)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/research.md`
+
+### 결과
+- `Ball.prefab`(m_Layer:0, Untagged), `Physics2DSettings.asset`(m_LayerCollisionMatrix 전부 ffff), `TagManager.asset`(태그 3개만 등록, 레이어 전부 미사용) 직접 확인
+- `SceneSetupEditor.cs`/`MonsterSetupEditor.cs`에 레이어 설정 코드 전무함을 확인, Monster/Block 프리팹 4+4종 및 실제 게임 씬(`Assets/Scenes/SampleScene.unity`) 전체 오브젝트가 m_Layer:0임을 grep으로 재확인
+- 부가 발견: `SceneSetupEditor.Step1_CreateBallPrefab()`이 `TrySetTag(go, "Ball")`을 호출하지만 "Ball" 태그가 `BallSetupEditor.AddRequiredTags()`의 등록 목록(Monster/Wall/Ground)에 빠져 있어 조용히 실패 → Ball.prefab이 Untagged로 남은 실제 이유임을 특정
+- `TrajectoryPreview.cs` line 96 주석이 이 "태그 없음" 상태를 다른 볼 필터링에 의존하고 있음을 확인 → 해결 방식 선택 시 상호작용 검토 필요 항목으로 명시
+- `ObjectPool.Get()`이 고정 크기가 아니라 동적으로 늘어나는 구조임을 검증, 이를 근거로 해결 방식 (a) 전용 Ball 레이어 신설+`IgnoreLayerCollision` vs (b) 볼 쌍마다 `IgnoreCollision` 두 후보의 트레이드오프를 "문제점/구현 대상 파악" 섹션에 정리
+- AGENTS.md는 "개별 task 폴더 목록은 별도 관리하지 않음" 정책이 명시되어 있어 인덱스 등록 생략 (정책 재확인 후 판단)
+
+### 주요 결정사항
+- plan.md는 작성하지 않음 (사용자 확인 대기, TaskRules.md 워크플로우 준수)
+- 코드/프리팹/ProjectSettings 파일은 읽기만 하고 수정하지 않음
+- 열린 질문(사용자 확인 필요): (a) 전용 Ball 레이어 신설 방식 vs (b) 볼 쌍마다 IgnoreCollision 호출 방식 중 선택 필요, (a) 선택 시 TrajectoryPreview.cs의 태그 기반 필터링 로직과의 상호작용 처리 방식도 함께 결정 필요
+
+---
+
+## 2026-07-05 (추가 정정)
+
+### 작업 내용
+- UIRules.md 섹션 11 "구현 방식" 항목 재정정: dev 에이전트가 `_hitRing`의 텍스처 타일링 방식(`CreateRingDashTexture()`, `RING_DASH_COUNT`, `mainTextureScale` 계산)을 완전 폐기하고 `LineRenderer.colorGradient` 기반 방식(`BuildRingDashGradient()`)으로 교체한 실제 구현(오케스트레이터가 git diff로 검증)에 맞춰 문서 서술 갱신
+- 경로: `Assets/_Project/Docs/UIRules.md` (코드 미수정, GameplayMechanics.md는 확인만 하고 변경 없음)
+
+### 결과
+- 섹션 11 "구현 방식" 고리(ring) 관련 문단: `_hitRing`도 레드닷과 동일하게 `CreateSolidTexture()`(단색 텍스처)를 사용하고, 점선 효과는 `_hitRing.colorGradient`(`BuildRingDashGradient()`)의 alphaKeys 8개(4등분 중앙 t=0/0.25/0.5/0.75 알파 1, 경계 t=0.125/0.375/0.625/0.875 알파 0)로 만들어 정확히 4개의 밝은 호가 나타남을 서술, 폐기된 이전 텍스처 타일링 방식(10개 의도했으나 실제 2개로 렌더링되어 폐기)도 참고용으로 한 문장 남김
+- 회전 로직 문단에 "`colorGradient`는 정점 인덱스 기준으로 알파를 매기므로 정점 각도가 회전해도 4개 호 형태가 유지된 채 함께 회전한다" 설명 추가 (회전 로직 자체는 `rotationOffsetDeg`/`Time.time * _ringRotationSpeed`로 기존과 동일, 변경 없음)
+- Inspector 조절 값 표 `_ringRotationSpeed` 행은 변경 없이 유지
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 코드는 이미 구현 완료 상태이므로 건드리지 않고 문서만 실제 구현에 정확히 맞춤
+- GameplayMechanics.md는 사용자 관점 서술("점선(끊어진 호) + 시계방향 회전")만 담고 구현 디테일(텍스처/Gradient)을 언급하지 않으므로 이번 정정 범위에서 제외
+
+---
+
+## 2026-07-05
+
+### 작업 내용
+- `_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/plan.md` STEP 3~4에 따라 GameplayMechanics.md / UIRules.md 갱신 (dev 에이전트가 이미 구현 완료한 `TrajectoryPreview.cs`의 실제 코드 내용을 오케스트레이터가 git diff로 검증해 전달, 이를 문서에 반영만 함 — 코드 미수정)
+- 경로: `Assets/_Project/Docs/GameplayMechanics.md`, `Assets/_Project/Docs/UIRules.md`
+
+### 결과
+- GameplayMechanics.md 섹션 1: 2차 충돌 지점 고리 설명 문장에 "실선이 아니라 끊어진 점선 형태이며, 조준(터치) 여부와 무관하게 항상 시계방향으로 계속 회전한다" 추가
+- UIRules.md 섹션 11: (1) 2차 충돌 지점 서술에 점선/회전 특징 추가, (2) 구현 방식 항목을 레드닷(`CreateSolidTexture()`, 회전 없음)과 고리(`CreateRingDashTexture()`, `RING_DASH_COUNT=10`, 둘레 기준 스케일)로 분리 서술 + 회전이 `DrawCircle()`의 `rotationOffsetDeg` 파라미터(`angle = 기존각도 - offsetRad`, `Time.time * _ringRotationSpeed`)로 구현되며 터치 여부와 무관하게 항상 진행됨을 명시, (3) Inspector 조절 값 표에 `_ringRotationSpeed`(deg/sec, 기본값 90) 행 추가
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 코드/씬 파일은 건드리지 않고 문서 서술만 실제 구현(오케스트레이터 제공 git diff 검증 내용)에 정확히 맞춰 갱신
+- GameplayMechanics.md의 "구현 현황" 하위 섹션(task 이력 기록)은 이번 지시 범위(섹션 1의 특정 문장 정정)를 벗어나므로 건드리지 않음 (외과적 변경 원칙)
+
+---
+
 ## 2026-07-04
 
 ### 작업 내용
@@ -953,3 +1174,54 @@
 - 코드 파일은 전혀 건드리지 않고 Read/Edit만 사용해 문서 3건만 순수 정정
 - research.md/plan.md 모두 기존 내용을 삭제하지 않고 "정정됨" 표기 + 추가 섹션 방식으로 이력을 보존(사용자 지시대로 "이후 사용자 확인으로 정정됨" 취지 유지)
 - WaveManager 신규 로직(스테이지 전체 몬스터 총수 계산, `OnStageKillProgressChanged` 이벤트)은 아직 계획 단계이며 dev 에이전트 구현은 사용자의 별도 승인 필요(plan.md 서문의 기존 승인 절차 문구 그대로 유지)
+
+---
+
+### 작업 내용 (추가)
+- `UIRules.md` 1장 Canvas 계층도에서 융합 시스템 잔재로 판단된 `PrismPanel` 줄 제거
+- 경로: `Assets/_Project/Docs/UIRules.md`
+
+### 결과
+- `Canvas_Panel` 하위 목록에서 `└─ PrismPanel` 줄 삭제, 그 앞 `BallLevelUpPanel` 줄의 트리 문자를 `├─` → `└─`로 수정해 마지막 항목으로 정리 (LevelUpPanel/PausePanel/BallLevelUpPanel 3개만 남음)
+- 문서 전체 `Prism` grep 결과 해당 계층도 1곳(수정 전 27번째 줄)뿐이었고 다른 언급은 없어 추가 조치 불필요
+- Read/Grep/Edit만 사용, Bash 미사용, `UIRules.md` 외 다른 파일은 수정하지 않음
+
+### 주요 결정사항
+- PDF 스펙 "구현 제외 항목"에 명시된 융합 시스템 관련 잔재 패널이라는 사용자 판단을 그대로 반영해 삭제, 별도 대체 문구 없이 목록만 축소
+
+---
+
+### 작업 내용 (추가)
+- 궤적 프리뷰 고리(Ring) 점선화 및 회전 효과 task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/research.md` (폴더 신규 생성 포함)
+- `TrajectoryPreview.cs`, `GameplayMechanics.md` 섹션 1, `UIRules.md` 섹션 11, `Assets/Scenes/SampleScene.unity`의 `TrajectoryPreview` 컴포넌트 직렬화 값, `Assets/_Project/Docs/targetUI/` 레퍼런스 이미지 3장(`KakaoTalk_20260701_190324151.jpg`, `_01.jpg`, `_02.jpg`)을 모두 직접 Read로 확인 후 작성
+
+### 결과
+- research.md 작성 완료: `_hitRing`이 `CreateSolidTexture()` 기반 24각형 실선이며 회전 로직이 전혀 없다는 점, `_trajectoryLine`은 이미 `CreateDashTexture()` + `textureMode=Tile` 점선 패턴을 쓰고 있어 재사용 가능한 기존 구조라는 점을 확인해 기술
+- 사용자가 별도 요청한 "궤적선 색상 Inspector 조절 가능화"는 코드(`_lineColor`/`_hitColor`/`_ringColor` 등 6개 `[SerializeField]` 필드)와 씬 오버라이드 값(코드 기본값과 6개 필드 전부 완전 일치, 표로 정리) 양쪽 모두 이미 충족되어 있어 추가 구현 불필요하다는 점을 명확히 기술 — 과거(2026-07-03) 씬 오버라이드가 코드 기본값을 가리던 전례를 재확인했으나 이번 건은 문제 없음
+- 레퍼런스 이미지 3장에서 레드닷 주변 고리 마커가 완전한 이어진 실선이 아니라 끊어진 호/틱 형태로 보인다는 시각적 근거를 이미지 좌표와 함께 서술(회전 자체는 정지 이미지로 검증 불가하다는 한계도 명시)
+- 문제점/구현 대상에 점선화(둘레 길이 기준 `mainTextureScale` 별도 계산 필요성), 회전(`DrawCircle()`이 매 프레임 월드 좌표를 직접 `SetPosition`하므로 `transform.Rotate()`가 무의미할 수 있고 각도 계산 자체에 시간 기반 오프셋을 더하는 방식이 필요하다는 방향성), 회전 속도 Inspector 노출 여부 등 3개 항목 기술
+- plan.md는 작성하지 않음(TaskRules.md 워크플로우에 따라 사용자 확인 대기)
+
+### 주요 결정사항
+- 구체적 구현 방법(점선 세그먼트 개수, 회전 속도/방향, Inspector 노출 여부)은 research.md에서 확정하지 않고 열린 질문 3건으로 명시해 plan.md 단계로 미룸
+- 코드는 읽기만 하고 수정하지 않음, git 커밋/푸시 없음, Bash 미사용, Read/Edit/Write/Glob/Grep만 사용
+
+---
+
+## 2026-07-05 (볼-볼 충돌 버그 plan.md)
+
+### 작업 내용
+- 볼-볼 물리 충돌 버그 task plan.md 신규 생성 (research.md는 이미 사용자 확인 완료 상태, 오케스트레이터-사용자 논의로 확정된 해결 방식 (a)를 그대로 STEP 구조로 반영)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/plan.md`
+- 작성 전 `BallSetupEditor.cs`, `BallLauncher.cs`, `ProjectSettings/TagManager.asset`을 직접 재확인해 레이어 배열 빈 슬롯 위치(인덱스 8)와 기존 태그 등록 패턴(`AddRequiredTags()`)을 재검증
+
+### 결과
+- plan.md 작성 완료: 구현 목표(전용 "Ball" Physics2D 레이어 신설 + `Ball.prefab` 레이어 재배치 + `BallLauncher.Awake()`에 `Physics2D.IgnoreLayerCollision` 1회 호출), 단계별 작업 계획 4단계(레이어 등록 에디터 코드, 프리팹 레이어 할당, 런타임 1회 호출, 문서 갱신 불필요 판단), 예상 변경/생성 파일 목록(`BallSetupEditor.cs`, `Ball.prefab`, `BallLauncher.cs`, `TagManager.asset`), 주의사항 6건 작성
+- "Ball" 태그 미등록 버그는 이번 범위에서 고치지 않고 그대로 둠(사용자 확정), `TrajectoryPreview.cs`의 `IsBlockingTag()`가 순수 태그 기준(`CompareTag`)이라 레이어 변경과 무관함을 주의사항에 명시(오케스트레이터가 이미 확인 완료한 사실을 근거로 인용)
+- 신규 문서 생성이 아니라 기존 task 폴더에 plan.md만 추가하는 것이라 AGENTS.md 인덱스 변경 불필요(개별 task 폴더는 별도 관리하지 않는 기존 정책)
+
+### 주요 결정사항
+- 해결 방식은 (a) 전용 Ball 레이어 + `IgnoreLayerCollision` 전역 1회 호출로 확정(사용자 결정 그대로 반영), Wall/Ground/Monster는 Default 레이어에 유지
+- 레이어 등록(`TagManager.asset`)과 프리팹 `m_Layer` 할당 순서 보장 필요성(`LayerMask.NameToLayer` 값 조회가 저장 이후여야 함)을 주의사항에 명시
+- 코드/프리팹은 건드리지 않고 plan.md만 작성, git 커밋/푸시 없음, Bash 미사용, Read/Write만 사용

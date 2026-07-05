@@ -206,3 +206,79 @@ Assets/_Project/Scripts/
 - **문제**: research.md에서 배경 텍스처(`Background_1_Stage.png`)를 픽셀 단위로 실측한 결과, 장식용 격자가 140×85px(비정사각형, 약 1.65:1)로 그려져 있음을 확인하였다. 몬스터/블록 스프라이트(`Fluffy`/`Spider`/`Block_1x1` 등)는 정사각형 1유닛 체계로 제작되어 있고, 원본 게임 실제 플레이 레퍼런스 스크린샷을 동일하게 실측하면 격자선 간격이 가로/세로 모두 약 97px로 정사각형이라, 우리 프로젝트 배경 에셋만 비정사각형인 상태였다.
 - **해결**: `BackgroundFitter.cs`/`WallFitter.cs`가 채택 중이던 "기기별 독립 scaleX/scaleY Stretch" 방식을 "텍스처 고유 비율 보정(`_cellAspectCorrection ≈ 1.647`, 고정값) + 격자 영역 기준 균일 Cover 배율" 2단계 공식으로 교체하였다. 신규 필드(`_cellAspectCorrection`, `_gridAreaWidth = 14.53`, `_gridAreaHeight = 10.16`) 주입은 기존 `SceneSetupEditor.cs`를 건드리지 않고 신규 `BackgroundGridFitSetupEditor.cs`(별도 메뉴 `PurpleCow/Setup/Background Grid Fit Setup`)로 분리하였다. 리소스(PNG)는 수정하지 않고 순수 코드 변경으로만 처리하였다.
 - **실기기 검증**: 사용자가 로컬에서 여러 실기기(Galaxy Note 10 등)로 테스트한 결과 격자가 정사각형으로 정상 렌더링됨을 확인하였다. 다만 새 계산식(격자 영역 기준 Cover)이 기존 방식(이미지 전체 기준 Stretch)보다 필요 배율이 커서, 기존 `_zoomFactor` 기본값 1.3을 그대로 쓰면 화면이 과도하게 확대되는 문제가 발견되었다. 에디터 미리보기(Free Aspect)에서는 0.6, 실기기(Note 10 포함 복수 기기)에서는 0.5가 적절함을 확인하여 `BackgroundFitter.cs`/`WallFitter.cs`의 `_zoomFactor` 기본값을 0.5로 최종 갱신하였다(커밋 완료). 에디터 미리보기와 실기기 결과가 다를 수 있는 이유(세이프 에어리어/노치/펀치홀 카메라, 정확한 해상도 재현 한계)도 함께 논의되었으며, 실기기 테스트 결과를 최종 기준으로 삼았다. `_nativeLeftX` 등 5개 벽 기준값 자체의 재조정 여부는 이번 대화에서 사용자가 별도 문제를 보고하지 않아 기존 값을 유지한 채 마무리되었다(사용자가 확인 완료; 이번에 정확히 확정된 조정 사항은 `_zoomFactor` 값뿐이다). 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-04/16-40_background-square-grid-fix/research.md`, `plan.md` 참고.
+
+---
+
+## 2026-07-05
+
+### PDF 스펙 대비 문서 재감사 (main에 이미 병합됨, PR #12)
+
+`MonsterRules.md`/`UIRules.md`를 공식 요구사항 PDF(`PurpleCow_클라이언트_채용과제.pdf`)와 다시 대조하는 작업을 진행하였다.
+
+- **첫 시도(방향 오류)**: 커밋 `d5a3b06`에서 두 문서에 "구현 상태"만 갱신하는 방식으로 작업했으나, 실제로 필요했던 것은 "문서에 적힌 규칙 자체가 PDF의 목표와 모순되는지"를 감사하는 것이었다는 점이 확인되어, 방향이 잘못된 작업이라는 사용자 판단에 따라 되돌렸다(`16ec529`).
+- **재감사**: 이후 "문서 내 규칙이 PDF 목표와 모순되는지 여부"만을 기준으로 재감사를 진행하였으나, 확실한 모순은 발견되지 않아 문서 수정 없이 결과만 보고하는 것으로 마무리하였다(코드/문서 변경 없음).
+- PR #12로 main에 머지 완료.
+
+### PrismPanel(융합 시스템 잔재) 제거 (main에 이미 병합됨, PR #12)
+
+`UISetupEditor.cs`의 Canvas_Panel 생성 목록을 검토하던 중, 이름만 존재하고 실제 로직이 전혀 없던 빈 스텁 패널 `PrismPanel`을 발견하였다.
+
+- PDF 스펙의 "구현 제외 항목"(튜토리얼, 배속 기능, 1스테이지 보스, 자동 조준 기능, 선택지 다시뽑기, 융합 시스템) 중 융합 시스템 관련 잔재로 판단되어, 사용자 확인 후 삭제를 확정하였다.
+- `UISetupEditor.cs`의 `panelNames` 배열에서 `"PrismPanel"` 항목을 제거하고, `SampleScene.unity`에 이미 생성되어 있던 빈 GameObject도 YAML 파일에서 직접 제거하였다. `UIRules.md`의 Canvas 계층도에서도 해당 줄을 함께 삭제하였다.
+- `LevelUpPanel`/`PausePanel`/`BallLevelUpPanel`은 실제 로직이 존재하는 정상 패널이므로 그대로 유지하였다.
+- PR #12로 main에 머지 완료.
+
+### 볼 궤적 프리뷰 고리(Ring) 점선화 + 회전 효과 (`_Task/2026-07-05/11-20_trajectory-ring-dash-rotate`, main에 이미 병합됨, PR #12)
+
+실제 플레이 레퍼런스 대비, `TrajectoryPreview.cs`의 2차 충돌 지점 레드닷을 감싸는 고리(`_hitRing`)가 완전한 실선으로 렌더링되던 것을 점선 + 회전 효과로 개선하였다.
+
+- **요구사항**: 원본 게임 레퍼런스(`targetUI/` 스크린샷 실측)처럼 고리가 끊어진 점선(파선) 형태로 보이고, 조준 여부와 무관하게 항상 시계방향으로 회전해야 한다는 사용자 지적을 반영하였다. 별도로 요청되었던 "궤적선 색상 등 Inspector 조절 가능화"는 조사 결과 이미 기존 코드(`_lineColor` 등 6개 `[SerializeField]` 필드)로 구현이 끝나 있음을 확인하여 추가 구현이 필요 없었다.
+- **시행착오 (점선화)**:
+  1. 첫 시도로 텍스처 반복(타일링) 방식을 적용해 원 둘레에 10개의 점선 세그먼트를 목표로 구현했으나, 실제로는 2개로 보이는 문제가 있었다. 원인은 특정하지 못했다(이 작업이 진행된 원격 환경에는 Unity 에디터가 없어 렌더링 결과를 직접 검증할 수 없었음).
+  2. 두 번째 시도로 `LineRenderer.colorGradient`(alphaKeys 8개, 4개 피크 + 4개 골 배치) 방식으로 교체하여 정확히 4개의 점선이 보이도록 보장했으나, 사용자가 실제 레퍼런스 이미지(`targetUI/circle.jpg`)를 보내 대조한 결과 점선 경계가 너무 부드럽게 흐려지는 문제가 발견되었다. 이는 그라데이션 방식 자체의 근본적 한계(alphaKeys 8개만으로는 선명한 경계 구현 불가)로 판단되었다.
+  3. 세 번째 시도로 텍스처 타일링 방식으로 재전환하되, 목표 개수를 4개로 조정하고, 기존 `_hitRing.loop = true` 대신 원을 명시적으로 닫는 정점(`CIRCLE_SEGMENTS + 1`개, explicit close)을 추가하는 방식으로 재구현하였다. 이는 1번 시도의 실패가 Unity의 loop 옵션과 Tile 텍스처 모드 조합에서 발생하는 알려진 문제일 가능성에 근거한 시도였다.
+- **회전 효과**: 회전 속도를 `[SerializeField] private float _ringRotationSpeed = 90f;`(단위 deg/sec)로 신규 필드 추가해 Inspector에 노출하였다.
+- **검증 상태 — 중요**: 이번 문서 갱신 작업에서 사용자가 실제로 검증 완료를 확인한 항목은 "볼 발사/볼-볼 충돌 방지"(아래 4번째 항목)뿐이며, 이 고리 점선화+회전 작업의 최종(3번째 시행착오) 버전이 실제로 정확히 4개의 호로 보이는지, 회전이 의도한 시계방향으로 자연스럽게 보이는지는 **사용자가 아직 로컬 Unity에서 재확인하지 않았다.** 즉 구현 자체는 완료되어 main(PR #12)에 반영되었으나, 최종 시각 확인은 사용자 로컬 테스트 대기 중인 상태로 별도 구분해서 기록한다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/research.md`, `plan.md` 참고.
+
+### 볼-볼 물리 충돌 방지 (`_Task/2026-07-05/16-40_ball-ball-collision-fix`, 아직 main에 병합 안 됨)
+
+실제 플레이 테스트 중 여러 볼이 동시에 존재할 때 볼끼리 물리적으로 서로 튕겨나가는 버그가 발견되어 원인을 조사하고 수정하였다.
+
+- **원인**: `Ball`/`Wall`/`Ground`/`Monster` GameObject가 전부 Default 레이어(0)에 있었고, `Physics2DSettings.asset`의 레이어 충돌 매트릭스가 Default-Default 쌍의 충돌을 허용하고 있어, 여러 볼이 동시에 존재하는 상황(로스터 다중 볼 등)에서 물리 엔진이 볼-볼 간 실제 충돌 반응(속도 변경)을 계산해 적용하고 있었다. `Ball.OnCollisionEnter2D`의 태그 분기(`Monster`/`Wall`/`Ground`만 처리)는 물리 반응이 이미 적용된 이후에 호출되는 콜백이라 코드 레벨에서는 이 물리적 튕김 자체를 막을 수 없었다.
+- **해결**: 전용 "Ball" Physics2D 레이어를 신설하였다. `BallSetupEditor.cs`에 `AddBallLayer()`(TagManager.asset에 레이어 등록)/`AssignBallPrefabLayer()`(Ball.prefab의 m_Layer를 신설 레이어로 설정) 신규 메서드를 추가하고, 기존 `PurpleCow/Setup/Ball System Setup` 메뉴 실행 시 자동으로 처리되도록 통합하였다. 런타임에서는 `BallLauncher.Awake()`에서 `Physics2D.IgnoreLayerCollision(ballLayer, ballLayer, true)`를 1회 호출해 볼-볼 충돌만 전역적으로 비활성화하였다. Wall/Ground/Monster는 그대로 Default 레이어에 남겨두었으며, Unity가 새 레이어 추가 시 기존 레이어와의 충돌 비트를 기본적으로 켠 채 초기화하므로 Ball-Wall/Ground/Monster 충돌은 별도 조치 없이 정상 유지된다.
+- **검증**: 사용자가 로컬에서 `PurpleCow/Setup/Ball System Setup` 메뉴를 재실행해 "Ball" 레이어 등록 및 `Ball.prefab` 레이어 할당을 완료한 뒤, 실제 플레이 테스트로 "볼 발사 정상 동작"과 "볼-볼 물리 충돌 방지(서로 안 튕김)" 둘 다 검증 완료를 확인하였다. 이 항목은 위 궤적 고리 작업과 달리 **구현 완료 + 사용자 실기기/로컬 검증 완료**로 명확히 구분된다.
+- **잠재적 위험(참고)**: `BallLauncher.Awake()`에 `Physics2D.IgnoreLayerCollision` 호출을 추가할 때, "Ball" 레이어가 아직 등록되지 않은 상태(로컬에서 Setup 메뉴를 먼저 재실행하지 않은 경우)에서 실행하면 `LayerMask.NameToLayer("Ball")`이 -1을 반환해 예외가 발생할 수 있는 위험이 있었으나, 사용자가 먼저 Setup 메뉴를 재실행해 레이어를 등록한 뒤 테스트했기 때문에 실제로는 문제없이 정상 동작이 확인되었다.
+- **병합 상태**: 이 작업은 아직 main에 병합되지 않았으며, 현재 브랜치(`claude/project-review-bugs-qq65d1`)에만 커밋되어 있다. main 병합은 다음 작업으로 남아있다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/research.md`, `plan.md` 참고.
+
+### 볼 조준 방향 Y좌표 하한 제한 (`_Task/2026-07-05/18-30_aim-direction-y-clamp`, 아직 main에 병합 안 됨)
+
+실제 플레이 테스트 중 사용자가 "볼 궤도를 설정할 때 일정 y좌표 밑으로는 설정하지 못하게 하자"고 요청하여 진행하였다.
+
+- **기준점 논의 과정**: 처음에는 기준점을 "격자타일 밑변"(배경 그리드의 시각적 바닥, `WallFitter`가 기기별로 동적 재계산하는 `Ground` Transform 위치)으로 잡고 research.md까지 작성했으나, `WallFitter._ground`가 private 필드라 `InputHandler`에서 접근하려면 씬 참조 연결이 추가로 필요하다는 복잡성이 확인되었다. 이후 사용자가 방향을 단순화하여, 이미 존재하는 몬스터 바닥 도달 게임오버 판정 기준선(`WaveManager._bottomBoundaryY`)을 그대로 재사용하기로 확정하였다. `WaveManager`가 이미 싱글톤이라 씬 참조 연결이나 에디터 스크립트 수정이 전혀 필요 없어져 구현이 단순해졌다.
+- **구현**: `WaveManager.cs`에 `public float BottomBoundaryY => _bottomBoundaryY;` 프로퍼티를 추가하였다. `InputHandler.ComputeAimDirection()`에서 터치 위치를 월드 좌표로 변환한 직후 `worldPos.y = Mathf.Max(worldPos.y, WaveManager.Instance.BottomBoundaryY);`로 clamp한 뒤 발사 지점 기준 방향을 계산하도록 수정하였다. `GameplayMechanics.md` 섹션 1에도 이 규칙을 문서화하는 줄을 함께 추가하였다.
+- **참고**: 이 clamp는 "조준 가능한 목표 지점의 범위"만 제한하며, 발사된 볼이 물리 반사로 실제 기준선 아래까지 내려가는 것 자체를 막는 장치는 아니다(별개 사안). `TrajectoryPreview.cs`는 `BallLauncher.Instance.LaunchDirection`(이미 clamp된 방향)을 그대로 받아 그리므로 수정이 필요 없었다.
+- **검증**: 사용자가 로컬 Unity에서 직접 플레이 테스트하여 정상 동작을 확인하였다("잘되니까"라고 명시적으로 확인). 이 작업 역시 위 볼-볼 물리 충돌 방지 항목과 같은 브랜치(`claude/project-review-bugs-qq65d1`)에 커밋되어 있으며 아직 main에 병합되지 않았다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-05/18-30_aim-direction-y-clamp/research.md`, `plan.md` 참고.
+
+### 플레이어 액티브 스킬 2종 구현 (`_Task/2026-07-05/21-30_player-active-skill-system`)
+
+- 회수된 원본/분신 볼을 도착 순서대로 FIFO 큐에 넣고, 초기 볼 발사와 같은 간격으로 현재 조준 궤도에 맞춰 재발사하도록 변경하였다.
+- 버서크는 30초 쿨타임과 6초 지속시간을 사용하며, 지속 중 활성 상태이거나 새로 발사되는 모든 볼에 속도 1.5배를 적용한다.
+- 분신은 원본 로스터 볼만 복제해 순차 발사한다. 복사본은 복사 대상에서 제외되며, 두 번째 회수 시 발사 지점에서 풀로 반환된다.
+- `PlayerActiveSkillData`, `PlayerActiveSkillManager`, `PlayerActiveSkillButton`과 Skill/UI/Scene Setup Editor 자동 구성을 추가하고, 기존 4종 기획 문서를 이번 범위인 버서크/분신 2종으로 갱신하였다.
+- 테스트 단계에서는 씬의 `berserk`/`illusion` 버튼을 직접 재사용하고, 두 스킬 모두 게임 시작 즉시 사용할 수 있도록 시작 쿨타임을 0초로 설정하였다.
+- 액티브 스킬 버튼 터치가 동시에 볼 조준 입력으로 처리되던 문제를 수정했다. 씬에 누락된 `EventSystem` + `InputSystemUIInputModule`을 Setup Editor가 생성하도록 보강하고, `InputHandler`가 처음 관측한 활성 터치에서 클릭 가능한 UI 여부를 검사해 UI에서 시작한 포인터를 릴리즈까지 조준 이벤트에서 제외한다.
+- 런타임/에디터 C# 어셈블리 빌드는 오류 0개로 통과했다. 사용자가 Unity 플레이 테스트를 완료해 버서크/분신 발동, 쿨타임 UI, 버튼 터치 시 조준 입력 차단이 정상 동작함을 확인했다.
+
+### 캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 (`_Task/2026-07-05/17-27_character-sprite-prefab`)
+
+plan.md 작성 당시의 초기 설계(`WeaponPivot`이라는 빈 부모 오브젝트 + `flipX` 기반 좌우 반전)는 로컬 실플레이 테스트 과정에서 여러 버그가 발견되며 시행착오를 거쳐 최종적으로 상당히 다른 구조로 귀결되었다. plan.md 자체는 과거 계획 기록으로 그대로 두고, 이 항목은 최종 구현 기준으로 기록한다.
+
+- **신규 파일**: `Assets/_Project/Scripts/Character/CharacterAimView.cs`(신규 폴더), `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs`(신규, 메뉴 `PurpleCow/Setup/Character System Setup`, 기존 에디터 스크립트는 수정하지 않음), `Assets/_Project/Prefabs/Character/Character.prefab`(사용자가 로컬 Unity에서 위 메뉴 실행 후 직접 여러 차례 수동 수정을 거쳐 완성).
+- **최종 구조**: `Character`(루트, `CharacterAimView` 컴포넌트) → `Body`/`Head`(SpriteRenderer) + `Weapon`(SpriteRenderer). 원래 계획에 있던 `WeaponPivot`(빈 부모, 회전축 용도)은 무기 스프라이트 자체의 피벗을 Sprite Editor에서 손잡이 위치로 재설정하면서 더 이상 필요 없어져 최종적으로 제거되었다. 다만 `CharacterSetupEditor.cs`의 기존 참조 연결 코드를 건드리지 않기 위해 코드상 필드명(`_weaponPivot`)은 그대로 유지하고, 실제로는 그 슬롯에 `Weapon` 오브젝트를 연결하였다. `Character.prefab`은 `BallLauncher`의 자식인 `LaunchPoint` 밑에 배치되어 `WallFitter`의 화면비 대응 리프레임을 자동으로 상속받는다.
+- **시행착오 1 (좌우 반전 방식)**: 캐릭터 기본 아트가 왼쪽을 바라보는 모습이라, 1차 구현에서는 개별 스프라이트 `flipX` + 무기 위치 수동 반전 방식을 시도했으나 실제 로컬 테스트에서 반전 조건이 반대로 되는 버그가 발견되었다. 최종적으로 조준 방향(`BallLauncher.Instance.LaunchDirection`)의 x가 양수(오른쪽 조준)일 때만 캐릭터 루트 전체의 `transform.localScale.x`를 -1로 반전시키는 방식으로 재설계하면서 확정하였다.
+- **시행착오 2 (무기/머리 회전 방식)**: 처음엔 `Mathf.Atan2` 기반으로 각도(도 단위)를 직접 계산하는 방식을 여러 차례 시도했으나, Unity의 Z축 회전 방향(CW/CCW) 규약을 매번 잘못 추측해 실제 플레이테스트에서 반복적으로 무기가 반대 방향을 가리키는 문제가 발생하였다. 사용자가 보내준 스크린샷 두 장을 픽셀 단위로 분석했으나 서로 다른 패턴을 보여 정확한 원인 특정에는 실패하였다. 최종적으로 `Quaternion.FromToRotation(Vector3.up, 목표방향)`으로 Unity가 직접 회전을 계산하게 하는 방식으로 전면 교체하여 각도 부호를 손으로 추측할 필요를 없애 근본적으로 해결하였다. 캐릭터 루트가 반전된 상태일 때는 목표 방향의 x부호를 미리 뒤집어서 로컬 회전을 계산해야 루트의 반전과 상쇄되어 최종 결과가 맞게 된다는 점도 함께 확인되었다.
+- **머리 추종**: 머리는 무기 회전의 일부 비율(`_headRotationRatio`, 기본 0.25)만 `Quaternion.Slerp`로 보간하며 보조적으로 따라가도록 구현하였다.
+- **미세 조정**: 실제 플레이테스트에서 "조준이 수평에 가까울수록 무기가 실제보다 덜 눕는 것 같다"는 피드백이 있어, `_horizontalBiasDegrees`(기본 15도, `[SerializeField]`) 값을 무기 회전에 추가하는 보정을 넣었다. 처음엔 조준 각도에 비례해서 넣었다가, 사용자 요청으로 "각도와 무관하게 항상 고정값 적용"으로 최종 변경하였다.
+- **의도적 미사용 필드**: `_bodySpriteRenderer`/`_headSpriteRenderer` 필드는 1차 구현(`flipX` 방식)의 잔재로 코드 로직상으로는 더 이상 사용되지 않지만, `CharacterSetupEditor.cs`의 기존 참조 연결 코드를 건드리지 않기 위해 필드 선언 자체는 의도적으로 그대로 남겨두었다.
+- **영향 범위 외**: `CharacterManager.cs`(HP/XP 로직, `Scripts/Core/`)는 이번 작업과 완전히 분리되어 전혀 수정하지 않았다.
+- **검증**: 위 시행착오(1차 WeaponPivot+flipX → 좌우 반전 버그 발견 → 루트 스케일 반전 방식으로 재설계하며 WeaponPivot도 함께 제거 → Atan2 각도 계산 방식으로 재구현했으나 회전 방향이 다시 반대로 나오는 문제 반복 → Quaternion.FromToRotation 기반으로 전면 교체 → 수평 보정치 고정값 적용까지 미세조정)를 모두 거친 뒤, 사용자가 로컬 Unity에서 실제 플레이 테스트로 최종 정상 동작을 확인하였다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-05/17-27_character-sprite-prefab/research.md`, `plan.md`(초기 계획, 최종 구현과 다름) 참고.

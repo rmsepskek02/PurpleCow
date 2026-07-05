@@ -1011,3 +1011,424 @@
 - **[해결됨]** `Assets/_Project/Scripts/UI/ResultPanel.cs` 46번째 줄의 `UIManager.Instance.Score` 참조로 인한 컴파일 오류는 사용자 확인 후 후속 지시로 "최종 점수 텍스트 완전 삭제"로 해결함. `_finalScoreText`(TMP_Text) 필드 및 `HandleGameStateChanged`의 해당 대입 줄 제거, `_resultTitleText`/`_restartButton` 등 다른 필드는 그대로 유지. `Assets/_Project/Scripts/Editor/UISetupEditor.cs`의 `Step10_SetupResultPanelContent()`에서도 `ScoreText` 자식 오브젝트 생성 코드 및 `so.FindProperty("_finalScoreText")` 참조 연결 코드를 함께 제거함. 수정 후 grep으로 프로젝트 전체(`.cs` 파일 기준) `_finalScoreText`/`UIManager.Instance.Score`/`UIManager.Score` 참조가 완전히 사라졌음을 확인함.
 - **[참고, 조치 안 함]** `Assets/Scenes/SampleScene.unity`에 `_finalScoreText: {fileID: 1056620222}`라는 직렬화된 필드 참조가 YAML로 남아있음을 grep으로 확인함. 스크립트 필드가 제거되면 Unity가 씬을 다시 열고 저장할 때 자동으로 정리하는 통상적인 orphaned serialized field이며, 컴파일 오류를 일으키지 않음. 원격 환경엔 Unity가 없어 씬 YAML을 직접 수정하는 것은 위험 부담이 있는 범위 밖 작업이라 손대지 않음 — 사용자가 로컬 Unity에서 `UISetupEditor` Setup 메뉴 재실행(또는 씬을 열고 저장)하면 자동 정리됨.
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
+
+---
+
+### 작업: PrismPanel(융합 시스템 잔재) 제거 — UISetupEditor.cs + SampleScene.unity
+
+**작업 내용:**
+- task 문서 없이 사용자 명시적 승인으로 즉시 진행 (오케스트레이터 지시에 명시됨)
+- 공식 스펙 PDF 구현 제외 항목(융합 시스템) 관련 빈 스텁 패널 `PrismPanel` 제거
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/UISetupEditor.cs` — `Step3_SetupPanelCanvas()` 내 `panelNames` 배열에서 `"PrismPanel"` 항목 제거 (`{ "LevelUpPanel", "PausePanel", "BallLevelUpPanel", "PrismPanel" }` → `{ "LevelUpPanel", "PausePanel", "BallLevelUpPanel" }`). 나머지 3개 패널은 그대로 유지.
+- `Assets/Scenes/SampleScene.unity` — YAML 텍스트 직접 편집으로 PrismPanel 관련 블록 3개 삭제:
+  - `!u!1 &1731188296` GameObject 블록 (`m_Name: PrismPanel`)
+  - `!u!224 &1731188297` RectTransform 블록 (m_Father: 849164776 = Canvas_Panel)
+  - `!u!225 &1731188298` CanvasGroup 블록
+  - 부모 `Canvas_Panel`의 RectTransform(`!u!224 &849164776`) `m_Children` 리스트에서 `- {fileID: 1731188297}` 참조 라인 1줄 제거 (나머지 3개 자식 LevelUpPanel/PausePanel/BallLevelUpPanel 참조는 유지)
+
+**검증:**
+- `grep -c "PrismPanel" SampleScene.unity` → 0
+- fileID 1731188296/1731188297/1731188298 참조 → 파일 전체에서 매치 없음 (완전 제거 확인)
+- `!u!1660057539 &9223372036854775807 SceneRoots`의 `- {fileID: 849164776}`는 Canvas_Panel 자체를 가리키는 무관한 참조이므로 건드리지 않음
+
+**주요 결정사항:**
+- Unity 에디터 없는 원격 환경이라 씬을 열어 직접 검증 불가 — YAML 텍스트 편집만 수행, fileID 참조 관계(부모 m_Children ↔ 자식 m_GameObject/m_Father)를 grep으로 교차 확인 후 진행
+- LevelUpPanel/PausePanel/BallLevelUpPanel 및 다른 모든 GameObject/컴포넌트는 전혀 건드리지 않음
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+---
+
+## 2026-07-05
+
+### 작업: 궤적 프리뷰 _hitRing 점선화 + 시계방향 회전 효과
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/plan.md` (사용자 승인 완료)
+- `TrajectoryPreview.cs` 단독 수정, `_hitRing`(2차 충돌 지점 레드닷을 감싸는 고리)을 실선 → 점선으로 교체하고 조준 여부와 무관하게 항상 시계방향으로 회전하는 효과 추가
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs`
+  - `[SerializeField] private float _ringRotationSpeed = 90f;` 필드 추가 (deg/sec, Inspector 노출) — 4초에 한 바퀴 도는 속도로, 너무 느려 밋밋하지도 너무 빨라 어지럽지도 않은 값으로 임의 결정(plan.md의 "60f 전후 참고" 문구보다 살짝 빠르게 설정해 애니메이션이 눈에 띄도록 함)
+  - `RING_DASH_COUNT = 10` 상수 추가 (고리 둘레에 배치할 점선 호 개수, plan.md가 제시한 8~12 범위의 중간값)
+  - `CreateRingDashTexture()` 신설 — 궤적선의 `CreateDashTexture()`(4px, 50:50 비율)와 별도로 5px 텍스처(2px 불투명/3px 투명 = 40% 비율)를 사용해 궤적선보다 간격이 넓은 "짧은 호 + 넓은 갭" 형태로 차별화. `CreateDashTexture()` 재사용이 아닌 신규 메서드를 선택한 이유: research.md/plan.md가 궤적선과 고리의 점선 비율이 다를 때 더 자연스럽다고 명시했고, 레퍼런스 이미지(`targetUI/KakaoTalk_20260701_190324151_02.jpg`)의 고리가 궤적선보다 끊김이 더 뚜렷했기 때문
+  - `CreateLineRenderer()` 시그니처에 `Vector2? textureScaleOverride = null` 선택적 파라미터 추가 — plan.md가 제시한 두 옵션(공용 헬퍼 파라미터 확장 vs `Awake()`에서 별도 재설정) 중 헬퍼 파라미터 확장을 선택(호출부 한 줄로 의도가 드러나고 `_trajectoryLine`/`_hitDot` 호출부는 그대로 유지되어 변경 범위가 더 작음). `Awake()`에서 `ringCircumference = 2π × _ringRadius`, `ringTextureScale = (RING_DASH_COUNT / ringCircumference, 1f)`로 계산해 전달 — 고리 둘레에 정확히 10개 점선이 이음새 없이 반복되도록 함(궤적선처럼 `DASH_WORLD_SIZE` 고정 스케일이 아닌, 고정 둘레 기준 정수 배 스케일 필요)
+  - `DrawCircle()` 시그니처에 `float rotationOffsetDeg = 0f` 파라미터 추가(plan.md 옵션 a 채택, 별도 메서드 분리보다 중복 코드가 적음). `angle = (i / CIRCLE_SEGMENTS) * 2π - rotationOffsetDeg(rad)`로 각도에서 오프셋을 빼는 방식 채택 — Unity 2D 좌표계(Y+ 위쪽)에서 `(cos(angle), sin(angle))`은 angle 증가 시 반시계 방향으로 이동하므로(예: angle=0의 (r,0) 지점에서 angle이 조금 커지면 y가 양수가 되어 위쪽, 즉 반시계 방향), 시계방향으로 보이려면 시간에 따라 angle을 감소시켜야 함. 반대로 검증하면 angle을 시간에 따라 "빼면"(offsetRad가 시간에 비례해 증가) (r,0) 지점이 y가 음수 쪽(아래)으로 이동 → 시계 방향(3시 방향에서 6시 방향으로 이동)과 일치함을 확인
+  - `UpdateTrajectory()`의 2차 충돌 분기에서 `float ringRotationOffsetDeg = Time.time * _ringRotationSpeed;` 계산 후 `DrawCircle(_hitRing, hit2.point, _ringRadius, ringRotationOffsetDeg)` 호출로 변경. `DrawCircle(_hitDot, hit2.point, _dotRadius)` 호출부는 그대로(기본값 0 사용)라 레드닷은 회전 미적용 유지
+  - `Update()`가 이미 터치 여부와 무관하게 매 프레임 실행되는 기존 구조(2026-07-03 수정)를 그대로 활용 — 회전 관련 로직에 터치 상태 체크를 별도로 추가하지 않음
+  - `CreateSolidTexture()` 위 주석을 "레드닷/원형 궤적선용" → "레드닷(_hitDot) 전용, 고리는 CreateRingDashTexture()로 분리됨"으로 정정(주석 정확성 유지 목적, 로직 변경 아님)
+
+**주요 결정사항:**
+- 텍스처 생성 방식: 신규 메서드(`CreateRingDashTexture()`) 신설 — `CreateDashTexture()` 재사용 대신 채택(이유는 위 수정 파일 항목 참고)
+- `DrawCircle()` 확장 vs 분리: 시그니처 확장(옵션 a) 채택 — `_hitDot` 호출부는 그대로 유지되어 하위 호환, 코드 중복 없음
+- `_ringRotationSpeed` 기본값: 90f(deg/sec, 약 4초/바퀴)
+- 시계방향 부호 처리: `angle - Mathf.Deg2Rad * Time.time * _ringRotationSpeed` (research.md 예시와 동일한 부호)
+- 점선 세그먼트 개수: `RING_DASH_COUNT = 10`, 비율은 40%(2px/5px) — 궤적선(50%)보다 간격이 넓어 시각적으로 구분됨
+- `GameplayMechanics.md`/`UIRules.md` 문서 갱신은 이번 작업 범위 밖(별도 docs 에이전트 담당)이라 손대지 않음
+- `Assets/Scenes/SampleScene.unity`는 수정하지 않음(신규 필드는 사용자 로컬에서 씬을 열 때 자동 직렬화됨)
+- 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/시각 결과(점선 간격/회전 방향/속도 체감)는 검증 불가 — C# 문법과 좌표 기하학적 논리만 재확인함, 최종 시각 검증은 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: TrajectoryPreview 고리(_hitRing) 점선 방식을 텍스처 타일링 → colorGradient로 교체 (QA 피드백 수정)
+
+**배경:** 2026-07-05 11-20 trajectory-ring-dash-rotate task의 텍스처 타일링 기반 구현(`CreateRingDashTexture()` + `mainTextureScale.x = RING_DASH_COUNT / 둘레길이`)을 사용자가 로컬 Unity에서 실제 테스트한 결과 의도한 10개가 아니라 호가 2개만 보이는 것으로 확인됨. 텍스처 타일링 계산과 `LineRenderer.textureMode = Tile`의 실제 렌더링 결과가 어긋난 것으로 추정. 정확한 개수를 보장하는 `LineRenderer.colorGradient` 방식으로 교체.
+
+**수정 파일 (`Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` 1개만):**
+- `RING_DASH_COUNT` 상수 제거
+- `CreateRingDashTexture()` 메서드 완전 제거(죽은 코드 방지)
+- `Awake()`에서 `_hitRing` 생성 시 `CreateRingDashTexture()` + `ringTextureScale` 계산 로직 제거 → `CreateSolidTexture()`로 되돌림(레드닷과 동일), 생성 직후 `_hitRing.colorGradient = BuildRingDashGradient(_ringColor);` 할당
+- `CreateLineRenderer()` 시그니처에서 `Vector2? textureScaleOverride = null` 파라미터 제거(호출부 3곳 모두 더 이상 필요 없어져 원래 시그니처로 복귀), `material.mainTextureScale`은 항상 `(1f / DASH_WORLD_SIZE, 1f)` 고정값 사용(이 부분은 기존 로직 그대로 유지, 이번 변경과 무관)
+- `BuildRingDashGradient(Color ringColor)` static 메서드 신설 — `GradientColorKey` 2개(t=0/t=1, RGB 둘 다 ringColor), `GradientAlphaKey` 8개(피크 t=0/0.25/0.5/0.75는 alpha 1, 골 t=0.125/0.375/0.625/0.875는 alpha 0, t 오름차순 배치)로 `gradient.SetKeys()` 호출 후 반환. 정확히 8개 키(Gradient alphaKeys 최대치)로 4등분+4중간점이 딱 맞아떨어져 텍스처 타일링 계산 없이 항상 정확히 4개 호 보장
+- `CreateSolidTexture()` 위 주석을 "레드닷/고리 공용, 고리의 점선 형태는 colorGradient로 표현"으로 갱신
+
+**회전 로직과의 호환성 확인:**
+- `DrawCircle()`의 `rotationOffsetDeg` 파라미터와 `Time.time * _ringRotationSpeed` 오프셋 로직은 변경하지 않음(요청사항대로) — `DrawCircle()`은 정점의 "월드 좌표 위치"를 회전시키는 반면, `colorGradient`는 LineRenderer 정점 "인덱스(순서, t=0~1)"를 기준으로 밝기를 매기므로 서로 독립적인 축. 정점이 회전해도 인덱스별 밝기 값은 인덱스에 고정된 채로 함께 회전하므로, 4개의 밝은 호가 고리 전체와 함께 계속 회전하는 것으로 동작할 것으로 판단(코드 변경 불필요, 그대로 유지)
+
+**주요 결정사항:**
+- `_ringColor`는 `[SerializeField]`라 런타임에 Inspector에서 바뀔 수 있지만, 기존 `startColor`/`endColor` 방식도 `Awake()` 시점 고정이었으므로 `BuildRingDashGradient()`도 동일한 수준(Awake 1회 계산)으로 유지 — 런타임 실시간 색상 반영은 범위 밖
+- `_hitDot`(레드닷)은 이번 변경 대상에서 완전히 제외 — 계속 `CreateSolidTexture()` 사용, colorGradient 미적용
+- `GameplayMechanics.md`/`UIRules.md`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음(요청사항 명시)
+- 이 원격 환경엔 Unity가 없어 실제 시각 결과(4개 호가 정확히 보이는지) 검증 불가 — C# 문법(`Gradient`/`GradientColorKey`/`GradientAlphaKey`는 `UnityEngine` 네임스페이스 포함, 별도 using 불필요)과 로직만 재확인함, 최종 시각 검증은 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: TrajectoryPreview 고리(_hitRing) colorGradient 방식 재폐기, 텍스처 반복 방식으로 재구현 (목표 호 4개, loop 미의존 명시적 원 닫기)
+
+**배경:** 바로 이전(같은 날) colorGradient로 교체한 결과, 사용자가 원본 게임 레퍼런스(`targetUI/circle.jpg`)와 비교해보니 부드러운 그라데이션 페이드가 레퍼런스의 "경계 선명한 끊어진 호"와 느낌이 다르다고 판단. 텍스처 반복 방식으로 재복귀하되, 과거 시도(목표 10개 → 실제 2개로 보임)의 원인으로 추정되는 `loop = true` + `textureMode = Tile` 조합을 이번엔 `_hitRing`에 한해 배제하고, `DrawCircle()`이 명시적으로 원을 닫는 정점을 추가하는 방식으로 대체.
+
+**수정 파일 (`Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` 1개만):**
+- `Awake()`의 `_hitRing.colorGradient = BuildRingDashGradient(_ringColor);` 호출 라인 제거, `BuildRingDashGradient(Color ringColor)` static 메서드 전체(Gradient 8-alphaKeys 방식) 완전 삭제
+- 신규 상수 `RING_DASH_COUNT = 4` 추가
+- 신규 메서드 `CreateRingDashTexture()` 추가 — `CreateDashTexture()`와 동일하게 4px 텍스처, 앞쪽 절반(픽셀 0-1) 불투명·뒤쪽 절반(픽셀 2-3) 완전투명인 50:50 비율(레퍼런스 대비 호가 간격보다 두꺼워 보이는 것과 맞아떨어지는 무난한 값으로 판단, `wrapMode = Repeat`, `filterMode = Point`)
+- `CreateLineRenderer()` 시그니처에 `float textureScaleX` 파라미터 추가(기존엔 항상 `1f / DASH_WORLD_SIZE` 고정값을 내부에서 계산했으나, 이제 호출부마다 다른 스케일이 필요해져 외부에서 주입받는 방식으로 변경) — `_trajectoryLine`은 기존과 동일하게 `1f / DASH_WORLD_SIZE` 전달(동작 변경 없음), `_hitDot`은 `1f`(솔리드 텍스처라 스케일 무의미) 전달, `_hitRing`은 `RING_DASH_COUNT / (2π × _ringRadius)`로 계산한 값을 전달
+- `_hitDot.loop = true;`는 그대로 유지, `_hitRing.loop = false;`로 명시(기존엔 `_hitRing.loop = true;`였음) — 주석으로 loop+Tile 조합의 알려진 이슈 정황과 이번 회피 전략을 기록
+- `DrawCircle()` 시그니처에 `bool explicitClose = false` 파라미터 추가(기본값 false로 `_hitDot` 호출부는 무변경). `explicitClose = true`(= `_hitRing` 전용 신규 호출)일 때 `positionCount = CIRCLE_SEGMENTS + 1`로 만들고, 루프 중 인덱스 0에서 계산한 `firstPoint`(회전 오프셋이 이미 반영된 위치)를 마지막 인덱스(`CIRCLE_SEGMENTS`)에 그대로 복사해 명시적으로 원을 닫음. `_hitDot` 호출부(`DrawCircle(_hitDot, hit2.point, _dotRadius);`)는 변경하지 않았고 `_hitRing` 호출부만 `DrawCircle(_hitRing, hit2.point, _ringRadius, ringRotationOffsetDeg, explicitClose: true);`로 확장
+- `CreateSolidTexture()` 위 주석을 "레드닷(_hitDot) 전용 단색 텍스처"로 갱신(고리는 더 이상 이 텍스처를 쓰지 않으므로)
+
+**이번 변경과 지난번(목표 10 → 실제 2) 시도의 구체적 차이:**
+- 지난번엔 `_hitRing.loop = true`로 두고 Unity가 "마지막 정점(23번) → 첫 정점(0번)" 구간을 자동으로 이어 원을 닫도록 맡겼음. 이번엔 `_hitRing.loop = false`로 바꾸고, `DrawCircle()`이 24개가 아니라 25개(`CIRCLE_SEGMENTS + 1`) 정점을 만들어 마지막 정점을 0번 정점과 동일한 위치로 명시적으로 채움 — Unity가 자동으로 처리하는 "숨은 닫힘 구간"을 없애고, 폴리라인에 실제로 그려지는 모든 구간(24개 선분)을 코드가 직접 정의
+- 텍스처 스케일 계산 공식(`RING_DASH_COUNT / 둘레길이`) 자체는 지난번과 동일하게 재사용했지만, 지난번엔 `loop=true`로 인해 "총 폴리라인 길이"가 실제 렌더링 시 둘레 길이와 정확히 일치하지 않았을 가능성이 있음(자동 닫힘 구간 길이가 텍스처 타일링 누적 계산에 반영되지 않는 경우). 이번엔 정점을 명시적으로 닫아 폴리라인이 24개 선분으로 완전히 구성되고 총 길이가 정확히 `2π × _ringRadius`(둘레)와 일치하도록 만들어, 스케일 공식의 전제(총 길이 = 둘레)가 실제로 성립하게 함
+- `_hitDot`은 이번에도 완전히 손대지 않음 — 여전히 `CIRCLE_SEGMENTS`개 정점 + `loop = true` + `CreateSolidTexture()`
+
+**주요 결정사항:**
+- `DrawCircle()`을 `_hitRing` 전용 메서드로 완전히 분리하지 않고 `explicitClose` 파라미터로 확장하는 방향 채택 — 이미 `rotationOffsetDeg` 파라미터가 있어 자연스러운 확장이라 판단했고, `_hitDot`/`_hitRing` 호출부가 여전히 하나의 메서드를 공유해 회전 각도 계산(`(i / CIRCLE_SEGMENTS) * 2π - offsetRad`) 로직 중복을 피함
+- 불투명:투명 비율은 정확한 수치 지정 없이 "극단적으로 얇지 않은" 재량 범위 내에서 기존 `CreateDashTexture()`와 동일한 50:50을 그대로 재사용 — 레퍼런스와 별도로 비교 검증할 방법이 이 원격 환경에는 없어, 이미 궤적선에서 검증된 비율을 그대로 채택하는 것이 안전하다고 판단
+- `CreateLineRenderer()`의 텍스처 스케일 계산을 메서드 내부 고정값에서 외부 주입 파라미터로 바꿈 — `_trajectoryLine` 호출부는 동일한 값을 그대로 전달해 동작 변경 없음을 보장
+- `GameplayMechanics.md`/`UIRules.md`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음(요청사항 명시, 오케스트레이터가 실제 diff 확인 후 문서는 별도 갱신 예정)
+- 이 원격 환경엔 Unity가 없어 실제 렌더링 결과(정확히 4개로 보이는지, loop=false 전환이 실제로 문제를 해결하는지)는 이번에도 검증 불가 — C# 문법과 기하학적 로직(정점 개수, 닫힘 위치, 텍스처 스케일 공식)만 재차 검토함. 사용자가 이 재시도의 실패 위험을 감수하고 진행하기로 한 상태이므로 최종 시각 검증은 반드시 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: 볼-볼 물리 충돌 버그 수정 (전용 "Ball" Physics2D 레이어 신설 + IgnoreLayerCollision)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/plan.md`
+- 기존 파일 2개 수정 (신규 파일 없음)
+- 원인: Ball/Wall/Ground/Monster 전부 Default 레이어(0)이고 `Physics2DSettings.asset`의 레이어 충돌 매트릭스가 Default-Default 충돌을 허용해, `Ball.OnCollisionEnter2D`의 태그 분기와 무관하게 물리 엔진이 볼-볼 충돌 반응(밀어내기)을 먼저 적용해버리는 구조였음
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/BallSetupEditor.cs`
+  - `AddBallLayer()` 메서드 추가 — `LayerMask.NameToLayer("Ball") != -1`이면 스킵(멱등성), 아니면 `SerializedObject`로 `ProjectSettings/TagManager.asset`을 열어 `"layers"` 배열의 인덱스 8~31(커스텀 슬롯) 중 비어있는 첫 슬롯에 `"Ball"`을 채움. `AddRequiredTags()`의 기존 태그 등록 패턴과 동일한 `SerializedObject`/`FindProperty` 문법 사용
+  - `AssignBallPrefabLayer()` 메서드 추가 — `LayerMask.NameToLayer("Ball")`로 조회한 레이어 인덱스를 `PrefabUtility.LoadPrefabContents("Assets/_Project/Prefabs/Ball/Ball.prefab")`로 연 GameObject의 `.layer`에 대입 후 `PrefabUtility.SaveAsPrefabAsset()` + `PrefabUtility.UnloadPrefabContents()`로 저장. 이미 해당 레이어면 스킵
+  - `SetupBallSystem()`(`[MenuItem("PurpleCow/Setup/Ball System Setup")]`)에 실행 순서 보장: `AddRequiredTags()` → `AddBallLayer()` → `AssetDatabase.SaveAssets()`(레이어를 디스크에 먼저 반영) → `AssignBallPrefabLayer()`(이 시점에 `LayerMask.NameToLayer("Ball")`이 유효한 값을 반환) → `CreatePhysicsMaterial()` → `CreateBallDataAsset()` → 마지막 `AssetDatabase.SaveAssets()`+`Refresh()`
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs`
+  - `Awake()`(`_ballPool = new ObjectPool<Ball>(...)` 생성 직후)에 다음 2줄 추가:
+    ```csharp
+    int ballLayer = LayerMask.NameToLayer("Ball");
+    Physics2D.IgnoreLayerCollision(ballLayer, ballLayer, true);
+    ```
+  - 게임 시작 시 1회만 호출되며, `ObjectPool<Ball>`이 이후 동적으로 생성하는 볼도 프리팹의 `m_Layer`("Ball"로 설정됨)를 자동 상속하므로 별도 처리 불필요
+
+**주요 결정사항:**
+- Wall/Ground/Monster는 요청대로 Default 레이어에 그대로 둠(옮기지 않음) — Unity가 새 레이어 추가 시 다른 레이어와의 충돌 비트를 기본 활성 상태로 초기화하므로 Ball-Default 충돌(벽/바닥/몬스터와의 정상 충돌)은 영향받지 않음
+- "Ball" 태그가 `TagManager.asset`에 등록되어 있지 않은 별개 버그(`SceneSetupEditor.Step1_CreateBallPrefab()`의 `TrySetTag(go, "Ball")` 조용한 실패)는 범위 외로 두고 손대지 않음
+- `TrajectoryPreview.cs`(태그 기준 레이캐스트 필터링)는 물리 레이어와 무관하다고 이미 오케스트레이터가 확인 완료된 사항이라 별도 검증 없이 그대로 둠
+- `ObjectPool.cs`는 요청대로 수정하지 않음
+- 이 원격 환경에는 Unity 에디터가 없어 레이어 등록/프리팹 저장/실제 물리 동작을 직접 실행·검증하지 못함 — 문법과 로직(특히 `SerializedObject`로 `"layers"` 배열에 값을 채우는 부분과 실행 순서 보장)만 재확인함. 최종 검증은 사용자가 로컬 Unity에서 `PurpleCow/Setup/Ball System Setup` 메뉴를 재실행하고 플레이 테스트하는 것으로 진행 필요
+
+---
+
+## 2026-07-05
+
+### 작업: 조준 방향 Y좌표 하한 제한 (WaveManager 기준선 재사용)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/18-30_aim-direction-y-clamp/plan.md`
+- 기존 파일 2개 수정 + 문서 1개 수정 (신규 파일 없음)
+- research.md의 A/B/C 후보(`WallFitter.Ground` 참조 방식)는 폐기되고, 이미 몬스터 게임오버 판정에 쓰이던 `WaveManager._bottomBoundaryY`를 그대로 재사용하는 더 단순한 방향으로 확정됨
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — 기존 `public int TotalWaves => _waveTable.TotalWaves;` 바로 아래에 `public float BottomBoundaryY => _bottomBoundaryY;` 프로퍼티 1줄 추가 (`_bottomBoundaryY` 필드 자체는 그대로 둠)
+- `Assets/_Project/Scripts/Core/InputHandler.cs` — `ComputeAimDirection(Vector2 screenPos)` 내부, `worldPos` 계산 직후 `launchPointPos` 계산 이전에 `worldPos.y = Mathf.Max(worldPos.y, WaveManager.Instance.BottomBoundaryY);` 1줄 추가. 터치 위치를 월드 좌표로 변환한 뒤 Y좌표가 게임오버 판정 기준선보다 낮으면 그 기준선 높이로 끌어올린 좌표를 기준으로 발사 지점 대비 방향을 계산하도록 변경
+- `Assets/_Project/Docs/GameplayMechanics.md` — 섹션 1(볼 발사 및 궤도 시스템) 내 "드래그하면 궤적이 드래그 위치를 목표로 실시간으로 따라간다" 글머리 기호 바로 다음 줄에 "조준 목표 지점의 Y좌표는 게임오버 판정 기준선(`WaveManager._bottomBoundaryY`)보다 아래로 내려갈 수 없다. 터치 위치가 그 기준선보다 낮으면 기준선 높이로 보정된 뒤 조준 방향이 계산된다." 문구를 같은 목록 스타일로 1줄 추가
+
+**주요 결정사항:**
+- `WaveManager.Instance`는 씬에 항상 존재하는 싱글톤이라 null 체크를 추가하지 않음 — 기존 `BallLauncher.Instance` 사용 관례와 동일한 스타일 유지
+- `TrajectoryPreview.cs`는 수정하지 않음 — `BallLauncher.Instance.LaunchDirection`(이미 clamp된 방향)을 그대로 받아 쓰므로 자동으로 반영됨(plan.md 확인 사항)
+- `SceneSetupEditor.cs`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음 — `WaveManager`가 이미 싱글톤이라 별도 참조 연결이 불필요
+- 이 원격 환경엔 Unity 에디터가 없어 실제 clamp 동작(터치 위치가 기준선 아래로 내려갈 때 조준 방향이 실제로 잘리는지)을 시각적으로 검증하지 못함 — C# 문법과 로직만 재확인함. 최종 검증은 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: 캐릭터 스프라이트 프리팹화 + 조준 방향 연동 회전 (CharacterAimView, CharacterSetupEditor)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-27_character-sprite-prefab/plan.md`
+- 신규 파일 2개 생성 (신규 폴더 `Scripts/Character/` 포함). 기존 파일은 단 한 줄도 수정하지 않음
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs` — `TrajectoryPreview.cs`와 동일한 폴링 패턴(`Update()`에서 `BallLauncher.Instance.LaunchDirection` 매 프레임 읽기, 이벤트 구독 아님)으로 구현. `_bodySpriteRenderer`/`_headSpriteRenderer`/`_headTransform`/`_weaponPivot`(SerializeField) 참조와 `_headRotationRatio`(기본 0.25f) 보유. 방향 벡터 `sqrMagnitude < 0.0001f`이면 가드로 스킵. 방향 x부호로 `flipX` 반전(몸통/머리) → `WeaponPivot` 로컬 위치 x부호 보정(`Awake()`에서 캐시한 `_weaponPivotBaseLocalPosition` 기준) → 반전 시 방향 벡터 x 미러링한 `effectiveDir`로 `Mathf.Atan2(...) * Mathf.Rad2Deg - 90f` 각도 계산 → `WeaponPivot.localRotation`에 적용 → `_headTransform.localRotation`에는 그 각도의 `_headRotationRatio` 비율만 적용
+- `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs` — `[MenuItem("PurpleCow/Setup/Character System Setup")]`. `Assets/_Project/Prefabs/Character` 폴더 생성 → `Character.prefab` 존재 시 로그만 남기고 스킵(멱등성) → `Body`/`Head`/`WeaponPivot`→`Weapon` 계층 구성(각 스프라이트를 `AssetDatabase.LoadAssetAtPath<Sprite>()`로 로드, 못 찾으면 `Debug.LogWarning`) → 초기 배치 수치(제안값): `Body(0,0,0)` sortingOrder 0, `Head(0,0.4,0)` sortingOrder 2, `WeaponPivot(0.2,0.15,0)`, `Weapon(0,0.4,0)`(WeaponPivot 자식) sortingOrder 1 → 루트에 `CharacterAimView` 부착 후 `SerializedObject`로 4개 참조 자동 연결 → `PrefabUtility.SaveAsPrefabAsset()` 저장 후 임시 GameObject `DestroyImmediate` → `GameObject.Find("LaunchPoint")`의 자식으로 `PrefabUtility.InstantiatePrefab()` + `localPosition = Vector3.zero` 배치(이미 자식으로 `Character`가 있으면 스킵) → 마지막에 `AssetDatabase.SaveAssets()`/`Refresh()`/`EditorSceneManager.SaveScene(...)`. 기존 `SceneSetupEditor.cs`의 `FindTransformOrWarn()`/`PlaceManager<T>()` 스타일을 참고했으나 코드 재사용 없이 이 새 파일 안에서 자체 유틸리티(`LoadSpriteOrWarn`)로 완결
+
+**주요 결정사항:**
+- 사용자 지시대로 `SceneSetupEditor.cs`, `BallSetupEditor.cs`, `MonsterSetupEditor.cs` 등 기존 에디터 스크립트는 참조조차 하지 않고 완전히 독립된 새 파일로만 작성 (git status로 새 파일 2개만 생성됐음을 확인)
+- `CharacterManager.cs`(HP/XP 로직 전용)에는 시각 회전 로직을 섞지 않고 `CharacterAimView.cs`로 완전히 분리 유지
+- 좌우 반전은 `SpriteRenderer.flipX`만 사용하고 `localScale.x` 부호 반전은 사용하지 않음(plan.md 지시대로)
+- 이 원격 환경에는 Unity 에디터가 없어 `Character.prefab`/`SampleScene.unity`는 직접 생성·검증 불가 — `.cs` 파일 2개만 산출물이며, 사용자가 로컬 Unity에서 `PurpleCow/Setup/Character System Setup` 메뉴를 실행해야 프리팹/씬 반영 및 파츠 위치·머리 회전 비율 등 초기 추정 수치의 육안 미세 조정이 필요함
+- `.prefab`/`.unity`/`.meta` 파일은 이번 작업에서 전혀 건드리지 않음
+- git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView.UpdateAim() 무기 회전 방향 버그 수정 (오케스트레이터 코드 리뷰 반영)
+
+**작업 내용:**
+- 오케스트레이터가 발견한 코드 리뷰 지적 사항 수정. 별도 plan.md 없이 기존 파일 1건 버그 수정만 진행
+- 기존 파일 1개 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs` — `UpdateAim()` 내 `effectiveDir`(방향 x부호 미러링) 변수와 관련 주석 삭제. `weaponAngle` 계산을 미러링 없는 원본 `direction` 기준으로 변경: `Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f`. `WeaponPivot`의 로컬 좌표계는 `SpriteRenderer.flipX`만 사용하는 반전 방식상 `facingLeft`와 무관하게 항상 월드 좌표계와 동일하다는 정확한 근거를 주석 1줄로 남김
+
+**주요 결정사항:**
+- 버그 원인: `facingLeft`일 때 `direction.x` 부호를 뒤집은 `effectiveDir`로 각도를 계산했으나, `WeaponPivot`은 `flipX`나 `localScale` 반전을 전혀 쓰지 않아 로컬 좌표계 자체가 뒤집히지 않으므로 미러링이 불필요했고, 오히려 실제 조준 방향과 반대 방향을 가리키는 결과를 낳았음(예: `direction=(-1,0)` → 수정 전 `weaponAngle=-90°`로 오른쪽을 가리킴, 수정 후 `weaponAngle=90°`로 왼쪽을 정확히 가리킴)
+- `_weaponPivot.localPosition.x` 부호 반전 로직은 회전과 무관한 앵커 위치 이동 목적이므로 그대로 유지
+- `_headTransform.localRotation`의 `_headRotationRatio` 반영 로직은 수정하지 않음 — 고쳐진 `weaponAngle`을 그대로 참조하므로 자동으로 함께 수정됨
+- 오케스트레이터 지시대로 이 파일 1개만 수정, git status로 변경 범위 확인함(`CharacterAimView.cs`는 이전 세션부터 커밋되지 않은 신규 파일(untracked) 상태였고 그 안에서만 diff 발생, 다른 파일은 무관)
+- git 커밋/푸시는 수행하지 않음(오케스트레이터가 처리 예정)
+
+---
+
+## 2026-07-05
+
+### 작업: 몬스터 로스터/컨베이어 스폰 방식 플레이테스트 피드백 반영 (A/B/C/D)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-21_monster-roster-conveyor-spawn/plan.md`("추가 확정 사항 반영 (2026-07-05 플레이테스트 피드백: A/B/C/D)" 섹션)
+- 기존 파일 1개(`WaveManager.cs`)만 수정 (신규 파일 없음), 사용자가 이미 검토/승인 완료한 계획을 그대로 반영
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs`
+  - A. `_monsterPrefab`/`_monsterPool`(단일 풀) 제거 → `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab`(각 `MonsterBase`) + `_poolByData`(`Dictionary<MonsterData, ObjectPool<MonsterBase>>`)로 교체. `Awake()`에서 `_waveTable.FluffyData/SpiderData/StoneBugData/ForestDeerData`를 키로 4개 풀 생성. `PlaceMonster()`는 `_poolByData[data].Get()`, `CheckGameOver()`/`HandleMonsterDied()`는 `_poolByData[monster.Data].Return(monster)` 사용
+  - B+C. `TryDispenseRoster()` 전면 재작성 — `midRow`/`topRow` 두 줄 스캔 방식 폐기, `topRow = _gridRows - 1` 한 줄만 스캔. `belowRow = _gridRows - 2`는 `OneByTwo`(ForestDeer) 배치 시 `IsCellFree(col, belowRow)` 사전 확인 용도로만 사용. `int maxThisTick = UnityEngine.Random.Range(3, 8)`로 틱당 배치 상한(3~7)을 두고 `placedThisTick`이 도달하면 스캔 즉시 종료
+  - D. `SpawnWave(int index)` 마지막 디스펜스 호출을 `if (index == 0) SpawnRosterAcrossFullGrid(); else TryDispenseRoster();` 분기로 교체. 신규 `SpawnRosterAcrossFullGrid()` 추가 — 그리드 전체를 로컬 `bool[,] free` 배열로 관리하며 로스터가 빌 때까지 (rosterIndex, col, row) 후보 조합 전체를 나열해 무작위로 하나씩 배치(웨이브 0 전용, 시간 지연 없이 같은 프레임에 전체 배치)
+  - `IsCellFree`/`GridToWorldPosition`/`CheckWaveCleared`/`GetWeakestMonster`/`GetMonstersInRow`/`CheckSkillUnlock`/`AdvanceToNextWave`/이벤트 시그니처/`BottomBoundaryY`는 요청대로 변경하지 않음
+
+**주요 결정사항:**
+- plan.md에 명시된 코드 스니펫을 그대로 반영, 임의 설계 변경 없음
+- `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab` Inspector 연결은 사용자가 Unity 에디터에서 직접 확인/연결 필요(이 원격 환경엔 Unity 에디터 없음)
+- 컴파일 가능 여부는 코드 리딩(참조하는 프로퍼티/타입명 존재 확인)으로만 검증, 실제 Unity 컴파일/플레이 테스트는 사용자 로컬 환경에서 필요
+- 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: 몬스터 로스터/컨베이어 스폰 방식 플레이테스트 피드백 반영 2 (E/F/G)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-21_monster-roster-conveyor-spawn/plan.md`("추가 확정 사항 반영 2 (2026-07-05 플레이테스트 피드백: E/F/G)" 섹션)
+- A/B/C/D는 이미 구현 완료된 상태(위 항목) 위에 추가 변경. 기존 파일 1개(`WaveManager.cs`)만 수정 (신규 파일 없음), 사용자가 이미 검토/승인 완료한 계획을 그대로 반영
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs`
+  - E. `PlaceMonster(MonsterData data, int col, int row)` → `PlaceMonster(MonsterData data, Vector3 worldPosition)`로 시그니처 변경(내부는 `monster.transform.position = worldPosition;`만 사용). `TryDispenseRoster()`/`SpawnRosterAcrossFullGrid()` 양쪽 배치 호출부를 `BlockSize` `switch` 표현식으로 `worldPos` 계산 후 `PlaceMonster(data, worldPos)` 호출로 교체(`TryDispenseRoster()`는 `topRow`/`belowRow` 평균, `SpawnRosterAcrossFullGrid()`는 `chosenRow`/`chosenRow+1` 평균 — 두 메서드의 `OneByTwo` 평균 대상 행이 다름을 주석으로 명시). `IsCellFree()` 판정 반경을 `_gridCellSize / 2f` → `_gridCellSize * 0.55f`로 확대
+  - F. `TryDispenseRoster()`의 열 스캔을 고정 `for (int col = 0; ...)` → 매 틱 Fisher-Yates로 셔플된 `List<int> colOrder`를 `foreach (int col in colOrder)`로 순회하도록 변경. `topRowFree` 캐시 계산 자체는 `col=0`부터 순서대로 유지, 셔플은 배치 시도 순서에만 적용. 루프 내부 판정/후보 수집/무작위 선택/배치/캐시 갱신 로직은 변경하지 않음
+  - G. `SpawnWave(int index)` 마지막 분기를 `if (index == 0 || index == 10) SpawnRosterAcrossFullGrid(); else TryDispenseRoster();`로 확장(각 매직넘버 옆에 의미 주석 추가). 신규 `CheckRosterDepleted()` 메서드 추가 — 로스터가 비었고 마지막 웨이브도 아니고 10웨이브(index 9, 오버랩 예외)도 아니면 `AdvanceToNextWave()` 즉시 호출. `TryDispenseRoster()`/`SpawnRosterAcrossFullGrid()` 각각의 배치 루프 종료 직후(메서드 마지막)에 `CheckRosterDepleted()` 호출 추가. `CheckWaveCleared()`/`AdvanceToNextWave()`는 수정하지 않음
+
+**주요 결정사항:**
+- plan.md에 명시된 코드 스니펫을 그대로 반영, 임의 설계 변경 없음
+- (plan.md에 직접 언급되지 않았으나 G 구현을 위해 필요했던 조정) `TryDispenseRoster()`의 `foreach` 루프 내부 조기 종료 조건(`_waveRoster.Count == 0 || placedThisTick >= maxThisTick`)의 처리를 `return;`에서 `break;`로 변경 — plan.md F 섹션 스니펫은 `return;`을 그대로 두고 있으나, 그대로 두면 G가 요구하는 "메서드 마지막에서 `CheckRosterDepleted()` 호출"이 조기 `return`에 의해 스킵되는 문제가 있어 루프만 빠져나오고 메서드 끝의 호출까지 항상 도달하도록 수정. 루프 내부의 다른 판정/배치 로직은 그대로 둠
+- `CheckRosterDepleted()` → `AdvanceToNextWave()` → `SpawnWave()`(index 0/10이면 `SpawnRosterAcrossFullGrid()` 재호출 → 그 끝에서 다시 `CheckRosterDepleted()`) 형태의 재귀적 연쇄 호출이 발생할 수 있으나, 이는 plan.md 주석("초반 웨이브들은 오버랩이 연쇄적으로 일어나 웨이브 인덱스가 실제 체감 진행 속도보다 빠르게 올라갈 수 있다")에 명시된 의도된 동작이라 별도 방어 로직을 추가하지 않음
+- 컴파일 가능 여부는 코드 리딩(참조하는 프로퍼티/타입명/`_currentWaveIndex`/`_waveTable.TotalWaves` 등 기존 필드·프로퍼티 존재 확인)으로만 검증, 실제 Unity 컴파일/플레이 테스트는 사용자 로컬 환경에서 필요
+- 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: TryDispenseRoster() 틱당 스폰 수 min/max Inspector 노출
+
+**작업 내용:**
+- 문서 작성 없이 사용자가 바로 구현 승인. 기존 파일 1개(`WaveManager.cs`)만 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs`
+  - `_killCountForSkill` 필드 바로 아래에 `[SerializeField] private int _minSpawnPerTick = 3;` / `[SerializeField] private int _maxSpawnPerTick = 7;` 추가
+  - `TryDispenseRoster()` 내부 `int maxThisTick = UnityEngine.Random.Range(3, 8);` → `UnityEngine.Random.Range(_minSpawnPerTick, _maxSpawnPerTick + 1)`로 교체 (기존 3~7 포함 범위와 동일 의미 유지 위해 `+1` 사용)
+
+**주요 결정사항:**
+- 필드명/기본값은 사용자 지시 그대로 사용, 다른 로직 변경 없음
+- 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView.UpdateAim() 무기 회전각 부호 버그 수정
+
+**작업 내용:**
+- 오케스트레이터가 사용자 로컬 플레이 스크린샷(`targetUI/TestResult/left.jpg`, `right.jpg`) 분석으로 발견한 CW/CCW 부호 불일치 버그 수정. 기존 파일 1개(`CharacterAimView.cs`)만 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs`
+  - `UpdateAim()` 내 `weaponAngle` 계산식을 `Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f` → `90f - Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg`로 부호 반전 (Unity `Quaternion.Euler(0,0,z)` 양수 회전이 이 프로젝트의 2D 카메라 배치에서 CW로 보이는데, 기존 식은 CCW 가정으로 유도되어 X축 방향이 반전되던 문제)
+  - 주석도 `// Unity Z축 회전은 CW이므로 부호 반전(90 - atan2)`로 수정
+
+**주요 결정사항:**
+- `_headTransform.localRotation` 계산 줄은 `weaponAngle` 변수를 그대로 참조하므로 수정 불필요 (자동 반영)
+- `facingLeft`/`flipX`/`pivotPos` 관련 좌우 반전 로직은 이번 버그와 무관하므로 변경하지 않음
+- 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView.cs 전면 재설계 (루트 좌우반전 방식으로 아키텍처 전환)
+
+**작업 내용:**
+- 오케스트레이터가 사용자와 논의해 확정한 새 설계로 `Assets/_Project/Scripts/Character/CharacterAimView.cs` 1개 파일만 전면 교체
+- `CharacterSetupEditor.cs` 등 다른 파일은 건드리지 않음 (사용자 지시)
+
+**변경 내용:**
+- 기존: `Body`/`Head` `SpriteRenderer.flipX` + `WeaponPivot.localPosition.x` 부호 수동 반전 방식 → 조준 방향 판정 자체가 반대로 되어 있어 "목표가 오른쪽인데 캐릭터가 왼쪽을 보는" 버그 발생
+- 신규: 캐릭터 기본 아트가 왼쪽 기준이므로, `direction.x > 0`(오른쪽 조준)일 때만 `transform.localScale = (-1, 1, 1)`로 **루트 전체**를 반전. 자식(Body/Head/Weapon)은 부모 스케일을 따라 자동 미러링되므로 개별 flipX/위치 보정 코드 전부 제거
+- 루트 반전 시 자식의 Z회전 표시 방향도 같이 뒤집히므로, `mirrored`일 때 `weaponAngle` 부호를 한 번 더 반전해서 보정
+- `WeaponPivot` 빈 부모 오브젝트 개념 폐기 — 무기 스프라이트 자체 피벗을 손잡이로 옮겨 무기 Transform이 곧 회전 앵커. 단, 필드명 `_weaponPivot`은 `CharacterSetupEditor.cs`의 `FindProperty("_weaponPivot")` 참조 때문에 그대로 유지 (사용자 명시 지시)
+- `_bodySpriteRenderer`/`_headSpriteRenderer` 필드도 동일한 이유로 선언은 유지, `UpdateAim()` 로직에서만 미사용으로 남김 (의도된 것)
+- `Awake()`, `_weaponPivotBaseLocalPosition` 필드, `pivotPos` 수동 위치 보정 코드 전부 삭제
+
+**Git:**
+- git status로 `CharacterAimView.cs` 1개 파일만 변경됨을 확인
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- 사용자가 로컬 Unity에서 프리팹 계층을 `Character > WeaponPivot > Weapon` → `Character > Weapon`으로 직접 재구성하고 `_weaponPivot` 슬롯에 새 `Weapon` 오브젝트를 재연결할 예정 — 코드 쪽은 필드명만 유지하면 되므로 스크립트 자체는 계층 변경과 무관하게 동작
+- `_bodySpriteRenderer`/`_headSpriteRenderer` 필드를 삭제하지 않고 미사용 상태로 남긴 이유는 `CharacterSetupEditor.cs`의 기존 참조 연결 코드 파손 방지 (그 파일은 건드리지 않기로 확정)
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView.UpdateAim() Atan2 방식 → Quaternion.FromToRotation 방식으로 교체
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs`의 `UpdateAim(Vector2 direction)` 메서드 본문만 교체 (필드 선언, `Update()`, 클래스 주석 등 나머지는 그대로 유지)
+- 다른 파일은 건드리지 않음 (`CharacterSetupEditor.cs` 포함, 사용자 명시 지시)
+
+**변경 내용:**
+- 기존: `Mathf.Atan2(direction.y, direction.x)`로 각도를 직접 계산 후 `mirrored`일 때 부호를 수동으로 뒤집는 방식 — Unity Z축 회전 방향(시계/반시계) 규약을 잘못 추측해서 반대로 도는 버그가 반복됨
+- 신규: 각도를 직접 계산하지 않고 `Quaternion.FromToRotation(Vector3.up, localTargetDir)`로 "Vector3.up을 목표 방향으로 정렬시키는 회전"을 Unity가 직접 계산하도록 위임해 회전 방향 추측 자체를 제거
+- `mirrored`(오른쪽 조준으로 루트 반전) 상태일 때는 목표 방향의 `x`부호를 미리 뒤집은 `localTargetDir`을 계산해 로컬 회전에 사용 — 루트 반전 시 자식 회전도 화면상 같이 미러링되어 보이는 것을 상쇄
+- 머리 회전은 `Quaternion.Slerp(Quaternion.identity, weaponRotation, _headRotationRatio)`로 무기 회전의 일부 비율만 보조적으로 보간 (기존 `Quaternion.Euler(0,0, weaponAngle * ratio)` 방식 대체)
+
+**Git:**
+- git status로 `CharacterAimView.cs` 1개 파일만 변경됨을 확인
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- `transform.localScale` 좌우 반전 로직(`mirrored = direction.x > 0f`)은 그대로 유지 — 이번 수정은 회전 계산 방식만 교체, 반전 판정 자체는 손대지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView 수평 보정치(`_horizontalBiasDegrees`) 추가
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs` 이 파일 하나만 수정 (다른 파일 미변경)
+
+**변경 내용:**
+- `_headRotationRatio` 필드 바로 아래에 `[SerializeField] private float _horizontalBiasDegrees = 15f;` 필드 추가
+- `UpdateAim()`에서 `weaponRotation = Quaternion.FromToRotation(Vector3.up, localTargetDir)` 계산 직후, `_weaponPivot.localRotation` 대입 전에 `weaponRotation.ToAngleAxis(out angle, out axis)`로 각도/축을 뽑아 `horizontalness = Mathf.Clamp01(angle / 90f)` 비율을 구하고 `weaponRotation = Quaternion.AngleAxis(angle + _horizontalBiasDegrees * horizontalness, axis)`로 재계산하는 로직 추가
+- 완전 수직(각도 0)일 때는 보정 없음, 완전 수평(각도 90)에 가까울수록 최대 `_horizontalBiasDegrees`(기본 15도)만큼 같은 축으로 추가 회전 — 이후 `_weaponPivot.localRotation`과 `_headTransform.localRotation`(Slerp)은 보정이 반영된 `weaponRotation`을 그대로 참조하므로 별도 수정 불필요
+
+**Git:**
+- git status로 `CharacterAimView.cs` 1개 파일만 변경됨을 확인
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- 보정치는 Inspector에서 조절 가능하도록 `[SerializeField]` 필드로 노출 (하드코딩하지 않음)
+- `_weaponPivot`/`_headTransform` 필드 및 시그니처는 변경하지 않아 `CharacterSetupEditor.cs`를 포함한 다른 파일과의 참조 호환성 그대로 유지
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView `_horizontalBiasDegrees` 각도 비례 → 항상 고정값 적용으로 변경
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs` 이 파일 하나만 수정 (다른 파일 미변경)
+
+**변경 내용:**
+- `UpdateAim()` 내 `horizontalness = Mathf.Clamp01(angle / 90f)` 비율 적용 로직 제거
+- `weaponRotation = Quaternion.AngleAxis(angle + _horizontalBiasDegrees * horizontalness, axis)` → `weaponRotation = Quaternion.AngleAxis(angle + _horizontalBiasDegrees, axis)`로 변경, 조준 각도와 무관하게 항상 고정 보정치(`_horizontalBiasDegrees`, 기본 15도)만큼 추가 회전
+- `axis.sqrMagnitude < 0.0001f || angle < 0.0001f` 조건일 때 `axis = Vector3.forward`로 강제하는 가드 추가 — 조준이 정확히 `Vector3.up`이라 `angle=0`인 경우 Unity `ToAngleAxis`가 축을 `Vector3.right` 등 예측 불가한 기본값으로 반환할 수 있어, 2D 회전 평면(XY, Z축 기준)을 벗어난 회전을 방지
+- `_horizontalBiasDegrees` 필드 선언/기본값(15f)/주석/이름은 요청대로 변경하지 않음
+- `_headTransform.localRotation = Quaternion.Slerp(...)` 줄은 보정된 `weaponRotation`을 그대로 참조하므로 수정 불필요
+
+**Git:**
+- git status로 `CharacterAimView.cs` 1개 파일만 변경됨을 확인
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- 두 조건(`axis.sqrMagnitude < 0.0001f`, `angle < 0.0001f`)을 OR로 모두 방어 — sqrMagnitude 체크만으로는 Unity의 `ToAngleAxis(angle=0)` 시 임의의 기본 축(예: Vector3.right) 반환 케이스를 못 걸러낼 수 있어 angle 체크를 추가 가드로 병행
+
+---
+
+## 2026-07-06
+
+### 작업: 몬스터 HP바 버그 수정 (구독 끊김 + 그래픽 미렌더링 + 피격 시에만 표출)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-06/00-16_monster-hp-bar-fix/plan.md` (사용자 사전 승인됨)
+- 기존 파일 1개 수정 + 신규 파일 1개 생성
+
+**수정 파일:**
+- `Assets/_Project/Scripts/UI/MonsterHpBar.cs`
+  - `Start()` → `OnEnable()` 이름 변경(구독 로직 동일 유지) — 오브젝트 풀 재사용 시 `OnDisable`과 짝을 이루어 매번 재구독되도록 수정(버그 1: 두 번째 스폰부터 구독 끊김 해결)
+  - `_canvasGroup` private 필드 추가, `OnEnable()`에서 `_canvasGroup == null`이면 `GetComponent<CanvasGroup>()`으로 런타임 자동 참조(에디터 수동 연결 없음)
+  - `UpdateHp()`에 `_canvasGroup.alpha = current < max ? 1f : 0f;` 추가 — 피격 시(`current < max`)에만 표출, 만피/재스폰 시 자동 숨김. `GameObject.SetActive`는 표시/숨김 용도로 사용하지 않음
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Editor/MonsterHpBarSetupEditor.cs` — `[MenuItem("PurpleCow/Setup/Monster HP Bar Setup")]`, Fluffy/Spider/StoneBug/ForestDeer 4개 프리팹 경로를 자체 배열로 나열(기존 `MonsterOverhaulSetupEditor.Configs`와 공유하지 않음)
+  - `PrefabUtility.EditPrefabContentsScope`로 각 프리팹을 열어: `GetComponentInChildren<Slider>(true)`로 `HpSlider` 탐색(없으면 경고 후 스킵) → `GetComponentInParent<Canvas>()`로 `HpBarCanvas` 탐색, `CanvasGroup` 없으면 추가(`blocksRaycasts=false`, `interactable=false`) → `slider.fillRect != null`이면 멱등성 스킵 → `HpSlider` 하위에 `Border`(`#5A100F`)/`Background`(`#2C2C2C`, inset)/`Fill Area`/`Fill`(`#5A100F`) RectTransform+Image 계층 생성 → `slider.fillRect`를 `Fill`에 연결(`handleRect`는 비워둠), `slider.interactable = false`
+  - 전체 처리 후 `AssetDatabase.SaveAssets()` / `AssetDatabase.Refresh()` 호출
+
+**주의사항:**
+- `MonsterOverhaulSetupEditor.cs`는 참고만 하고 전혀 수정하지 않음(git status로 미변경 확인)
+- 신규 에디터 스크립트 작성 시 각 프리팹을 처리하는 `SetupMonsterHpBar(string)` 메서드가 루프가 아니므로, 최초 작성한 `continue`문(스킵 처리 2곳)이 컴파일 오류였음을 발견하고 `return`으로 즉시 수정함
+
+**Git:**
+- git status로 `MonsterHpBar.cs`(수정), `MonsterHpBarSetupEditor.cs`(신규)만 변경/추가됨을 확인
+- 커밋/푸시는 수행하지 않음(오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- 이 원격 환경에는 Unity 에디터가 없어 신규 에디터 메뉴 실행 결과(프리팹 실제 반영)를 직접 검증할 수 없음 — 사용자가 로컬 Unity에서 `PurpleCow/Setup/Monster HP Bar Setup` 메뉴를 실행해야 4개 프리팹에 `CanvasGroup`/`Border`/`Background`/`Fill Area`/`Fill`이 실제로 생성됨
+- Border/Fill 색상(`#5A100F`)과 Background 색상(`#2C2C2C`)은 plan.md에 확정된 RGBA 근사값을 그대로 사용(0.353/0.063/0.059/1, 0.173/0.173/0.173/1)
+- 새로 생성하는 Image 컴포넌트는 모두 `raycastTarget = false`로 설정(HP바는 클릭 대상 아님, 관례적 권장 사항 반영)

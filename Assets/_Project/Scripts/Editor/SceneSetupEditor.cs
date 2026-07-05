@@ -483,6 +483,7 @@ public static class SceneSetupEditor
         PlaceManager<BallLauncher>("BallLauncher");
         PlaceManager<WaveManager>("WaveManager");
         PlaceManager<SkillManager>("SkillManager");
+        PlaceManager<PlayerActiveSkillManager>("PlayerActiveSkillManager");
         PlaceManager<UIManager>("UIManager");
         PlaceManager<CharacterManager>("CharacterManager");
         PlaceManager<TrajectoryPreview>("TrajectoryPreview");

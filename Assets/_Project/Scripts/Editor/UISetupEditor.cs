@@ -2,15 +2,29 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 using TMPro;
 
 public static class UISetupEditor
 {
+    [MenuItem("PurpleCow/Setup/Connect Player Active Skill Buttons")]
+    private static void ConnectPlayerActiveSkillButtons()
+    {
+        EnsureEventSystem();
+        SkillSetupEditor.CreatePlayerActiveSkillDataAssets();
+        Step14_SetupPlayerActiveSkills();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
+    }
+
     [MenuItem("PurpleCow/Setup/UI Setup")]
     private static void SetupUI()
     {
         EnsurePrefabFolders();
+        EnsureEventSystem();
 
         Canvas hudCanvas    = Step1_CreateCanvas("Canvas_HUD",   10);
         Canvas panelCanvas  = Step1_CreateCanvas("Canvas_Panel", 20);
@@ -28,11 +42,23 @@ public static class UISetupEditor
         Step11_SetupSkillSelectionPanelContent();
         Step12_CreateSkillSlotPrefab();
         Step13_SetupSkillSlotGroups();
+        Step14_SetupPlayerActiveSkills();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
         Debug.Log("[UISetupEditor] UI Setup 완료.");
+    }
+
+    private static void EnsureEventSystem()
+    {
+        if (Object.FindFirstObjectByType<EventSystem>() != null)
+            return;
+
+        GameObject eventSystemObj = new GameObject("EventSystem");
+        eventSystemObj.AddComponent<EventSystem>();
+        eventSystemObj.AddComponent<InputSystemUIInputModule>();
+        Debug.Log("[UISetupEditor] EventSystem with InputSystemUIInputModule created.");
     }
 
     private static void EnsurePrefabFolders()
@@ -145,7 +171,7 @@ public static class UISetupEditor
         if (panelCanvas == null) return;
         Transform panelRoot = panelCanvas.transform;
 
-        string[] panelNames = { "LevelUpPanel", "PausePanel", "BallLevelUpPanel", "PrismPanel" };
+        string[] panelNames = { "LevelUpPanel", "PausePanel", "BallLevelUpPanel" };
         foreach (string pname in panelNames)
         {
             GameObject obj = EnsureChildObject(panelRoot, pname);
@@ -762,6 +788,190 @@ public static class UISetupEditor
     // ──────────────────────────────────────────
     // 유틸리티
     // ──────────────────────────────────────────
+
+    private static void Step14_SetupPlayerActiveSkills()
+    {
+        GameObject managerObj = GameObject.Find("PlayerActiveSkillManager");
+        if (managerObj == null)
+        {
+            managerObj = new GameObject("PlayerActiveSkillManager");
+            managerObj.AddComponent<PlayerActiveSkillManager>();
+        }
+
+        PlayerActiveSkillData berserk = AssetDatabase.LoadAssetAtPath<PlayerActiveSkillData>(
+            "Assets/_Project/Data/PlayerActiveSkillData_Berserk.asset");
+        PlayerActiveSkillData clone = AssetDatabase.LoadAssetAtPath<PlayerActiveSkillData>(
+            "Assets/_Project/Data/PlayerActiveSkillData_Clone.asset");
+
+        PlayerActiveSkillManager manager = managerObj.GetComponent<PlayerActiveSkillManager>();
+        SerializedObject managerSo = new SerializedObject(manager);
+        SerializedProperty skills = managerSo.FindProperty("_skills");
+        skills.arraySize = 2;
+        skills.GetArrayElementAtIndex(0).objectReferenceValue = berserk;
+        skills.GetArrayElementAtIndex(1).objectReferenceValue = clone;
+        managerSo.ApplyModifiedPropertiesWithoutUndo();
+
+        Button berserkButton = FindSceneButton("berserk");
+        Button illusionButton = FindSceneButton("illusion");
+        if (berserkButton != null && illusionButton != null)
+        {
+            SetupExistingPlayerActiveSkillButton(berserkButton, 0);
+            SetupExistingPlayerActiveSkillButton(illusionButton, 1);
+            Debug.Log("[UISetupEditor] Existing berserk/illusion buttons connected.");
+            return;
+        }
+
+        GameObject hudPanelObj = GameObject.Find("HUDPanel");
+        if (hudPanelObj == null)
+        {
+            Debug.LogWarning("[UISetupEditor] HUDPanel is missing.");
+            return;
+        }
+
+        GameObject barObj = EnsureChildObject(hudPanelObj.transform, "PlayerActiveSkillBar");
+        RectTransform barRect = EnsureRectTransform(barObj);
+        barRect.anchorMin = new Vector2(1f, 0f);
+        barRect.anchorMax = new Vector2(1f, 0f);
+        barRect.pivot = new Vector2(1f, 0f);
+        barRect.anchoredPosition = new Vector2(-36f, 130f);
+        barRect.sizeDelta = new Vector2(304f, 142f);
+
+        HorizontalLayoutGroup layout = EnsureComponent<HorizontalLayoutGroup>(barObj);
+        layout.spacing = 12f;
+        layout.childAlignment = TextAnchor.MiddleRight;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        SetupPlayerActiveSkillButton(
+            barObj.transform, "BerserkButton", 0, new Color(0.78f, 0.18f, 0.14f));
+        SetupPlayerActiveSkillButton(
+            barObj.transform, "CloneButton", 1, new Color(0.12f, 0.55f, 0.68f));
+    }
+
+    private static Button FindSceneButton(string objectName)
+    {
+        Button[] buttons = Object.FindObjectsByType<Button>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        foreach (Button button in buttons)
+        {
+            if (string.Equals(
+                    button.gameObject.name,
+                    objectName,
+                    System.StringComparison.OrdinalIgnoreCase))
+                return button;
+        }
+
+        return null;
+    }
+
+    private static void SetupExistingPlayerActiveSkillButton(Button button, int skillIndex)
+    {
+        GameObject buttonObj = button.gameObject;
+        Image icon = buttonObj.GetComponent<Image>();
+        EnsureComponent<UIButton>(buttonObj);
+        PlayerActiveSkillButton skillButton = EnsureComponent<PlayerActiveSkillButton>(buttonObj);
+
+        GameObject overlayObj = EnsureChildObject(buttonObj.transform, "CooldownOverlay");
+        StretchFill(EnsureRectTransform(overlayObj));
+        Image overlay = EnsureComponent<Image>(overlayObj);
+        overlay.color = new Color(0f, 0f, 0f, 0.72f);
+        overlay.type = Image.Type.Filled;
+        overlay.fillMethod = Image.FillMethod.Radial360;
+        overlay.fillOrigin = (int)Image.Origin360.Top;
+        overlay.fillClockwise = true;
+        overlay.raycastTarget = false;
+
+        GameObject cooldownTextObj = EnsureChildObject(buttonObj.transform, "CooldownText");
+        StretchFill(EnsureRectTransform(cooldownTextObj));
+        TextMeshProUGUI cooldownText = EnsureComponent<TextMeshProUGUI>(cooldownTextObj);
+        cooldownText.alignment = TextAlignmentOptions.Center;
+        cooldownText.fontSize = 36f;
+        cooldownText.color = Color.white;
+        cooldownText.raycastTarget = false;
+
+        SerializedObject so = new SerializedObject(skillButton);
+        so.FindProperty("_skillIndex").intValue = skillIndex;
+        so.FindProperty("_button").objectReferenceValue = button;
+        so.FindProperty("_icon").objectReferenceValue = icon;
+        so.FindProperty("_cooldownOverlay").objectReferenceValue = overlay;
+        so.FindProperty("_cooldownText").objectReferenceValue = cooldownText;
+        so.FindProperty("_nameText").objectReferenceValue = null;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void SetupPlayerActiveSkillButton(
+        Transform parent,
+        string objectName,
+        int skillIndex,
+        Color backgroundColor)
+    {
+        GameObject buttonObj = EnsureChildObject(parent, objectName);
+        EnsureRectTransform(buttonObj).sizeDelta = new Vector2(142f, 142f);
+
+        LayoutElement layoutElement = EnsureComponent<LayoutElement>(buttonObj);
+        layoutElement.preferredWidth = 142f;
+        layoutElement.preferredHeight = 142f;
+
+        Image background = EnsureComponent<Image>(buttonObj);
+        background.color = backgroundColor;
+        Button button = EnsureComponent<Button>(buttonObj);
+        button.targetGraphic = background;
+        EnsureComponent<UIButton>(buttonObj);
+        PlayerActiveSkillButton skillButton = EnsureComponent<PlayerActiveSkillButton>(buttonObj);
+
+        GameObject iconObj = EnsureChildObject(buttonObj.transform, "Icon");
+        RectTransform iconRect = EnsureRectTransform(iconObj);
+        StretchFill(iconRect);
+        iconRect.offsetMin = new Vector2(18f, 34f);
+        iconRect.offsetMax = new Vector2(-18f, -12f);
+        Image icon = EnsureComponent<Image>(iconObj);
+        icon.preserveAspect = true;
+        icon.raycastTarget = false;
+
+        GameObject overlayObj = EnsureChildObject(buttonObj.transform, "CooldownOverlay");
+        StretchFill(EnsureRectTransform(overlayObj));
+        Image overlay = EnsureComponent<Image>(overlayObj);
+        overlay.color = new Color(0f, 0f, 0f, 0.72f);
+        overlay.type = Image.Type.Filled;
+        overlay.fillMethod = Image.FillMethod.Radial360;
+        overlay.fillOrigin = (int)Image.Origin360.Top;
+        overlay.fillClockwise = true;
+        overlay.raycastTarget = false;
+
+        GameObject cooldownTextObj = EnsureChildObject(buttonObj.transform, "CooldownText");
+        StretchFill(EnsureRectTransform(cooldownTextObj));
+        TextMeshProUGUI cooldownText = EnsureComponent<TextMeshProUGUI>(cooldownTextObj);
+        cooldownText.alignment = TextAlignmentOptions.Center;
+        cooldownText.fontSize = 42f;
+        cooldownText.color = Color.white;
+        cooldownText.raycastTarget = false;
+
+        GameObject nameTextObj = EnsureChildObject(buttonObj.transform, "NameText");
+        RectTransform nameTextRect = EnsureRectTransform(nameTextObj);
+        nameTextRect.anchorMin = new Vector2(0f, 0f);
+        nameTextRect.anchorMax = new Vector2(1f, 0f);
+        nameTextRect.pivot = new Vector2(0.5f, 0f);
+        nameTextRect.anchoredPosition = new Vector2(0f, 5f);
+        nameTextRect.sizeDelta = new Vector2(-8f, 30f);
+        TextMeshProUGUI nameText = EnsureComponent<TextMeshProUGUI>(nameTextObj);
+        nameText.alignment = TextAlignmentOptions.Center;
+        nameText.fontSize = 20f;
+        nameText.color = Color.white;
+        nameText.raycastTarget = false;
+
+        SerializedObject so = new SerializedObject(skillButton);
+        so.FindProperty("_skillIndex").intValue = skillIndex;
+        so.FindProperty("_button").objectReferenceValue = button;
+        so.FindProperty("_icon").objectReferenceValue = icon;
+        so.FindProperty("_cooldownOverlay").objectReferenceValue = overlay;
+        so.FindProperty("_cooldownText").objectReferenceValue = cooldownText;
+        so.FindProperty("_nameText").objectReferenceValue = nameText;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
 
     private static GameObject EnsureChildObject(Transform parent, string name)
     {

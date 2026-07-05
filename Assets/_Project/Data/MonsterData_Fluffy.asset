@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: MonsterData_Fluffy
   m_EditorClassIdentifier: Assembly-CSharp::MonsterData
   _hp: 30
-  _moveSpeed: 1
+  _moveSpeed: 0.2
   _damage: 1
   _reward: 10
   _blockSize: 0

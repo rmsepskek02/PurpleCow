@@ -10,6 +10,7 @@ public static class SkillSetupEditor
         EnsureDataFolder();
         CreateActiveSkillDataAssets();
         CreatePassiveSkillDataAssets();
+        CreatePlayerActiveSkillDataAssets();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -187,6 +188,46 @@ public static class SkillSetupEditor
             },
             iconPath: ""
         );
+    }
+
+    public static void CreatePlayerActiveSkillDataAssets()
+    {
+        CreatePlayerActiveSkillData(
+            "Assets/_Project/Data/PlayerActiveSkillData_Berserk.asset",
+            PlayerActiveSkillType.Berserk,
+            "Berserk",
+            "Assets/_Project/Sprites/SpeedUp.png");
+
+        CreatePlayerActiveSkillData(
+            "Assets/_Project/Data/PlayerActiveSkillData_Clone.asset",
+            PlayerActiveSkillType.Clone,
+            "Illusion",
+            "Assets/_Project/Sprites/Copy.png");
+    }
+
+    private static void CreatePlayerActiveSkillData(
+        string path,
+        PlayerActiveSkillType skillType,
+        string displayName,
+        string iconPath)
+    {
+        if (AssetDatabase.LoadAssetAtPath<PlayerActiveSkillData>(path) != null)
+            return;
+
+        PlayerActiveSkillData data = ScriptableObject.CreateInstance<PlayerActiveSkillData>();
+        SerializedObject so = new SerializedObject(data);
+        so.FindProperty("_skillType").enumValueIndex = (int)skillType;
+        so.FindProperty("_displayName").stringValue = displayName;
+        so.FindProperty("_cooldown").floatValue = 30f;
+        so.FindProperty("_duration").floatValue = 6f;
+        so.FindProperty("_speedMultiplier").floatValue = 1.5f;
+        so.FindProperty("_cloneReturnCount").intValue = 2;
+        so.FindProperty("_icon").objectReferenceValue =
+            AssetDatabase.LoadAssetAtPath<Sprite>(iconPath);
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        AssetDatabase.CreateAsset(data, path);
+        Debug.Log($"[SkillSetupEditor] PlayerActiveSkillData created: {path}");
     }
 
     // ──────────────────────────────────────────
