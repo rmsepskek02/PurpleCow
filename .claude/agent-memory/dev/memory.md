@@ -1374,3 +1374,37 @@
 
 **주요 결정사항:**
 - 두 조건(`axis.sqrMagnitude < 0.0001f`, `angle < 0.0001f`)을 OR로 모두 방어 — sqrMagnitude 체크만으로는 Unity의 `ToAngleAxis(angle=0)` 시 임의의 기본 축(예: Vector3.right) 반환 케이스를 못 걸러낼 수 있어 angle 체크를 추가 가드로 병행
+
+---
+
+## 2026-07-06
+
+### 작업: 몬스터 HP바 버그 수정 (구독 끊김 + 그래픽 미렌더링 + 피격 시에만 표출)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-06/00-16_monster-hp-bar-fix/plan.md` (사용자 사전 승인됨)
+- 기존 파일 1개 수정 + 신규 파일 1개 생성
+
+**수정 파일:**
+- `Assets/_Project/Scripts/UI/MonsterHpBar.cs`
+  - `Start()` → `OnEnable()` 이름 변경(구독 로직 동일 유지) — 오브젝트 풀 재사용 시 `OnDisable`과 짝을 이루어 매번 재구독되도록 수정(버그 1: 두 번째 스폰부터 구독 끊김 해결)
+  - `_canvasGroup` private 필드 추가, `OnEnable()`에서 `_canvasGroup == null`이면 `GetComponent<CanvasGroup>()`으로 런타임 자동 참조(에디터 수동 연결 없음)
+  - `UpdateHp()`에 `_canvasGroup.alpha = current < max ? 1f : 0f;` 추가 — 피격 시(`current < max`)에만 표출, 만피/재스폰 시 자동 숨김. `GameObject.SetActive`는 표시/숨김 용도로 사용하지 않음
+
+**생성 파일:**
+- `Assets/_Project/Scripts/Editor/MonsterHpBarSetupEditor.cs` — `[MenuItem("PurpleCow/Setup/Monster HP Bar Setup")]`, Fluffy/Spider/StoneBug/ForestDeer 4개 프리팹 경로를 자체 배열로 나열(기존 `MonsterOverhaulSetupEditor.Configs`와 공유하지 않음)
+  - `PrefabUtility.EditPrefabContentsScope`로 각 프리팹을 열어: `GetComponentInChildren<Slider>(true)`로 `HpSlider` 탐색(없으면 경고 후 스킵) → `GetComponentInParent<Canvas>()`로 `HpBarCanvas` 탐색, `CanvasGroup` 없으면 추가(`blocksRaycasts=false`, `interactable=false`) → `slider.fillRect != null`이면 멱등성 스킵 → `HpSlider` 하위에 `Border`(`#5A100F`)/`Background`(`#2C2C2C`, inset)/`Fill Area`/`Fill`(`#5A100F`) RectTransform+Image 계층 생성 → `slider.fillRect`를 `Fill`에 연결(`handleRect`는 비워둠), `slider.interactable = false`
+  - 전체 처리 후 `AssetDatabase.SaveAssets()` / `AssetDatabase.Refresh()` 호출
+
+**주의사항:**
+- `MonsterOverhaulSetupEditor.cs`는 참고만 하고 전혀 수정하지 않음(git status로 미변경 확인)
+- 신규 에디터 스크립트 작성 시 각 프리팹을 처리하는 `SetupMonsterHpBar(string)` 메서드가 루프가 아니므로, 최초 작성한 `continue`문(스킵 처리 2곳)이 컴파일 오류였음을 발견하고 `return`으로 즉시 수정함
+
+**Git:**
+- git status로 `MonsterHpBar.cs`(수정), `MonsterHpBarSetupEditor.cs`(신규)만 변경/추가됨을 확인
+- 커밋/푸시는 수행하지 않음(오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- 이 원격 환경에는 Unity 에디터가 없어 신규 에디터 메뉴 실행 결과(프리팹 실제 반영)를 직접 검증할 수 없음 — 사용자가 로컬 Unity에서 `PurpleCow/Setup/Monster HP Bar Setup` 메뉴를 실행해야 4개 프리팹에 `CanvasGroup`/`Border`/`Background`/`Fill Area`/`Fill`이 실제로 생성됨
+- Border/Fill 색상(`#5A100F`)과 Background 색상(`#2C2C2C`)은 plan.md에 확정된 RGBA 근사값을 그대로 사용(0.353/0.063/0.059/1, 0.173/0.173/0.173/1)
+- 새로 생성하는 Image 컴포넌트는 모두 `raycastTarget = false`로 설정(HP바는 클릭 대상 아님, 관례적 권장 사항 반영)
