@@ -985,3 +985,31 @@
 - 블록 스프라이트 로드는 `AssetDatabase.LoadAssetAtPath<Sprite>` 대신 `AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().FirstOrDefault()` 사용 — Multiple 모드 스프라이트(서브에셋 이름이 파일명과 다름, 예: `Block_1x1_0`)를 안전하게 로드하기 위함.
 - 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/프리팹 GUI 편집/asset 재직렬화 검증 불가 — 문법/네이밍/직렬화 필드명(SerializedObject.FindProperty 대상 문자열) 일치 여부만 신중히 재확인함.
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
+
+---
+
+## 2026-07-05
+
+### 작업: PrismPanel(융합 시스템 잔재) 제거 — UISetupEditor.cs + SampleScene.unity
+
+**작업 내용:**
+- task 문서 없이 사용자 명시적 승인으로 즉시 진행 (오케스트레이터 지시에 명시됨)
+- 공식 스펙 PDF 구현 제외 항목(융합 시스템) 관련 빈 스텁 패널 `PrismPanel` 제거
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/UISetupEditor.cs` — `Step3_SetupPanelCanvas()` 내 `panelNames` 배열에서 `"PrismPanel"` 항목 제거 (`{ "LevelUpPanel", "PausePanel", "BallLevelUpPanel", "PrismPanel" }` → `{ "LevelUpPanel", "PausePanel", "BallLevelUpPanel" }`). 나머지 3개 패널은 그대로 유지.
+- `Assets/Scenes/SampleScene.unity` — YAML 텍스트 직접 편집으로 PrismPanel 관련 블록 3개 삭제:
+  - `!u!1 &1731188296` GameObject 블록 (`m_Name: PrismPanel`)
+  - `!u!224 &1731188297` RectTransform 블록 (m_Father: 849164776 = Canvas_Panel)
+  - `!u!225 &1731188298` CanvasGroup 블록
+  - 부모 `Canvas_Panel`의 RectTransform(`!u!224 &849164776`) `m_Children` 리스트에서 `- {fileID: 1731188297}` 참조 라인 1줄 제거 (나머지 3개 자식 LevelUpPanel/PausePanel/BallLevelUpPanel 참조는 유지)
+
+**검증:**
+- `grep -c "PrismPanel" SampleScene.unity` → 0
+- fileID 1731188296/1731188297/1731188298 참조 → 파일 전체에서 매치 없음 (완전 제거 확인)
+- `!u!1660057539 &9223372036854775807 SceneRoots`의 `- {fileID: 849164776}`는 Canvas_Panel 자체를 가리키는 무관한 참조이므로 건드리지 않음
+
+**주요 결정사항:**
+- Unity 에디터 없는 원격 환경이라 씬을 열어 직접 검증 불가 — YAML 텍스트 편집만 수행, fileID 참조 관계(부모 m_Children ↔ 자식 m_GameObject/m_Father)를 grep으로 교차 확인 후 진행
+- LevelUpPanel/PausePanel/BallLevelUpPanel 및 다른 모든 GameObject/컴포넌트는 전혀 건드리지 않음
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
