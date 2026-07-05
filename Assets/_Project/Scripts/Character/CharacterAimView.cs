@@ -40,7 +40,7 @@ public class CharacterAimView : MonoBehaviour
 
         // WeaponPivot의 로컬 좌표계는 SpriteRenderer.flipX와 무관하게 facingLeft 여부와 상관없이
         // 항상 월드 좌표계와 동일하므로, 방향 미러링 없이 원본 direction으로 그대로 각도를 계산한다.
-        float weaponAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f; // 무기 기본 자세(수직)를 0도로 보정
+        float weaponAngle = 90f - Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg; // Unity Z축 회전은 CW이므로 부호 반전(90 - atan2)
         _weaponPivot.localRotation = Quaternion.Euler(0f, 0f, weaponAngle);
 
         // 머리는 무기 회전각의 일부 비율만 보조적으로 반영("방향을 대략 암시"하는 용도)

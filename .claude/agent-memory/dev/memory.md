@@ -1261,3 +1261,22 @@
 **주요 결정사항:**
 - 필드명/기본값은 사용자 지시 그대로 사용, 다른 로직 변경 없음
 - 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView.UpdateAim() 무기 회전각 부호 버그 수정
+
+**작업 내용:**
+- 오케스트레이터가 사용자 로컬 플레이 스크린샷(`targetUI/TestResult/left.jpg`, `right.jpg`) 분석으로 발견한 CW/CCW 부호 불일치 버그 수정. 기존 파일 1개(`CharacterAimView.cs`)만 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs`
+  - `UpdateAim()` 내 `weaponAngle` 계산식을 `Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f` → `90f - Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg`로 부호 반전 (Unity `Quaternion.Euler(0,0,z)` 양수 회전이 이 프로젝트의 2D 카메라 배치에서 CW로 보이는데, 기존 식은 CCW 가정으로 유도되어 X축 방향이 반전되던 문제)
+  - 주석도 `// Unity Z축 회전은 CW이므로 부호 반전(90 - atan2)`로 수정
+
+**주요 결정사항:**
+- `_headTransform.localRotation` 계산 줄은 `weaponAngle` 변수를 그대로 참조하므로 수정 불필요 (자동 반영)
+- `facingLeft`/`flipX`/`pivotPos` 관련 좌우 반전 로직은 이번 버그와 무관하므로 변경하지 않음
+- 커밋/푸시는 수행하지 않음
