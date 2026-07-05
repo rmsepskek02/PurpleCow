@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08676a355841c9040ba8d93da83f7b90, type: 3}
   m_Name: WaveTableData
   m_EditorClassIdentifier: Assembly-CSharp::WaveTableData
-  _baseSpawnCount: 3
+  _baseSpawnCount: 10
   _spawnCountPerWave: 0.5
   _baseTwoCellWeight: 0.1
   _twoCellWeightPerWave: 0.03
