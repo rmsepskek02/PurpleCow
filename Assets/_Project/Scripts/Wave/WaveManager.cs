@@ -212,8 +212,10 @@ public class WaveManager : Singleton<WaveManager>
             }
             else
             {
-                OnWaveCleared?.Invoke();   // UIManager → SkillSelectionPanel 열기
-                // AdvanceToNextWave()는 SkillSelectionPanel.OnSkillSelected 콜백 이후 UIManager가 호출
+                // 스킬 선택(SkillSelectionPanel)은 웨이브 클리어가 아니라 OnKillCountReached(킬 카운트 누적)로
+                // 별도 트리거되는 독립적인 시스템이라, 웨이브 클리어 시 그 콜백을 기다리지 않고 바로 다음 웨이브로 진행한다.
+                OnWaveCleared?.Invoke();
+                AdvanceToNextWave();
             }
         }
     }

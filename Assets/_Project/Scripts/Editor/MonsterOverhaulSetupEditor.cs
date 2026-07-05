@@ -15,6 +15,10 @@ public static class MonsterOverhaulSetupEditor
     private const float TwoCellHp = 50f;
     private const int   TwoCellReward = 18;
 
+    // 블록 스프라이트 원본 크기(0.96, 1칸 기준) 대비 실측 그리드 셀 크기(WaveManager._gridCellSize=0.85) 비율.
+    // 프리팹 전체(캐릭터 스프라이트+블록+콜라이더+HP바)를 이 비율로 축소해 그리드 칸에 맞춘다.
+    private const float GridCellFitScale = 0.85f / 0.96f;
+
     private struct PrefabBlockConfig
     {
         public string Name;
@@ -154,9 +158,14 @@ public static class MonsterOverhaulSetupEditor
         {
             GameObject root = scope.prefabContentsRoot;
 
+            // 그리드 셀 크기(WaveManager._gridCellSize=0.85) 대비 블록 스프라이트 원본 크기(0.96)
+            // 비율만큼 프리팹 전체(스프라이트+콜라이더+HP바)를 축소해 그리드 칸에 맞춘다.
+            // 런타임이 아니라 프리팹 자체에 값을 구워넣는 방식이라, BlockVisual 존재 여부와 무관하게 매번 적용한다.
+            root.transform.localScale = new Vector3(GridCellFitScale, GridCellFitScale, 1f);
+
             if (root.transform.Find("BlockVisual") != null)
             {
-                Debug.Log($"[MonsterOverhaulSetupEditor] {config.Name}.prefab BlockVisual 이미 존재, 스킵.");
+                Debug.Log($"[MonsterOverhaulSetupEditor] {config.Name}.prefab BlockVisual 이미 존재, 스케일만 갱신.");
                 return;
             }
 
