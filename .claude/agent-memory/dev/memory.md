@@ -1052,3 +1052,25 @@
 - Head가 Body가 아닌 Character의 직접 자식이 된 것은 1차 구현과의 명확한 차이점 — plan.md 4단계 계층도 및 사용자 지시 원문이 동일하게 명시.
 - 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/씬 반영 검증 불가. `BallLauncher.Instance.LaunchDirection` 프로퍼티 시그니처, `SerializedObject.FindProperty` 대상 필드명(`_weaponPivot`/`_head`) 문자열 일치만 신중히 재확인함.
 - git 커밋/푸시는 수행하지 않음(오케스트레이터가 검토 후 처리 예정).
+
+---
+
+## 2026-07-05 (추가)
+
+### 작업: 캐릭터 Head/WeaponPivot 좌우 좌표 버그 수정 (오케스트레이터 레퍼런스 재분석 결과 반영)
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs`의 `CreateCharacterPrefab()`에서 Head와 WeaponPivot의 로컬 X좌표 부호를 반전.
+  - Head: `(0.34f, 0.58f)` → `(-0.34f, 0.58f)`
+  - WeaponPivot: `(-0.29f, 0.65f, 0f)` → `(0.29f, 0.65f, 0f)`
+  - Y값은 변경 없음.
+- 오케스트레이터가 원본 게임 레퍼런스(오른쪽 조준 4장 + 왼쪽 조준 3장)와 `Character_Main.png` 합본을 재비교한 결과, 합본 이미지 자체가 "왼쪽 조준" 자세(방울 오른쪽·무기 왼쪽)였음이 확인되어, 기존 코드가 이를 "오른쪽 조준 기본 자세"로 오인해 좌우가 뒤바뀐 상태였음. 이번 수정으로 오른쪽 조준(양수 각도) 기본 자세에서 방울이 왼쪽, 무기가 오른쪽에 오도록 정정.
+- 관련 코드 주석도 함께 정정(Head 위치 주석에 "합본은 왼쪽 조준 자세였다" 취지 반영).
+- `CharacterAimController.cs`의 `_mirroredRotationSign` 등 회전 부호 로직은 이번 위치값 변경과 무관하므로 손대지 않음(지시 그대로 준수).
+- sortingOrder, Weapon의 WeaponPivot 자식 배치, SerializedObject 연결 로직 등 다른 부분은 수정하지 않음.
+
+**결과:** 파일 수정 완료. Unity 미설치 환경이라 실제 프리팹/씬 시각 검증은 불가하며, Unity에서 재생성 후 시각 확인 필요.
+
+**주요 결정사항:**
+- 이번 수정은 오케스트레이터가 이미 확정한 버그(사용자 승인 완료)로, 좌표값 부호 반전 외 다른 로직/구조는 건드리지 않음(외과적 변경 원칙 준수).
+- git 커밋/푸시는 수행하지 않음(사용자 지시).
