@@ -1,3 +1,46 @@
+## 2026-07-05 (몬스터 로스터+컨베이어 스폰 plan.md에 A/B/C/D 추가 섹션 append)
+
+### 작업 내용
+- 기존 task 문서 `plan.md`에 플레이테스트 피드백(A/B/C/D) 반영 섹션을 append(기존 내용 보존, 끝에 추가만)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-21_monster-roster-conveyor-spawn/plan.md`
+- 작업 전 기존 plan.md 전체, `MonsterRules.md` 2장/6장(방금 갱신된 A/B/C/D 확정 내용), 실제 코드 `WaveManager.cs`/`ObjectPool.cs`를 읽어 설계가 코드/문서와 어긋나지 않는지 확인 후 진행
+
+### 결과
+- 신규 섹션 `## 추가 확정 사항 반영 (2026-07-05 플레이테스트 피드백: A/B/C/D)`를 plan.md 끝에 추가
+- **A(프리팹 풀 분리)**: `_monsterPrefab`/`_monsterPool` 제거 → `_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab` 4개 필드 + `Dictionary<MonsterData, ObjectPool<MonsterBase>> _poolByData`로 교체. `Awake()`에서 `_waveTable`의 4종 `MonsterData`를 키로 4개 풀 생성. `PlaceMonster`는 `_poolByData[data].Get()`, `CheckGameOver()`/`HandleMonsterDied()`는 `_poolByData[monster.Data].Return(monster)` 사용(기존 `MonsterBase.Data` 프로퍼티 재사용, 추가 변경 불필요)
+- **B(상단 1행 트리거)+C(틱당 3~7 제한)**: `TryDispenseRoster()`를 `topRow = _gridRows - 1` 한 줄만 스캔하도록 재작성. `belowRow = _gridRows - 2`는 `OneByTwo` 배치 직전 `IsCellFree(col, belowRow)` 사전 확인 용도로만 사용. `maxThisTick = Random.Range(3, 8)`(3~7)와 `placedThisTick` 카운터로 틱당 배치 수 제한. 전체 메서드 코드 스니펫으로 구체화해 반영
+- **D(웨이브 0 전체 배치)**: `SpawnWave()` 마지막 단계를 `if (index == 0) SpawnRosterAcrossFullGrid(); else TryDispenseRoster();`로 분기. 신규 `SpawnRosterAcrossFullGrid()` 메서드는 그리드 전체(5행)를 `bool[,] free`로 관리하며, 로스터가 빌 때까지 (rosterIndex, col, row) 후보 전부 나열 → 무작위 선택 → 배치를 반복하는 코드로 구체화
+- 예상 변경 파일 목록/주의사항 섹션도 이번 추가분 기준으로 갱신(동일 파일 `WaveManager.cs`, 4개 프리팹 Inspector 연결은 사용자가 Unity 에디터에서 직접 확인 필요, `SpawnRosterAcrossFullGrid()`는 웨이브 0에서만 호출되어 성능 우려 없음, 틱당 3~7 제한으로 소진 시간 길어지는 것은 의도된 동작임을 명시)
+- `.cs` 파일은 읽기만 하고 수정하지 않음, AGENTS.md 인덱스 변경 불필요(기존 task 폴더 내 파일 갱신이므로 신규 문서 아님)
+
+### 주요 결정사항
+- 사용자가 제공한 A/B/C/D 설계를 그대로 반영하고 임의 대안 제시 없음(설계는 이미 확정된 것으로 간주)
+- 기존 plan.md의 1~9번 계획은 이미 구현 완료로 간주하고 중복 서술 없이 "기존 계획 O번 항목을 다음과 같이 수정" 형식으로 참조
+- 코드 스니펫은 계획 수준으로만 작성(실제 구현은 dev 에이전트가 별도 진행)
+
+---
+
+## 2026-07-05 (MonsterRules.md 몬스터 스폰 조건 대폭 갱신 — 로스터+컨베이어 방식)
+
+### 작업 내용
+- 몬스터 스폰 조건을 대대적으로 바꾸기로 사용자와 논의 완료 후, `MonsterRules.md`를 새 확정 설계에 맞춰 갱신 (순수 문서 작업, 코드 미반영 — 구현은 이후 별도 research.md/plan.md에서 진행 예정)
+- 경로: `Assets/_Project/Docs/MonsterRules.md`
+
+### 결과
+- 문서 헤더(서두 요약)에 이번 갱신 내용 한 문단 추가: "웨이브 시작 시 일괄 랜덤 배치 + 점유 체크" → "로스터(수량+종류) 사전 결정 + 그리드 상단 2줄 컨베이어 벨트 채움"으로 전면 대체, 웨이브 클리어 조건에 "로스터 전부 소진" 추가, 바닥 도달 시 웨이브클리어 체크 누락 버그 수정 방향 확정을 명시
+- 2장(몬스터 스폰 및 전진 메커닉): 기존 "한 번에 전부 스폰"/"웨이브 시작 시 일괄 랜덤 배치+점유체크" 서술을 로스터+컨베이어 방식으로 교체. 신규 확정 불릿 추가 — (1) 로스터 사전 결정 + 상단 2줄(row 3~4) 빈칸에 순차 채움, (2) 스폰 위치가 상단 2줄로 한정됨, (3) `spawnCheckInterval = _gridCellSize / MoveSpeed`(하드코딩 아님, `MonsterData.MoveSpeed` 실제 참조, 실측 예 0.85초), (4) 세로 2칸 몬스터(ForestDeer)가 상단 2줄 전체를 채우는 것은 의도된 정상 동작, (5) 웨이브 클리어 조건이 "활성 몬스터 0" AND "로스터 전부 소진" 두 조건으로 확장. 구현현황 하위섹션도 함께 갱신(현재 코드는 일괄 스폰 방식이며 새 규칙 미반영임을 명시, `CheckGameOver()`가 `CheckWaveCleared()`를 호출하지 않는 버그를 새로 명시)
+- 6장(웨이브 시스템): "데이터 구조" 문단에 로스터 개념(기존 spawnCount/twoCellWeight 공식 그대로 재사용, 좌표만 상단 2줄 빈칸 발생 시 그때그때 계산) 반영. "WaveManager 흐름"을 로스터+컨베이어 5단계 알고리즘으로 전면 교체하고, 현재 구현 인용문(`>`)에 `CheckGameOver()`가 `CheckWaveCleared()`를 호출하지 않는 버그 상세 설명 추가. 신규 "웨이브 클리어 조건 — 신규 확정" 소섹션을 추가해 조건 변경과 바닥 도달 버그 수정 방향을 한곳에 정리
+- 3장(몬스터 종류/스탯)/4장(HP 관리)/5장(상태이상)은 이번 변경과 무관하므로 건드리지 않음
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- `WaveManager.cs`/`WaveTableData.cs`/`MonsterBase.cs` 현재 코드를 직접 Read로 재확인해 "현재 구현" 서술의 정확성 검증(9열×5행 그리드 전체 점유체크, `CheckGameOver()`가 매 프레임 실행되지만 `CheckWaveCleared()` 미호출, `HandleMonsterDied()`만 호출하는 구조를 코드 라인 기준으로 재확인)
+- 로스터 수량/종류 결정 공식(`BaseSpawnCount`/`SpawnCountPerWave`/`BaseTwoCellWeight`/`TwoCellWeightPerWave`)은 이번 설계 변경으로 바뀌지 않음을 여러 곳에서 명확히 구분 서술(바뀐 것은 배치 방식뿐)
+- 아직 코드 미반영이므로 관련 서술 전체에 "(구현 예정 — 아직 코드 미반영)" 또는 "(현재 구현 — 아직 새 규칙 미반영)" 표시를 일관되게 유지, 새 규칙은 "(확정)"으로 표시
+- task 문서(research.md/plan.md)는 이번 문서 갱신 범위에 포함하지 않음(사용자 지시대로 순수 문서 작업으로 한정, 구현 단계에서 별도 작성 예정)
+
+---
+
 ## 2026-07-05 (조준 방향 Y 하한 제한 research)
 
 ### 작업 내용
