@@ -1,3 +1,42 @@
+## 2026-07-05 (볼-볼 충돌 버그 research)
+
+### 작업 내용
+- 볼-볼 물리 충돌 버그 task research.md 생성 (오케스트레이터가 사전 조사한 원인을 코드/설정 파일 직접 열람으로 검증)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/research.md`
+
+### 결과
+- `Ball.prefab`(m_Layer:0, Untagged), `Physics2DSettings.asset`(m_LayerCollisionMatrix 전부 ffff), `TagManager.asset`(태그 3개만 등록, 레이어 전부 미사용) 직접 확인
+- `SceneSetupEditor.cs`/`MonsterSetupEditor.cs`에 레이어 설정 코드 전무함을 확인, Monster/Block 프리팹 4+4종 및 실제 게임 씬(`Assets/Scenes/SampleScene.unity`) 전체 오브젝트가 m_Layer:0임을 grep으로 재확인
+- 부가 발견: `SceneSetupEditor.Step1_CreateBallPrefab()`이 `TrySetTag(go, "Ball")`을 호출하지만 "Ball" 태그가 `BallSetupEditor.AddRequiredTags()`의 등록 목록(Monster/Wall/Ground)에 빠져 있어 조용히 실패 → Ball.prefab이 Untagged로 남은 실제 이유임을 특정
+- `TrajectoryPreview.cs` line 96 주석이 이 "태그 없음" 상태를 다른 볼 필터링에 의존하고 있음을 확인 → 해결 방식 선택 시 상호작용 검토 필요 항목으로 명시
+- `ObjectPool.Get()`이 고정 크기가 아니라 동적으로 늘어나는 구조임을 검증, 이를 근거로 해결 방식 (a) 전용 Ball 레이어 신설+`IgnoreLayerCollision` vs (b) 볼 쌍마다 `IgnoreCollision` 두 후보의 트레이드오프를 "문제점/구현 대상 파악" 섹션에 정리
+- AGENTS.md는 "개별 task 폴더 목록은 별도 관리하지 않음" 정책이 명시되어 있어 인덱스 등록 생략 (정책 재확인 후 판단)
+
+### 주요 결정사항
+- plan.md는 작성하지 않음 (사용자 확인 대기, TaskRules.md 워크플로우 준수)
+- 코드/프리팹/ProjectSettings 파일은 읽기만 하고 수정하지 않음
+- 열린 질문(사용자 확인 필요): (a) 전용 Ball 레이어 신설 방식 vs (b) 볼 쌍마다 IgnoreCollision 호출 방식 중 선택 필요, (a) 선택 시 TrajectoryPreview.cs의 태그 기반 필터링 로직과의 상호작용 처리 방식도 함께 결정 필요
+
+---
+
+## 2026-07-05 (추가 정정)
+
+### 작업 내용
+- UIRules.md 섹션 11 "구현 방식" 항목 재정정: dev 에이전트가 `_hitRing`의 텍스처 타일링 방식(`CreateRingDashTexture()`, `RING_DASH_COUNT`, `mainTextureScale` 계산)을 완전 폐기하고 `LineRenderer.colorGradient` 기반 방식(`BuildRingDashGradient()`)으로 교체한 실제 구현(오케스트레이터가 git diff로 검증)에 맞춰 문서 서술 갱신
+- 경로: `Assets/_Project/Docs/UIRules.md` (코드 미수정, GameplayMechanics.md는 확인만 하고 변경 없음)
+
+### 결과
+- 섹션 11 "구현 방식" 고리(ring) 관련 문단: `_hitRing`도 레드닷과 동일하게 `CreateSolidTexture()`(단색 텍스처)를 사용하고, 점선 효과는 `_hitRing.colorGradient`(`BuildRingDashGradient()`)의 alphaKeys 8개(4등분 중앙 t=0/0.25/0.5/0.75 알파 1, 경계 t=0.125/0.375/0.625/0.875 알파 0)로 만들어 정확히 4개의 밝은 호가 나타남을 서술, 폐기된 이전 텍스처 타일링 방식(10개 의도했으나 실제 2개로 렌더링되어 폐기)도 참고용으로 한 문장 남김
+- 회전 로직 문단에 "`colorGradient`는 정점 인덱스 기준으로 알파를 매기므로 정점 각도가 회전해도 4개 호 형태가 유지된 채 함께 회전한다" 설명 추가 (회전 로직 자체는 `rotationOffsetDeg`/`Time.time * _ringRotationSpeed`로 기존과 동일, 변경 없음)
+- Inspector 조절 값 표 `_ringRotationSpeed` 행은 변경 없이 유지
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 코드는 이미 구현 완료 상태이므로 건드리지 않고 문서만 실제 구현에 정확히 맞춤
+- GameplayMechanics.md는 사용자 관점 서술("점선(끊어진 호) + 시계방향 회전")만 담고 구현 디테일(텍스처/Gradient)을 언급하지 않으므로 이번 정정 범위에서 제외
+
+---
+
 ## 2026-07-05
 
 ### 작업 내용
@@ -967,3 +1006,22 @@
 ### 주요 결정사항
 - 구체적 구현 방법(점선 세그먼트 개수, 회전 속도/방향, Inspector 노출 여부)은 research.md에서 확정하지 않고 열린 질문 3건으로 명시해 plan.md 단계로 미룸
 - 코드는 읽기만 하고 수정하지 않음, git 커밋/푸시 없음, Bash 미사용, Read/Edit/Write/Glob/Grep만 사용
+
+---
+
+## 2026-07-05 (볼-볼 충돌 버그 plan.md)
+
+### 작업 내용
+- 볼-볼 물리 충돌 버그 task plan.md 신규 생성 (research.md는 이미 사용자 확인 완료 상태, 오케스트레이터-사용자 논의로 확정된 해결 방식 (a)를 그대로 STEP 구조로 반영)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/plan.md`
+- 작성 전 `BallSetupEditor.cs`, `BallLauncher.cs`, `ProjectSettings/TagManager.asset`을 직접 재확인해 레이어 배열 빈 슬롯 위치(인덱스 8)와 기존 태그 등록 패턴(`AddRequiredTags()`)을 재검증
+
+### 결과
+- plan.md 작성 완료: 구현 목표(전용 "Ball" Physics2D 레이어 신설 + `Ball.prefab` 레이어 재배치 + `BallLauncher.Awake()`에 `Physics2D.IgnoreLayerCollision` 1회 호출), 단계별 작업 계획 4단계(레이어 등록 에디터 코드, 프리팹 레이어 할당, 런타임 1회 호출, 문서 갱신 불필요 판단), 예상 변경/생성 파일 목록(`BallSetupEditor.cs`, `Ball.prefab`, `BallLauncher.cs`, `TagManager.asset`), 주의사항 6건 작성
+- "Ball" 태그 미등록 버그는 이번 범위에서 고치지 않고 그대로 둠(사용자 확정), `TrajectoryPreview.cs`의 `IsBlockingTag()`가 순수 태그 기준(`CompareTag`)이라 레이어 변경과 무관함을 주의사항에 명시(오케스트레이터가 이미 확인 완료한 사실을 근거로 인용)
+- 신규 문서 생성이 아니라 기존 task 폴더에 plan.md만 추가하는 것이라 AGENTS.md 인덱스 변경 불필요(개별 task 폴더는 별도 관리하지 않는 기존 정책)
+
+### 주요 결정사항
+- 해결 방식은 (a) 전용 Ball 레이어 + `IgnoreLayerCollision` 전역 1회 호출로 확정(사용자 결정 그대로 반영), Wall/Ground/Monster는 Default 레이어에 유지
+- 레이어 등록(`TagManager.asset`)과 프리팹 `m_Layer` 할당 순서 보장 필요성(`LayerMask.NameToLayer` 값 조회가 저장 이후여야 함)을 주의사항에 명시
+- 코드/프리팹은 건드리지 않고 plan.md만 작성, git 커밋/푸시 없음, Bash 미사용, Read/Write만 사용
