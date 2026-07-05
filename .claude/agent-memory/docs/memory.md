@@ -1,3 +1,42 @@
+## 2026-07-04
+
+### 작업 내용
+- 몬스터 시스템 개편 task plan.md 생성
+- 경로: Assets/_Project/Docs/_Task/2026-07-04/22-53_monster-system-overhaul/plan.md
+- research.md는 이미 사용자 확인 완료 상태였으며, 오케스트레이터-사용자 논의로 확정된 설계 결정사항을 그대로 STEP 1~6으로 구조화
+
+### 결과
+- plan.md 생성 완료: 구현 목표, STEP 1(MonsterData BlockSize 필드) ~ STEP 6(MonsterSetupEditor 정리) 상세 계획, 예상 변경/생성 파일 목록 테이블(코드 5종 + 프리팹 4종 + asset 2종), 주의사항 5건 작성
+- AGENTS.md는 "개별 task 폴더 목록은 별도 관리하지 않음" 정책이 이미 명시되어 있어 이번 task 인덱스 등록은 생략(현재 AGENTS.md 정책 확인 후 판단)
+
+### 주요 결정사항
+- MonsterData에 BlockSize enum(OneByOne/TwoByOne/OneByTwo) 추가, MonsterBase가 OnSpawn/ApplyData 시점에 콜라이더 크기와 HP바 폭을 이 값 기준으로 런타임 자동 적용(데이터가 단일 기준)
+- 프리팹에 BlockVisual 자식(SpriteRenderer 전용, 콜라이더 없음) 추가해 블록+캐릭터 합성, 콜라이더/MonsterBase/tag는 루트 유지 → Ball.cs 완전히 수정 불필요
+- HpBarCanvas를 BlockVisual 자식으로 재배치(MonsterHpBar.cs의 GetComponentInParent는 그대로 MonsterBase 탐색 가능하므로 스크립트 무수정)
+- WaveTableData: WaveEntry/MonsterSpawnEntry(좌표 포함) 구조 완전 제거 → 공식 파라미터(baseSpawnCount/spawnCountPerWave/baseTwoCellWeight/twoCellWeightPerWave/totalWaves) + MonsterData 4종 참조 구조로 전환
+- WaveManager.SpawnWave(): 9열×5행 그리드, 웨이브 인덱스 기반 공식으로 spawnCount/twoCellWeight 계산, 그리드 용량 기준 상한(약 22)으로 사전 제한, occupied bool[,] 매 웨이브 재초기화, 2칸 몬스터 우선 배치 후 1칸 몬스터 배치
+- MonsterSetupEditor.SetupWaveSpawnEntries() 전체 폐기, CreateWaveDataAssets/CreateMonsterDataAssets 새 구조에 맞게 재작성 필요
+- WaveTableData.asset/MonsterData_*.asset 실제 재생성은 로컬 Unity 에디터 실행 필요 — 주의사항에 명시
+
+---
+
+### 작업 내용 (추가)
+- 몬스터 시스템 개편 plan.md의 STEP 6 수정 (사용자 피드백 반영)
+- 경로: Assets/_Project/Docs/_Task/2026-07-04/22-53_monster-system-overhaul/plan.md
+
+### 결과
+- STEP 6 제목을 "MonsterSetupEditor.cs 대폭 정리" → "신규 MonsterOverhaulSetupEditor.cs 작성 (새 데이터 구조 세팅 전용)"으로 교체
+- 예상 변경/생성 파일 목록 테이블에서 MonsterSetupEditor.cs 행 제거, MonsterOverhaulSetupEditor.cs(신규 생성) 행으로 교체
+- 주의사항에 "기존 MonsterSetupEditor.cs는 수정하지 않는다" 문장 신규 추가(6번), 5번 항목에 "결정한 수치는 구현 완료 보고 시 함께 명시한다" 문구 추가
+- STEP 1~5, 구현 목표, 서두 요약 등 나머지 섹션은 전혀 건드리지 않음
+
+### 주요 결정사항
+- 기존 MonsterSetupEditor.cs는 이번 작업에서 전혀 수정하지 않음 — 문자열 기반 리플렉션 API(SerializedObject/FindProperty)를 쓰므로 데이터 구조가 바뀌어도 컴파일에는 영향 없음을 확인, 기존 메뉴 항목은 쓸모없어져도 그대로 방치(제거하지 않음)
+- 새 데이터 구조(MonsterData._blockSize 채우기, WaveTableData.asset 신규 파라미터 구조 생성/갱신, 프리팹 4종 BlockVisual 합성 + HpBarCanvas 재배치)는 전부 신규 MonsterOverhaulSetupEditor.cs(별도 MenuItem: PurpleCow/Setup/Monster Overhaul Setup)가 독립적으로 담당
+- 이전 배경 정사각형 보정 task에서 BackgroundGridFitSetupEditor.cs를 분리했던 전례와 동일한 원칙(기존 다역할 에디터 스크립트를 계속 편집하면 혼선 발생) 적용
+
+---
+
 ## 2026-06-30
 
 ### 작업 내용
@@ -859,3 +898,21 @@
 - ProjectHistory.md 신규 섹션은 기존 날짜 섹션과 동일하게 `### 소제목 (task 경로)` 형식 + `- **문제**/**해결**/**실기기 검증**` 굵은 라벨 bullet 구조로 작성해 2026-07-03 섹션들과 문체 일관성 유지
 - ProjectStatus.md 완료 목록 항목은 기존 항목들과 동일하게 task 경로를 인라인 코드로 병기하고 한 문단으로 요약하는 기존 패턴을 그대로 따름
 - Bash 미사용, Read/Edit만 사용해 작업 완료
+
+---
+
+### 작업 내용 (추가)
+- 몬스터 시스템 개편 본작업 research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/22-53_monster-system-overhaul/research.md` (폴더 신규 생성 포함)
+- `MonsterRules.md`(최근 갱신본), `MonsterData.cs`, `MonsterBase.cs`, `WaveTableData.cs`, `WaveManager.cs`, `MonsterSetupEditor.cs`, `BackgroundFitter.cs`, `WallFitter.cs`, `UIRules.md` 9장을 모두 직접 Read로 확인 후 작성
+- 오케스트레이터가 이미 확인한 프리팹 구조(캐릭터 4종 vs 블록 스텁 4종 완전 분리, 블록+캐릭터 합성 프리팹 부재)와 스프라이트 픽셀 실측 결과(Pillow 측정값)를 그대로 인용해 재확인 없이 반영
+
+### 결과
+- research.md 작성 완료: 현재 상태(프리팹 구조/스프라이트 실측/`MonsterData` 필드/`MonsterBase` 동작/콜라이더/HP바/`WaveTableData` 구조/`WaveManager` 흐름/`MonsterSetupEditor` 자동화/격자 영역 정보 총 10개 세부 항목), 관련 파일 및 의존성 표(신규 파일 없이 기존 파일 14개 + asset 2종), 문제점/구현 대상 8개 항목(MonsterData 블록 크기 표현 선택지 A/B, 프리팹 재구성, 콜라이더 확장, HP바 재배치, WaveTableData 구조 변경, WaveManager 랜덤 배치+점유체크, MonsterSetupEditor 대체 방안, 기존 WaveTableData.asset 재생성 필요성), 결론(4갈래 요약) 작성
+- AGENTS.md는 개별 task 폴더 목록을 별도 인덱스로 관리하지 않는다는 기존 규칙(59번 줄)을 확인하여 인덱스 추가 작업은 수행하지 않음
+
+### 주요 결정사항
+- 해결책/구현 방법은 확정하지 않고 선택지만 나열하는 원칙을 지켜, MonsterData 블록 크기 필드 추가 여부·WaveEntry 가중치 필드 설계·그리드 열/행 계산 방식 등은 모두 복수 선택지로만 서술하고 plan.md로 결정을 미룸
+- 콜라이더/HP바 재배치 이슈는 "블록 크기를 어디서 읽어올지"(선택지 1번)와 서로 연결된 하위 질문이라는 점을 명시해 plan.md 논의 시 연계 검토가 필요함을 강조
+- 기존 `WaveTableData.asset`의 구조 변경 시 재직렬화 문제는 원격 텍스트 환경의 한계로 명시하고, 에디터 자동화 스크립트 처리 여부와 사용자 수동 처리 여부 모두 열어둠
+- Bash 미사용, Read/Write만 사용해 작업 완료
