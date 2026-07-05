@@ -4,8 +4,8 @@
 기존에 `GameplayMechanics.md`(스폰/전진 메커닉)와 `UIRules.md`(HP바, 캐릭터 HP/XP)에 흩어져 있던 몬스터 관련 서술과,
 현재 코드와 어긋난 낡은 초기 설계 task 문서(`_Task/2026-06-30/14-00_Monster시스템구현/`)를 정리하기 위해 신규 작성되었습니다.
 `MonsterBase.cs`/`WaveManager.cs` 실제 코드를 기준으로 작성되었으며, 이후 몬스터 관련 규칙이 추가/변경되면 이 문서를 기준으로 갱신합니다.
-웨이브 구성(전종류 랜덤 등장), 스폰 위치 결정 방식(런타임 랜덤 배치 + 점유 체크), 몬스터별 고정 블록 크기, HP바 표시 방식은 이후 `MonsterOverhaulSetupEditor.cs`/`WaveManager.cs`/`MonsterBase.cs` 개편을 통해 실제 코드에 모두 반영 완료되었습니다.
-과거 버전에서는 이 문서가 이 내용들을 "(구현 예정 — 아직 코드 미반영)"으로 표시했으나, 현재는 아래처럼 전부 "(구현 완료)"로 갱신되었습니다.
+이번 갱신에서는 웨이브 구성(전종류 랜덤 등장), 스폰 위치 결정 방식(런타임 랜덤 배치 + 점유 체크), 몬스터별 고정 블록 크기, HP바 표시 방식이 새로 확정되어 반영되었습니다.
+확정된 설계이지만 아직 코드에는 반영되지 않은 부분은 각 섹션에 "(구현 예정 — 아직 코드 미반영)" 또는 "(현재 구현 — 아직 새 규칙 미반영)"으로 표시했습니다.
 
 ---
 
@@ -34,10 +34,10 @@
 
 ### 구현 현황
 
-관련 코드: `WaveManager.cs`, `MonsterBase.cs`, `MonsterOverhaulSetupEditor.cs`
+관련 코드: `WaveManager.cs`, `MonsterBase.cs`, `MonsterSetupEditor.cs`
 
-- **(구현 완료)** `WaveManager.SpawnWave()`는 웨이브 시작 시점마다 스폰 수만큼 몬스터 종류/좌표를 직접 계산해 한 프레임에 일괄 스폰한다. 더 이상 에디터에서 미리 구워넣은 고정 좌표를 사용하지 않는다(6장 참고).
-- **(구현 완료)** 스폰 위치는 `WaveManager.SpawnWave()`가 매 웨이브 시작마다 점유 배열(`bool[,] occupied`)을 새로 초기화하고, `GetFreeAnchors()`/`MarkOccupied()`로 2칸 몬스터(StoneBug/ForestDeer)를 먼저 랜덤 배치한 뒤 나머지를 1칸 몬스터(Fluffy/Spider)로 채우는 방식으로 런타임에 직접 계산한다. 이전 웨이브의 점유 상태와 무관하게 매 웨이브 새 점유 배열로 초기화되므로 위에서 확정한 "매 웨이브 런타임 랜덤 배치 + 점유 체크" 규칙과 일치한다(6장 참고).
+- **(구현 완료)** `WaveManager`는 `SpawnWave()`에서 웨이브에 속한 `MonsterSpawnEntry` 전체를 한 프레임에 일괄 스폰한다.
+- **(구현 예정 — 아직 코드 미반영)** 현재 코드는 스폰 위치를 `MonsterSpawnEntry.GridPosition`(그리드 좌표) × `_gridCellSize`를 `_spawnRoot.position`에 더해 계산하는데, 이 좌표는 런타임 랜덤이 아니라 `MonsterSetupEditor.SetupWaveSpawnEntries()`가 **에디터에서 한 번 실행 시점에 고정값으로 계산해 `WaveTableData.asset`에 미리 구워넣은 값**이다. 즉 현재는 언제 플레이해도 같은 웨이브는 항상 같은 위치에 몬스터가 뜨며, 위에서 확정한 "매 웨이브 런타임 랜덤 배치 + 점유 체크" 규칙과 어긋난다. `WaveManager`가 점유 체크 기반으로 좌표를 직접 계산하도록 교체가 필요하다(6장 참고).
 - **(구현 완료)** `MonsterBase.Update()`가 매 프레임 `MonsterData.MoveSpeed` 기반으로 `Vector3.down` 방향 이동을 수행한다(시간 연속 하강). 볼 발사/귀환 사이클(`BallLauncher`/`Ball`)과는 완전히 독립적으로 동작한다.
 - **(구현 완료)** `WaveManager.CheckGameOver()`가 `Update()`에서 매 프레임 활성 몬스터의 `transform.position.y`가 `_bottomBoundaryY` 이하인지 체크해 하단 도달을 판정한다. 도달 시 풀 반납 + `OnMonsterReachedBottom` 이벤트 발행.
 - 냉동(`ApplyFreeze`)/슬로우(`ApplySlow`)도 턴 기반이 아니라 초 단위 타이머로 동작한다(4장/5장 참고).
@@ -60,13 +60,14 @@
 - `Block_2x2`(정사각 2칸)는 이번 4종 매칭에는 사용하지 않는다.
 - 콜라이더는 몬스터가 차지하는 블록 전체 크기를 커버해야 한다(2칸짜리 몬스터는 콜라이더도 2칸만큼 커버).
 - 2칸을 차지하는 몬스터(StoneBug/ForestDeer)가 스폰될 때 인접한 다른 몬스터와 겹치지 않도록 **점유 체크(occupancy check)** 로직이 반드시 필요하다(겹침 절대 불가, 랜덤 스폰 — 6장 참고).
-- **(구현 완료)** 위 블록 크기 매핑은 `MonsterData.BlockSize`(enum: `OneByOne`/`TwoByOne`/`OneByTwo`) 필드와 `MonsterBase.ApplyBlockSize()`(콜라이더 크기·HP바 폭 자동 설정)로 코드에 반영되어 있으며, 점유 체크 로직도 `WaveManager.GetFreeAnchors()`/`MarkOccupied()`로 구현되어 있다. 프리팹의 블록 스프라이트 합성/HP바 재배치는 `MonsterOverhaulSetupEditor.cs`가 담당한다.
+- **(구현 예정 — 아직 코드 미반영)** 위 블록 크기 매핑과 점유 체크 로직은 현재 코드에 반영되어 있지 않다.
 
 ### 웨이브별 등장 구성 — 전종류 랜덤 (신규 확정)
 
-- **(구현 완료)** 웨이브 1~20 전 구간에서 4종(Fluffy/Spider/StoneBug/ForestDeer) 전부가 랜덤하게 섞여서 등장한다. 특정 웨이브 구간에서만 종류가 점진적으로 늘어나던 기존 방식은 폐지되었다(2장 참고).
-- **(구현 완료)** 난이도 스케일링: `WaveManager.SpawnWave()`가 `WaveTableData`의 `BaseSpawnCount`/`SpawnCountPerWave`로 웨이브당 스폰 수를(`spawnCount = BaseSpawnCount + SpawnCountPerWave * waveIndex`), `BaseTwoCellWeight`/`TwoCellWeightPerWave`로 2칸 몬스터(StoneBug/ForestDeer) 등장 비율을(`twoCellWeight = BaseTwoCellWeight + TwoCellWeightPerWave * waveIndex`, 0~1로 클램프) 매 웨이브 계산한다. 기본값은 `BaseSpawnCount=10`/`SpawnCountPerWave=0.5`/`BaseTwoCellWeight=0.1`/`TwoCellWeightPerWave=0.03`(`MonsterOverhaulSetupEditor.cs` 기준)이며, 밸런스 튜닝값은 추후 조정 가능하다.
-- 과거 버전에서는 웨이브 1~5는 Fluffy만, 6~10은 +Spider, 11~15는 +StoneBug, 16~20은 +ForestDeer가 추가되는 방식(구 `MonsterSetupEditor.SetupWaveSpawnEntries()`)으로 웨이브별 등장 종류를 점진적으로 늘렸으나, 이 방식은 폐기되었고 현재는 위 가중치 랜덤 방식으로 완전히 대체되었다.
+- **(확정)** 웨이브 1~20 전 구간에서 4종(Fluffy/Spider/StoneBug/ForestDeer) 전부가 랜덤하게 섞여서 등장한다. 특정 웨이브 구간에서만 종류가 점진적으로 늘어나던 기존 방식은 폐지되었다(2장 참고).
+- 난이도 스케일링 방향성: 웨이브가 진행될수록 (a) 웨이브당 스폰 수가 증가하고, (b) 2칸 몬스터(StoneBug/ForestDeer)의 등장 가중치가 증가한다. **정확한 수치 공식(스폰 수 증가 폭, 가중치 곡선 등)은 아직 미정이며 추후 별도 plan.md에서 결정한다.**
+
+> **(현재 구현 — 아직 새 규칙 미반영)** 현재 코드(`MonsterSetupEditor.SetupWaveSpawnEntries()`)는 웨이브 1~5는 Fluffy만, 6~10은 +Spider, 11~15는 +StoneBug, 16~20은 +ForestDeer가 추가되는 방식으로 웨이브별 등장 종류를 점진적으로 늘리며, 좌표까지 고정값으로 계산해 `WaveTableData.asset`에 구워넣는다. 각 웨이브의 스폰 수도 그룹(5웨이브 단위)과 그룹 내 위치에 따라 점진적으로 증가하도록 자동 계산된다(`spawnCount = 3 + posInGroup + groupIdx * 2`). 이 방식은 위 확정 규칙에 따라 폐기될 예정이다.
 
 ### `MonsterData` (ScriptableObject) 필드
 
@@ -78,9 +79,9 @@
 | `MoveSpeed` | float | 초당 하강 속도 |
 | `Damage` | int | 하단 도달 시 캐릭터에게 주는 피해량 |
 | `Reward` | int | 처치/통과 시 획득 XP (`UIRules.md` 섹션 10 참고) |
-| `BlockSize` | enum(`OneByOne`/`TwoByOne`/`OneByTwo`) | 몬스터가 차지하는 블록 크기. 콜라이더 크기/HP바 폭 자동 계산에 사용(`MonsterBase.ApplyBlockSize()`) |
 
-- **(구현 완료)** 2칸 몬스터(StoneBug/ForestDeer)는 1칸 몬스터(Fluffy/Spider)보다 `Hp`/`Reward`가 더 크게 차등을 둔다. `MonsterSetupEditor.CreateMonsterDataAssets()`가 생성하는 기본값(Hp 30 / MoveSpeed 1 / Damage 1 / Reward 10)은 4종 모두 동일하게 유지되지만, 이후 `MonsterOverhaulSetupEditor.cs`가 2칸 몬스터(StoneBug/ForestDeer)만 `Hp=50`/`Reward=18`로 상향 조정한다(1칸 몬스터 Fluffy/Spider는 기본값 Hp 30/Reward 10 그대로 유지).
+- **(확정)** 2칸 몬스터(StoneBug/ForestDeer)는 1칸 몬스터(Fluffy/Spider)보다 `Hp`/`Reward`가 더 크게 차등을 둔다. 정확한 수치는 아직 미정이며 "더 크다"는 방향성만 규칙으로 확정되었다.
+- **(현재 구현 — 아직 새 규칙 미반영)** `MonsterSetupEditor.CreateMonsterDataAssets()`가 생성하는 기본값은 4종 모두 동일(Hp 30 / MoveSpeed 1 / Damage 1 / Reward 10)이다. 몬스터별 실제 밸런스 차이(2칸 몬스터 상향 포함)는 아직 반영되지 않았으며, 이후 각 `MonsterData` 에셋을 개별 조정하는 방식으로 반영될 예정이다.
 
 ---
 
@@ -145,27 +146,37 @@
 
 관련 코드: `WaveTableData.cs`, `WaveManager.cs`
 
-### 데이터 구조 (구현 완료)
+### 데이터 구조 — 신규 확정 구조
 
-`WaveTableData`는 더 이상 몬스터의 정확한 스폰 좌표를 저장하지 않는다. 웨이브당 "스폰 수"와 "몬스터 종류별 등장 가중치"를 계산하기 위한 **구성 파라미터만** 가지며, 실제 좌표는 웨이브가 시작될 때마다 `WaveManager`가 점유 체크 로직을 이용해 매번 새로 랜덤 계산한다(2장/3장 참고). 과거 버전에 있던 `WaveEntry`/`MonsterSpawnEntry`(웨이브별 `MonsterData` + 고정 `GridPosition` 목록) 구조는 완전히 폐기되었다.
+**(확정)** `WaveTableData`는 더 이상 몬스터의 정확한 스폰 좌표를 저장하지 않는다. 웨이브당 "스폰 수"와 "몬스터 종류별 등장 가중치" 같은 **구성 파라미터만** 가지며, 실제 좌표는 웨이브가 시작될 때마다 `WaveManager`가 점유 체크 로직을 이용해 매번 새로 랜덤 계산한다(2장/3장 참고).
 
-- `WaveTableData`(ScriptableObject) 필드: `BaseSpawnCount`(int), `SpawnCountPerWave`(float), `BaseTwoCellWeight`(float), `TwoCellWeightPerWave`(float), `TotalWaves`(int, 기본 20), `FluffyData`/`SpiderData`/`StoneBugData`/`ForestDeerData`(각 몬스터 종류의 `MonsterData` 참조).
-- 좌표(`GridPosition`)는 더 이상 어떤 데이터 에셋에도 저장되지 않으며, 전적으로 `WaveManager.SpawnWave()`가 런타임에 계산한다(아래 참고).
-- 이 파라미터들의 초기값 세팅은 `MonsterOverhaulSetupEditor.SetupWaveTableData()`가 담당한다.
+- `WaveTableData`(ScriptableObject): 20개 웨이브 전체를 테이블 형태로 관리하는 큰 구조는 유지한다.
+- `WaveEntry`: 웨이브 번호 + 이 웨이브의 스폰 수, 몬스터 종류별 등장 가중치 등 구성 파라미터를 갖는다. 정확한 필드 설계(가중치 표현 방식 등)는 아직 미정이며 추후 plan.md에서 확정한다.
+- 좌표(`GridPosition`)는 더 이상 `WaveEntry`/`MonsterSpawnEntry`에 저장되지 않는다.
 
-### `WaveManager` 흐름 (구현 완료)
+> **(현재 구현 — 아직 새 규칙 미반영)** 현재 코드는 `WaveEntry`가 `List<MonsterSpawnEntry> SpawnEntries`를 가지며, `MonsterSpawnEntry`는 `MonsterData Data`(몬스터 종류) + `Vector2Int GridPosition`(정확한 스폰 좌표)을 그대로 갖고 있다. 이 좌표는 `MonsterSetupEditor.SetupWaveSpawnEntries()`가 에디터에서 한 번 계산해 에셋에 구워넣은 고정값이며, 위 확정 구조(구성 파라미터만 저장)로 교체가 필요하다.
 
-`WaveManager.SpawnWave()`는 `WaveTableData`에서 이번 웨이브의 스폰 수/가중치 구성 파라미터만 읽어오고, 웨이브가 시작되는 시점마다 아래 흐름 전체를 새로 계산한다.
+### `WaveManager` 흐름 — 신규 확정 흐름
 
-1. `Awake()`: `MonsterBase` 프리팹으로 `ObjectPool<MonsterBase>` 생성.
-2. `Start()`: `SpawnWave(0)` 호출로 첫 웨이브 스폰.
-3. `SpawnWave(index)`: `BaseSpawnCount`/`SpawnCountPerWave`로 이번 웨이브 스폰 수를, `BaseTwoCellWeight`/`TwoCellWeightPerWave`로 2칸 몬스터 등장 비율을 계산한다(3장 참고). 웨이브 시작마다 점유 배열(`bool[,] occupied`)을 새로 초기화하고, 2칸 몬스터(StoneBug/ForestDeer)를 `GetFreeAnchors()`(점유되지 않은 좌표 후보 탐색)/`MarkOccupied()`로 먼저 랜덤 배치한 뒤, 나머지 스폰 수만큼 1칸 몬스터(Fluffy/Spider)로 채운다. 결정된 그리드 좌표를 월드 좌표로 변환해 풀에서 꺼낸 몬스터를 배치하고 `_activeMonsters`에 추가한다. `OnWaveStarted(waveNumber)`, `OnMonsterCountChanged(현재, 전체)`를 발행한다. 이전 웨이브의 점유 상태와는 무관하게 매 웨이브 새로 랜덤 결정된다(2장 참고).
-4. `Update() → CheckGameOver()`: 매 프레임 활성 몬스터의 `position.y`가 `_bottomBoundaryY` 이하인지 체크(전진은 `MonsterBase.Update()`가 자체적으로 수행). 도달 시 리스트에서 제거 + 풀 반납 + `OnMonsterReachedBottom` 발행.
-5. `MonsterBase.OnMonsterDied` 구독(`OnEnable`/`OnDisable`) → `HandleMonsterDied()`: 리스트 제거, 풀 반납, `_totalKillCount` 증가 → `CheckSkillUnlock()`(`_killCountForSkill`마다 `OnKillCountReached` 발행) → `OnMonsterCountChanged` 발행 → `CheckWaveCleared()`.
-6. `CheckWaveCleared()`: 활성 몬스터 수가 0이면, 마지막 웨이브였던 경우 `OnAllWavesCleared`를 발행한다. 마지막 웨이브가 아니었던 경우 `OnWaveCleared`를 발행한 뒤 **스킬 선택 완료를 기다리지 않고 곧바로 `AdvanceToNextWave()`를 직접 호출**해 다음 웨이브를 스폰한다.
-7. `AdvanceToNextWave()`: 웨이브 인덱스를 증가시키고 다음 웨이브를 스폰하거나(모두 소진 시) `OnAllWavesCleared`를 발행한다. 이 메서드는 `CheckWaveCleared()`가 직접 호출하므로, 외부(UIManager 등)가 스킬 선택 완료 콜백 이후 별도로 호출할 필요가 없다.
+**(확정)** `WaveManager.SpawnWave()`는 `WaveTableData`에서 이번 웨이브의 스폰 수/가중치 구성만 읽어오고, 웨이브가 시작되는 시점에 매번 다음을 새로 계산해야 한다.
 
-**스킬 선택 UI와 웨이브 진행은 서로 완전히 독립적인 트리거를 가진다.** `SkillSelectionPanel`은 `OnWaveCleared`가 아니라 **처치 수 누적 트리거(`WaveManager.OnKillCountReached`, `_killCountForSkill`마다 발행)**를 구독해 열린다(`SkillSelectionPanel.OnEnable()`에서 `WaveManager.OnKillCountReached += OpenPanel` 구독). 웨이브 클리어 시점에는 스킬 선택 패널이 열려 있든 아니든 상관없이 `WaveManager`가 바로 다음 웨이브로 진행하며, 스킬 선택 완료(`UIManager.OnSkillSelectionComplete()`)는 그저 `Time.timeScale`을 복구하고 패널을 닫는 역할만 한다. 이는 PDF 스펙("각 웨이브에서 조건(처치 수) 충족 시 3택지 선택 UI 노출")과 일치하는 동작이다.
+1. 구성된 스폰 수만큼, 몬스터 종류를 가중치에 따라 랜덤 결정한다.
+2. 필드 상단 그리드 영역 내에서 각 몬스터의 스폰 위치를 랜덤으로 결정하되, 점유 체크 로직으로 이미 배치가 확정된 다른 몬스터(특히 2칸짜리)와 겹치지 않는 좌표만 후보로 사용한다(겹침 절대 불가).
+3. 결정된 좌표에 몬스터를 배치한다.
+
+이전 웨이브의 점유 상태와는 무관하게 매 웨이브 새로 랜덤 결정된다(2장 참고). **(구현 예정 — 아직 코드 미반영)**
+
+> **(현재 구현 — 아직 새 규칙 미반영)** 현재 `WaveManager`는 아래처럼 동작하며, 위 확정 흐름으로 교체가 필요하다.
+>
+> 1. `Awake()`: `MonsterBase` 프리팹으로 `ObjectPool<MonsterBase>` 생성.
+> 2. `Start()`: `SpawnWave(0)` 호출로 첫 웨이브 스폰.
+> 3. `SpawnWave(index)`: 해당 웨이브의 `SpawnEntries`를 순회하며 풀에서 몬스터를 꺼내(`ApplyData` + `GridPosition` 기반 **고정** 위치 설정) `_activeMonsters`에 추가. `OnWaveStarted(waveNumber)`, `OnMonsterCountChanged(현재, 전체)` 발행.
+> 4. `Update() → CheckGameOver()`: 매 프레임 활성 몬스터의 `position.y`가 `_bottomBoundaryY` 이하인지 체크(전진은 `MonsterBase.Update()`가 자체적으로 수행). 도달 시 리스트에서 제거 + 풀 반납 + `OnMonsterReachedBottom` 발행.
+> 5. `MonsterBase.OnMonsterDied` 구독(`OnEnable`/`OnDisable`) → `HandleMonsterDied()`: 리스트 제거, 풀 반납, `_totalKillCount` 증가 → `CheckSkillUnlock()`(`_killCountForSkill`마다 `OnKillCountReached` 발행) → `OnMonsterCountChanged` 발행 → `CheckWaveCleared()`.
+> 6. `CheckWaveCleared()`: 활성 몬스터 수가 0이면 마지막 웨이브인 경우 `OnAllWavesCleared`를 즉시 발행하고, 아니면 `OnWaveCleared`를 발행한다(UIManager가 이를 받아 SkillSelectionPanel을 연다).
+> 7. `AdvanceToNextWave()`: SkillSelectionPanel에서 스킬 선택 완료 콜백 이후 UIManager가 호출. 웨이브 인덱스를 증가시키고 다음 웨이브를 스폰하거나(모두 소진 시) `OnAllWavesCleared`를 발행.
+
+위 3~7번 흐름 중 스킬/킬카운트/웨이브 클리어 판정 로직(5~7번)은 좌표 계산 방식이 바뀌어도 그대로 유지될 예정이다. 변경이 필요한 부분은 3번(`SpawnWave`)의 위치 계산 로직뿐이다.
 
 ### 스킬 시스템이 참조하는 헬퍼
 
@@ -189,11 +200,10 @@
 
 | 파일 | 경로 | 설명 |
 |---|---|---|
-| MonsterData.cs | `Assets/_Project/Scripts/Data/MonsterData.cs` | 몬스터 스탯 ScriptableObject (Hp/MoveSpeed/Damage/Reward/BlockSize) |
-| MonsterBase.cs | `Assets/_Project/Scripts/Monster/MonsterBase.cs` | 몬스터 HP/이동/상태이상/사망 처리, 블록 크기별 콜라이더/HP바 폭 적용(`ApplyBlockSize`), 풀링(IPoolable) |
-| WaveTableData.cs | `Assets/_Project/Scripts/Data/WaveTableData.cs` | 웨이브 20개 구성 파라미터 ScriptableObject (BaseSpawnCount/SpawnCountPerWave/BaseTwoCellWeight/TwoCellWeightPerWave/몬스터 종류별 MonsterData 참조) |
+| MonsterData.cs | `Assets/_Project/Scripts/Data/MonsterData.cs` | 몬스터 스탯 ScriptableObject (Hp/MoveSpeed/Damage/Reward) |
+| MonsterBase.cs | `Assets/_Project/Scripts/Monster/MonsterBase.cs` | 몬스터 HP/이동/상태이상/사망 처리, 풀링(IPoolable) |
+| WaveTableData.cs | `Assets/_Project/Scripts/Data/WaveTableData.cs` | 웨이브 20개 구성 테이블 ScriptableObject (WaveEntry/MonsterSpawnEntry) |
 | WaveManager.cs | `Assets/_Project/Scripts/Wave/WaveManager.cs` | 웨이브 스폰/진행/클리어 판정, 킬카운트 기반 스킬 선택 트리거 |
 | Ball.cs | `Assets/_Project/Scripts/Ball/Ball.cs` | 몬스터와의 충돌 감지 및 데미지 계산/적용 |
 | BallSkillBase.cs | `Assets/_Project/Scripts/Skill/Base/BallSkillBase.cs` | 볼 스킬 공통 베이스, `OnBallHit(MonsterBase)`에서 몬스터 상태이상 API 호출 |
-| MonsterSetupEditor.cs | `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs` | 몬스터 데이터/웨이브 테이블 SO 에셋 최초 생성 에디터 스크립트. `SetupWaveSpawnEntries()`(구 `WaveEntry`/`MonsterSpawnEntry` 기반 고정 좌표 굽기)는 현재 `WaveTableData` 구조와 더 이상 맞지 않는 낡은 메서드로, 실제로는 `MonsterOverhaulSetupEditor.cs`가 이를 대체한다 |
-| MonsterOverhaulSetupEditor.cs | `Assets/_Project/Scripts/Editor/MonsterOverhaulSetupEditor.cs` | 몬스터 블록 크기(`BlockSize`) 데이터화, 2칸 몬스터 Hp/Reward 상향, `WaveTableData` 신규 파라미터 구조 세팅, 프리팹 블록 비주얼(스프라이트 합성)/HP바 재배치를 전담하는 에디터 스크립트 |
+| MonsterSetupEditor.cs | `Assets/_Project/Scripts/Editor/MonsterSetupEditor.cs` | 몬스터/웨이브 SO 에셋 자동 생성 및 웨이브별 스폰 데이터 자동 설정 에디터 스크립트 |
