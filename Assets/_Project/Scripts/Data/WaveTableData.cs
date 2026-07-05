@@ -3,7 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "WaveTableData", menuName = "PurpleCow/WaveTableData")]
 public class WaveTableData : ScriptableObject
 {
-    [SerializeField] private int   _baseSpawnCount = 3;
+    [SerializeField] private int   _baseSpawnCount = 10;
     [SerializeField] private float _spawnCountPerWave = 0.5f;
     [SerializeField] private float _baseTwoCellWeight = 0.1f;
     [SerializeField] private float _twoCellWeightPerWave = 0.03f;

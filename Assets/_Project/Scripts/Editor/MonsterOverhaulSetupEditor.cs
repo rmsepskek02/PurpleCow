@@ -110,7 +110,7 @@ public static class MonsterOverhaulSetupEditor
         MonsterData forestDeer = AssetDatabase.LoadAssetAtPath<MonsterData>($"{DataFolder}/MonsterData_ForestDeer.asset");
 
         SerializedObject so = new SerializedObject(waveTable);
-        so.FindProperty("_baseSpawnCount").intValue = 3;
+        so.FindProperty("_baseSpawnCount").intValue = 10;
         so.FindProperty("_spawnCountPerWave").floatValue = 0.5f;
         so.FindProperty("_baseTwoCellWeight").floatValue = 0.1f;
         so.FindProperty("_twoCellWeightPerWave").floatValue = 0.03f;

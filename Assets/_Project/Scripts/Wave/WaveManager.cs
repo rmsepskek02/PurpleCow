@@ -116,7 +116,7 @@ public class WaveManager : Singleton<WaveManager>
                 monster.ApplyData(data);
 
             Vector3 worldPosition = _spawnRoot.position + new Vector3(
-                anchor.x * _gridCellSize,
+                (anchor.x - (_gridColumns - 1) / 2f) * _gridCellSize,
                 anchor.y * _gridCellSize,
                 0f
             );
