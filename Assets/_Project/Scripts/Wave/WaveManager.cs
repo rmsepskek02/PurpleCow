@@ -17,6 +17,8 @@ public class WaveManager : Singleton<WaveManager>
 
     private ObjectPool<MonsterBase> _monsterPool;
     private List<MonsterBase> _activeMonsters = new List<MonsterBase>();
+    private List<MonsterData> _waveRoster = new List<MonsterData>();
+    private float _spawnCheckTimer;
     private int _currentWaveIndex;
     private int _totalKillCount;
     private int _currentWaveTotalCount;
@@ -55,6 +57,20 @@ public class WaveManager : Singleton<WaveManager>
     private void Update()
     {
         CheckGameOver();
+
+        if (_waveRoster.Count == 0)
+            return; // 로스터 소진 시 스캔 자체를 건너뛰어 성능 낭비 방지
+
+        _spawnCheckTimer += Time.deltaTime;
+
+        float referenceMoveSpeed = _waveTable.FluffyData.MoveSpeed;
+        float spawnCheckInterval = _gridCellSize / referenceMoveSpeed;
+
+        if (_spawnCheckTimer >= spawnCheckInterval)
+        {
+            _spawnCheckTimer -= spawnCheckInterval;
+            TryDispenseRoster();
+        }
     }
 
     private void SpawnWave(int index)
@@ -72,101 +88,141 @@ public class WaveManager : Singleton<WaveManager>
         int capacityLimit = (_gridColumns * _gridRows) / 2;
         spawnCount = Mathf.Min(spawnCount, capacityLimit);
 
-        // 4. 웨이브 시작마다 점유 배열 새로 초기화
-        bool[,] occupied = new bool[_gridColumns, _gridRows];
-        var spawnList = new List<(MonsterData data, Vector2Int anchor)>();
+        // 4. 이번 웨이브 로스터 계산 (좌표 없이 종류/수량만 결정)
+        _waveRoster.Clear();
 
-        // 5. 2칸 몬스터(StoneBug/ForestDeer) 먼저 배치
+        // 5. 2칸 몬스터(StoneBug/ForestDeer) 로스터 채우기
         int twoCellTarget = Mathf.Min(Mathf.RoundToInt(spawnCount * twoCellWeight), spawnCount);
         for (int i = 0; i < twoCellTarget; i++)
         {
             bool horizontal = UnityEngine.Random.value < 0.5f;
-            int width  = horizontal ? 2 : 1;
-            int height = horizontal ? 1 : 2;
             MonsterData data = horizontal ? _waveTable.StoneBugData : _waveTable.ForestDeerData;
-
-            List<Vector2Int> candidates = GetFreeAnchors(occupied, width, height);
-            if (candidates.Count == 0)
-                break;
-
-            Vector2Int anchor = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-            MarkOccupied(occupied, anchor, width, height);
-            spawnList.Add((data, anchor));
+            _waveRoster.Add(data);
         }
 
-        // 6. 나머지 스폰 수만큼 1칸 몬스터(Fluffy/Spider)로 채움
-        int remaining = spawnCount - spawnList.Count;
+        // 6. 나머지 스폰 수만큼 1칸 몬스터(Fluffy/Spider) 로스터 채우기
+        int remaining = spawnCount - twoCellTarget;
         for (int i = 0; i < remaining; i++)
         {
             MonsterData data = UnityEngine.Random.value < 0.5f ? _waveTable.FluffyData : _waveTable.SpiderData;
-
-            List<Vector2Int> candidates = GetFreeAnchors(occupied, 1, 1);
-            if (candidates.Count == 0)
-                break;
-
-            Vector2Int anchor = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-            MarkOccupied(occupied, anchor, 1, 1);
-            spawnList.Add((data, anchor));
+            _waveRoster.Add(data);
         }
 
-        // 7~8. 그리드 좌표 → 월드 좌표 변환 후 스폰
-        foreach ((MonsterData data, Vector2Int anchor) in spawnList)
-        {
-            MonsterBase monster = _monsterPool.Get();
-            if (data != null)
-                monster.ApplyData(data);
-
-            Vector3 worldPosition = _spawnRoot.position + new Vector3(
-                (anchor.x - (_gridColumns - 1) / 2f) * _gridCellSize,
-                anchor.y * _gridCellSize,
-                0f
-            );
-            monster.transform.position = worldPosition;
-            _activeMonsters.Add(monster);
-        }
-
-        // 9. 웨이브 시작/몬스터 수 변화 이벤트 발행
-        _currentWaveTotalCount = spawnList.Count;
+        // 7. 웨이브 시작/몬스터 수 변화 이벤트 발행
+        _currentWaveTotalCount = _waveRoster.Count;
 
         OnWaveStarted?.Invoke(index + 1);
         OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
+
+        // 8. 웨이브 시작과 동시에 첫 몬스터가 바로 나타나도록 즉시 1회 디스펜스
+        TryDispenseRoster();
     }
 
-    private List<Vector2Int> GetFreeAnchors(bool[,] occupied, int width, int height)
+    private void TryDispenseRoster()
     {
-        var candidates = new List<Vector2Int>();
+        if (_waveRoster.Count == 0)
+            return;
 
-        for (int col = 0; col <= _gridColumns - width; col++)
+        int midRow = _gridRows - 2;
+        int topRow = _gridRows - 1;
+
+        bool[] midRowFree = new bool[_gridColumns];
+        bool[] topRowFree = new bool[_gridColumns];
+        for (int col = 0; col < _gridColumns; col++)
         {
-            for (int row = 0; row <= _gridRows - height; row++)
+            midRowFree[col] = IsCellFree(col, midRow);
+            topRowFree[col] = IsCellFree(col, topRow);
+        }
+
+        int[] rows = { midRow, topRow };
+        foreach (int row in rows)
+        {
+            bool[] rowFree = row == midRow ? midRowFree : topRowFree;
+
+            for (int col = 0; col < _gridColumns; col++)
             {
-                bool isFree = true;
-                for (int dx = 0; dx < width && isFree; dx++)
+                if (_waveRoster.Count == 0)
+                    return;
+
+                if (!rowFree[col])
+                    continue;
+
+                bool oneByOneFits = true;
+                bool twoByOneFits = col + 1 < _gridColumns && rowFree[col + 1];
+                bool oneByTwoFits = row == midRow && topRowFree[col];
+
+                List<int> fittingIndices = new List<int>();
+                for (int i = 0; i < _waveRoster.Count; i++)
                 {
-                    for (int dy = 0; dy < height && isFree; dy++)
-                    {
-                        if (occupied[col + dx, row + dy])
-                            isFree = false;
-                    }
+                    BlockSize size = _waveRoster[i].BlockSize;
+                    if (size == BlockSize.OneByOne && oneByOneFits)
+                        fittingIndices.Add(i);
+                    else if (size == BlockSize.TwoByOne && twoByOneFits)
+                        fittingIndices.Add(i);
+                    else if (size == BlockSize.OneByTwo && oneByTwoFits)
+                        fittingIndices.Add(i);
                 }
 
-                if (isFree)
-                    candidates.Add(new Vector2Int(col, row));
+                if (fittingIndices.Count == 0)
+                    continue;
+
+                int rosterIndex = fittingIndices[UnityEngine.Random.Range(0, fittingIndices.Count)];
+                MonsterData data = _waveRoster[rosterIndex];
+
+                PlaceMonster(data, col, row);
+                _waveRoster.RemoveAt(rosterIndex);
+
+                switch (data.BlockSize)
+                {
+                    case BlockSize.OneByOne:
+                        rowFree[col] = false;
+                        break;
+                    case BlockSize.TwoByOne:
+                        rowFree[col] = false;
+                        rowFree[col + 1] = false;
+                        break;
+                    case BlockSize.OneByTwo:
+                        midRowFree[col] = false;
+                        topRowFree[col] = false;
+                        break;
+                }
             }
         }
-
-        return candidates;
     }
 
-    private void MarkOccupied(bool[,] occupied, Vector2Int anchor, int width, int height)
+    private bool IsCellFree(int col, int row)
     {
-        for (int dx = 0; dx < width; dx++)
+        Vector3 cellWorldPos = GridToWorldPosition(col, row);
+        float halfCell = _gridCellSize / 2f;
+
+        foreach (MonsterBase monster in _activeMonsters)
         {
-            for (int dy = 0; dy < height; dy++)
-            {
-                occupied[anchor.x + dx, anchor.y + dy] = true;
-            }
+            Vector3 pos = monster.transform.position;
+            if (Mathf.Abs(pos.x - cellWorldPos.x) < halfCell && Mathf.Abs(pos.y - cellWorldPos.y) < halfCell)
+                return false;
         }
+        return true;
+    }
+
+    private Vector3 GridToWorldPosition(int col, int row)
+    {
+        return _spawnRoot.position + new Vector3(
+            (col - (_gridColumns - 1) / 2f) * _gridCellSize,
+            row * _gridCellSize,
+            0f
+        );
+    }
+
+    private void PlaceMonster(MonsterData data, int col, int row)
+    {
+        MonsterBase monster = _monsterPool.Get();
+        if (data != null)
+            monster.ApplyData(data);
+
+        monster.transform.position = GridToWorldPosition(col, row);
+        _activeMonsters.Add(monster);
+
+        OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
     }
 
     private void CheckGameOver()
@@ -180,6 +236,8 @@ public class WaveManager : Singleton<WaveManager>
                 _monsterPool.Return(monster);
                 OnMonsterReachedBottom?.Invoke(monster);
                 OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
+
+                CheckWaveCleared();
             }
         }
     }
@@ -204,7 +262,7 @@ public class WaveManager : Singleton<WaveManager>
 
     private void CheckWaveCleared()
     {
-        if (_activeMonsters.Count == 0)
+        if (_activeMonsters.Count == 0 && _waveRoster.Count == 0)
         {
             // 마지막 웨이브인 경우 스킬 선택 없이 바로 종료
             if (_currentWaveIndex + 1 >= _waveTable.TotalWaves)
