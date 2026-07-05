@@ -47,14 +47,16 @@ public static class CharacterSetupEditor
         CreateSpritePart("Body", root.transform, BodySpritePath, Vector2.zero, 0);
 
         // Head: Character의 직접 자식(Body 자식 아님). 조준 각도를 ±10도로 좁게 클램프해 제자리 tilt만 한다.
-        GameObject head = CreateSpritePart("Head", root.transform, HeadSpritePath, new Vector2(0.34f, 0.58f), 1);
+        // Character_Main.png 합본은 "왼쪽 조준" 자세(방울 오른쪽, 무기 왼쪽)였다. 오른쪽 조준(양수 각도) 기본
+        // 자세에서는 방울이 왼쪽, 무기가 오른쪽에 와야 하므로 합본 좌표 대비 X 부호를 반전해 배치한다.
+        GameObject head = CreateSpritePart("Head", root.transform, HeadSpritePath, new Vector2(-0.34f, 0.58f), 1);
 
         // WeaponPivot: 회전축 역할을 하는 빈 오브젝트. 원본 게임 레퍼런스를 재분석한 결과
         // 무기의 손잡이 쪽은 캐릭터 어깨 근처에 거의 고정되고 갈고리 끝만 호를 그리므로,
         // 회전축을 무기 스프라이트 자신이 아니라 이 빈 오브젝트로 분리했다.
         GameObject weaponPivot = new GameObject("WeaponPivot");
         weaponPivot.transform.SetParent(root.transform, false);
-        weaponPivot.transform.localPosition = new Vector3(-0.29f, 0.65f, 0f);
+        weaponPivot.transform.localPosition = new Vector3(0.29f, 0.65f, 0f);
 
         // Weapon: WeaponPivot의 자식. Character_main_weapon.png의 커스텀 spritePivot(0.18, 0.29,
         // 손잡이 부근)이 이미 "축 → 콘텐츠" 오프셋을 담당하므로 Weapon 자신의 로컬 오프셋은 0으로 둔다.
