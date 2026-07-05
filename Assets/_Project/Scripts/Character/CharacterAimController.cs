@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // BallLauncher.LaunchDirection(현재 조준 방향)을 읽어 WeaponPivot과 Head를 조준 방향으로
-// 부드럽게 회전시키고, 조준 각도의 부호에 따라 캐릭터 전체를 좌우 반전시킨다.
+// 즉시 회전시키고, 조준 각도의 부호에 따라 캐릭터 전체를 좌우 반전시킨다.
 // 이 스크립트는 Character 프리팹의 루트 오브젝트에 부착된다(좌우 반전은 자기 자신의 localScale.x를 사용).
 public class CharacterAimController : MonoBehaviour
 {
