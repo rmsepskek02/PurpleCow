@@ -1,3 +1,24 @@
+## 2026-07-05 (볼-볼 충돌 버그 research)
+
+### 작업 내용
+- 볼-볼 물리 충돌 버그 task research.md 생성 (오케스트레이터가 사전 조사한 원인을 코드/설정 파일 직접 열람으로 검증)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/research.md`
+
+### 결과
+- `Ball.prefab`(m_Layer:0, Untagged), `Physics2DSettings.asset`(m_LayerCollisionMatrix 전부 ffff), `TagManager.asset`(태그 3개만 등록, 레이어 전부 미사용) 직접 확인
+- `SceneSetupEditor.cs`/`MonsterSetupEditor.cs`에 레이어 설정 코드 전무함을 확인, Monster/Block 프리팹 4+4종 및 실제 게임 씬(`Assets/Scenes/SampleScene.unity`) 전체 오브젝트가 m_Layer:0임을 grep으로 재확인
+- 부가 발견: `SceneSetupEditor.Step1_CreateBallPrefab()`이 `TrySetTag(go, "Ball")`을 호출하지만 "Ball" 태그가 `BallSetupEditor.AddRequiredTags()`의 등록 목록(Monster/Wall/Ground)에 빠져 있어 조용히 실패 → Ball.prefab이 Untagged로 남은 실제 이유임을 특정
+- `TrajectoryPreview.cs` line 96 주석이 이 "태그 없음" 상태를 다른 볼 필터링에 의존하고 있음을 확인 → 해결 방식 선택 시 상호작용 검토 필요 항목으로 명시
+- `ObjectPool.Get()`이 고정 크기가 아니라 동적으로 늘어나는 구조임을 검증, 이를 근거로 해결 방식 (a) 전용 Ball 레이어 신설+`IgnoreLayerCollision` vs (b) 볼 쌍마다 `IgnoreCollision` 두 후보의 트레이드오프를 "문제점/구현 대상 파악" 섹션에 정리
+- AGENTS.md는 "개별 task 폴더 목록은 별도 관리하지 않음" 정책이 명시되어 있어 인덱스 등록 생략 (정책 재확인 후 판단)
+
+### 주요 결정사항
+- plan.md는 작성하지 않음 (사용자 확인 대기, TaskRules.md 워크플로우 준수)
+- 코드/프리팹/ProjectSettings 파일은 읽기만 하고 수정하지 않음
+- 열린 질문(사용자 확인 필요): (a) 전용 Ball 레이어 신설 방식 vs (b) 볼 쌍마다 IgnoreCollision 호출 방식 중 선택 필요, (a) 선택 시 TrajectoryPreview.cs의 태그 기반 필터링 로직과의 상호작용 처리 방식도 함께 결정 필요
+
+---
+
 ## 2026-07-05 (추가 정정)
 
 ### 작업 내용
