@@ -1,3 +1,42 @@
+## 2026-07-04
+
+### 작업 내용
+- 몬스터 시스템 개편 task plan.md 생성
+- 경로: Assets/_Project/Docs/_Task/2026-07-04/22-53_monster-system-overhaul/plan.md
+- research.md는 이미 사용자 확인 완료 상태였으며, 오케스트레이터-사용자 논의로 확정된 설계 결정사항을 그대로 STEP 1~6으로 구조화
+
+### 결과
+- plan.md 생성 완료: 구현 목표, STEP 1(MonsterData BlockSize 필드) ~ STEP 6(MonsterSetupEditor 정리) 상세 계획, 예상 변경/생성 파일 목록 테이블(코드 5종 + 프리팹 4종 + asset 2종), 주의사항 5건 작성
+- AGENTS.md는 "개별 task 폴더 목록은 별도 관리하지 않음" 정책이 이미 명시되어 있어 이번 task 인덱스 등록은 생략(현재 AGENTS.md 정책 확인 후 판단)
+
+### 주요 결정사항
+- MonsterData에 BlockSize enum(OneByOne/TwoByOne/OneByTwo) 추가, MonsterBase가 OnSpawn/ApplyData 시점에 콜라이더 크기와 HP바 폭을 이 값 기준으로 런타임 자동 적용(데이터가 단일 기준)
+- 프리팹에 BlockVisual 자식(SpriteRenderer 전용, 콜라이더 없음) 추가해 블록+캐릭터 합성, 콜라이더/MonsterBase/tag는 루트 유지 → Ball.cs 완전히 수정 불필요
+- HpBarCanvas를 BlockVisual 자식으로 재배치(MonsterHpBar.cs의 GetComponentInParent는 그대로 MonsterBase 탐색 가능하므로 스크립트 무수정)
+- WaveTableData: WaveEntry/MonsterSpawnEntry(좌표 포함) 구조 완전 제거 → 공식 파라미터(baseSpawnCount/spawnCountPerWave/baseTwoCellWeight/twoCellWeightPerWave/totalWaves) + MonsterData 4종 참조 구조로 전환
+- WaveManager.SpawnWave(): 9열×5행 그리드, 웨이브 인덱스 기반 공식으로 spawnCount/twoCellWeight 계산, 그리드 용량 기준 상한(약 22)으로 사전 제한, occupied bool[,] 매 웨이브 재초기화, 2칸 몬스터 우선 배치 후 1칸 몬스터 배치
+- MonsterSetupEditor.SetupWaveSpawnEntries() 전체 폐기, CreateWaveDataAssets/CreateMonsterDataAssets 새 구조에 맞게 재작성 필요
+- WaveTableData.asset/MonsterData_*.asset 실제 재생성은 로컬 Unity 에디터 실행 필요 — 주의사항에 명시
+
+---
+
+### 작업 내용 (추가)
+- 몬스터 시스템 개편 plan.md의 STEP 6 수정 (사용자 피드백 반영)
+- 경로: Assets/_Project/Docs/_Task/2026-07-04/22-53_monster-system-overhaul/plan.md
+
+### 결과
+- STEP 6 제목을 "MonsterSetupEditor.cs 대폭 정리" → "신규 MonsterOverhaulSetupEditor.cs 작성 (새 데이터 구조 세팅 전용)"으로 교체
+- 예상 변경/생성 파일 목록 테이블에서 MonsterSetupEditor.cs 행 제거, MonsterOverhaulSetupEditor.cs(신규 생성) 행으로 교체
+- 주의사항에 "기존 MonsterSetupEditor.cs는 수정하지 않는다" 문장 신규 추가(6번), 5번 항목에 "결정한 수치는 구현 완료 보고 시 함께 명시한다" 문구 추가
+- STEP 1~5, 구현 목표, 서두 요약 등 나머지 섹션은 전혀 건드리지 않음
+
+### 주요 결정사항
+- 기존 MonsterSetupEditor.cs는 이번 작업에서 전혀 수정하지 않음 — 문자열 기반 리플렉션 API(SerializedObject/FindProperty)를 쓰므로 데이터 구조가 바뀌어도 컴파일에는 영향 없음을 확인, 기존 메뉴 항목은 쓸모없어져도 그대로 방치(제거하지 않음)
+- 새 데이터 구조(MonsterData._blockSize 채우기, WaveTableData.asset 신규 파라미터 구조 생성/갱신, 프리팹 4종 BlockVisual 합성 + HpBarCanvas 재배치)는 전부 신규 MonsterOverhaulSetupEditor.cs(별도 MenuItem: PurpleCow/Setup/Monster Overhaul Setup)가 독립적으로 담당
+- 이전 배경 정사각형 보정 task에서 BackgroundGridFitSetupEditor.cs를 분리했던 전례와 동일한 원칙(기존 다역할 에디터 스크립트를 계속 편집하면 혼선 발생) 적용
+
+---
+
 ## 2026-06-30
 
 ### 작업 내용
@@ -758,3 +797,140 @@
 - research.md는 "코드를 아직 수정하지 않은 상태"의 조사/결정사항 정리 문서라는 지시에 따라 구현 스텝(예: Slider vs Image fillAmount 선택, New! 판별 로직 구체 설계 등)은 일절 다루지 않고 사실관계와 갭, 확정된 범위만 기록
 - HUD % 진행률의 "현재 웨이브 기준 계산"과 레퍼런스의 "TopBar(스테이지 전체 뉘앙스) + WaveBar(웨이브 진행 뉘앙스) 이원 구조" 사이의 불일치를 문제점 섹션에 명시적으로 남겨 plan.md 단계에서 재정의하도록 유도
 - AGENTS.md는 기존 정책(개별 task 폴더 별도 인덱싱 안 함)에 따라 갱신하지 않음
+
+---
+
+### 작업 내용 (추가)
+- 몬스터 전용 통합 규칙 문서 `MonsterRules.md` 신규 생성 (사용자 승인된 목차 기준, task 문서 없이 순수 문서 작업으로 진행)
+- 경로: `Assets/_Project/Docs/MonsterRules.md`
+- `GameplayMechanics.md` 섹션 2 본문을 `MonsterRules.md`로 이관하고 원래 자리에는 안내 문구 + 링크만 남김 (섹션 1은 손대지 않음)
+- `AGENTS.md` Docs 문서 표에 `MonsterRules.md` 행 신규 추가
+- 작성 전 `MonsterData.cs`, `MonsterBase.cs`(최근 재설계된 냉동/슬로우/도트/보너스크리티컬 API 전부 포함), `WaveTableData.cs`, `WaveManager.cs`, `Ball.cs`(전체, `CalculateDamage`/`OnCollisionEnter2D`/`OnTriggerEnter2D` 흐름 확인), `BallSkillBase.cs`, `MonsterSetupEditor.cs`(웨이브별 몬스터 등장 구간 및 기본 스탯 자동 생성 로직), `GameplayMechanics.md` 섹션 2, `UIRules.md` 섹션 9/10, `DevRules.md`(ScriptableObject 사용 범위), `ProjectHistory.md`(`SetupWaveSpawnEntries` 기록)를 모두 Read로 직접 확인
+
+### 결과
+- `MonsterRules.md` 생성 완료: 1.개요 / 2.스폰·전진 메커닉(GameplayMechanics.md 섹션2 원문 이관) / 3.몬스터 종류·스탯(Fluffy/Spider/StoneBug/ForestDeer 웨이브별 등장 구간 표 + MonsterData 필드 표, 4종 기본값이 현재 모두 동일함을 각주로 명시) / 4.HP 관리·사망 처리(TakeDamage/Die/OnHpChanged + Ball→Monster 데미지 전달 흐름을 Ball.cs 실제 코드 기준으로 상세 기술, 낡은 task 문서의 static event 기반 충돌 감지 설계는 참고하지 않았음을 명시) / 5.상태이상 처리(ApplyFreeze/ApplySlow/ApplyBonusCritChance·ConsumeBonusCritChance/ApplyDot 표 + IceBallSkill/FireBallSkill/AmethystDaggerPassive/EmeraldDaggerPassive 연동 지점) / 6.웨이브 시스템(WaveTableData 구조, WaveManager 스폰→진행→처치/통과 판정→클리어→AdvanceToNextWave 흐름, GetWeakestMonster/GetMonstersInRow 헬퍼) / 7.UI 연동 참조(UIRules.md 9/10장 링크만, 중복 서술 없음) / 8.관련 파일 목록 표까지 총 8개 섹션 작성 완료
+- `GameplayMechanics.md` 섹션 2 본문을 "이 내용은 MonsterRules.md로 이관되었습니다" 안내 문구 + 링크로 교체 완료 (섹션 1은 변경 없음)
+- `AGENTS.md` Docs 문서 표에 `MonsterRules.md` 행 추가 완료
+- `UIRules.md`는 사용자 지시대로 전혀 수정하지 않음
+
+### 주요 결정사항
+- 몬스터 관련 규칙의 단일 기준(source of truth)을 `MonsterRules.md`로 확정 — 향후 몬스터 관련 규칙 변경/추가는 이 문서를 기준으로 갱신
+- `_Task/2026-06-30/14-00_Monster시스템구현/`의 초기 설계(static event `OnHitMonster`/`LastDamage` 기반 충돌 감지)는 현재 코드(Unity `OnCollisionEnter2D`/`OnTriggerEnter2D`에서 `CalculateDamage()`가 직접 `TakeDamage()` 호출, `OnHitMonster`는 데미지 적용 "이후" 다른 시스템에 알리는 용도로만 사용)와 다르다는 점을 4장에 명시적으로 각주 처리해 향후 혼동 방지
+- `MonsterSetupEditor.cs` 확인 결과 4종 몬스터의 `MonsterData` 기본값이 현재 모두 동일(Hp 30/MoveSpeed 1/Damage 1/Reward 10)함을 확인 — 종별 차등 수치는 코드에 하드코딩되어 있지 않고 이후 에셋 Inspector 직접 조정으로 반영되는 구조임을 3장 각주로 정확히 기록(과장하거나 임의로 차등값을 지어내지 않음)
+- Ball의 스킬 연동(냉동/슬로우/도트/보너스크리티컬)은 `PlayerActiveSkillDesign.md`의 4종 스킬이 아니라 `BallSkillBase`를 상속하는 Active/Passive 볼 스킬 클래스(`IceBallSkill`/`FireBallSkill`/`AmethystDaggerPassive`/`EmeraldDaggerPassive`)가 실제로 호출하는 구조임을 코드로 직접 확인 후 5장에 정확히 기술
+- Bash 미사용, Read/Edit/Write/Glob/Grep만 사용해 작업 완료
+
+---
+
+### 작업 내용 (추가)
+- 사용자·오케스트레이터가 긴 논의 끝에 확정한 몬스터 시스템 개편 설계를 `MonsterRules.md`와 `UIRules.md`(섹션 9)에 순수 문서 작업으로 반영. 코드는 전혀 수정하지 않음(구현은 이후 별도 task로 진행 예정)
+- 경로: `Assets/_Project/Docs/MonsterRules.md`, `Assets/_Project/Docs/UIRules.md`
+- 작업 전 최신 상태 확인을 위해 `MonsterRules.md`, `UIRules.md` 전문과 `MonsterData.cs`, `MonsterBase.cs`, `WaveManager.cs`, `WaveTableData.cs`, `MonsterSetupEditor.cs`를 모두 Read로 직접 재확인. 특히 `MonsterSetupEditor.SetupWaveSpawnEntries()`가 에디터에서 한 번 실행 시점에 웨이브별 `GridPosition`을 고정값으로 계산해 `WaveTableData.asset`에 미리 구워넣는 구조임을 코드로 직접 확인(런타임 랜덤이 아님 — 기존 `MonsterRules.md` 2장에 이미 있던 "매 웨이브 새로 랜덤 결정" 서술과 실제로 어긋나 있었음)
+- 원본 게임 레퍼런스 스크린샷(`Assets/_Project/Docs/targetUI/KakaoTalk_20260701_190324151_02.jpg`)을 Read로 직접 열람해 몬스터가 블록(발판) 위에 서 있고 HP바(빨간 바)가 블록 앞면 하단에 임베드되어 있으며 폭이 블록 가로 길이에 비례함을 시각적으로 확인 후 문서에 반영
+
+### 결과
+- `MonsterRules.md` 수정 완료: 서두 요약에 이번 갱신 내용(전종류 랜덤 등장/런타임 랜덤 배치+점유체크/고정 블록 크기/HP바 방식) 2줄 추가. 2장(스폰/전진 메커닉)에 "웨이브 1~20 전 구간 4종 전부 랜덤 등장" + "런타임 매번 새로 랜덤 계산 + 점유 체크" 확정 규칙 추가, 구현 현황에 현재 코드가 에디터에서 좌표를 고정 계산해 굽는 방식이라 확정 규칙과 다르다는 점을 "(구현 예정 — 아직 코드 미반영)"으로 명시. 3장(몬스터 종류·스탯)에 "종류 및 고정 블록(베이스) 크기" 소제목 신규 추가(Fluffy/Spider→Block_1x1, StoneBug→Block_2x1, ForestDeer→Block_1x2, Block_2x2 미사용, 콜라이더 전체 커버, 점유 체크 필요), "웨이브별 등장 구성 — 전종류 랜덤" 소제목 신규 추가(기존 웨이브 구간별 등장 표 삭제, 난이도 스케일링 방향성만 서술하고 수치 공식은 미정으로 명시), MonsterData 필드 표 아래에 "2칸 몬스터 Hp/Reward 상향" 확정 규칙 + 현재 코드가 4종 동일 기본값임을 대비해 명시. 6장(웨이브 시스템)을 "데이터 구조 — 신규 확정 구조"(WaveTableData가 좌표 대신 스폰수/가중치 구성 파라미터만 보유)와 "WaveManager 흐름 — 신규 확정 흐름"(SpawnWave가 매번 종류 랜덤 결정→점유 체크 기반 좌표 랜덤 결정→배치 3단계)으로 재구성하고, 기존 현재 구현 흐름은 인용 블록으로 하위에 유지하며 스킬/킬카운트/클리어 판정 로직(5~7번)은 그대로 유지된다는 점 명시. 7장(UI 연동 참조)을 HP바 블록 앞면 임베드 방식으로 갱신하고 UIRules.md 9장 링크 유지. 1장 개요의 HP바 서술도 최신 방식으로 갱신
+- `UIRules.md` 9장 "몬스터 HP바" 전면 재작성 완료: 기존 "머리 위 월드 스페이스 캔버스+슬라이더" 서술 삭제. "확정된 방식 — 블록(베이스) 앞면 임베드"(블록 앞면 하단 임베드, 폭이 블록 가로 길이에 비례, 정확한 비율은 `targetUI/` 레퍼런스 기준), "배치 방식(앵커/부모 구조 변경)"(HP바를 블록 오브젝트의 자식으로 이동, Canvas 설정 World Space/Sorting Layer UI는 유지), "재사용 가능한 부분"(`MonsterHpBar`, `MonsterBase.OnHpChanged` 이벤트 구독 구조와 발행 시점은 그대로 재사용 가능, 바뀌는 것은 부모/앵커/크기뿐) 3개 소제목으로 재구성
+- `AGENTS.md`는 두 문서 모두 기존 표의 설명 문구가 이미 "몬스터 HP바"/"스폰 및 전진 메커닉" 등 주제 단위로 서술되어 있어 세부 내용이 바뀌어도 그대로 유효 — 신규 섹션 추가가 아니므로 갱신하지 않음
+
+### 주요 결정사항
+- 이번 작업은 순수 문서 갱신이며 코드(`MonsterData.cs`/`MonsterBase.cs`/`WaveManager.cs`/`WaveTableData.cs`/`MonsterSetupEditor.cs`)는 전혀 수정하지 않음 — 구현은 이후 별도 task(research.md/plan.md)로 진행 예정이므로 이번 문서에는 "확정된 규칙"만 서술하고 정확한 수치 공식(스폰 수 증가 폭, 가중치 곡선, 2칸 몬스터 스탯 배율 등)은 미정으로 남겨둠
+- 확정 규칙과 현재 코드 상태가 다른 부분은 전부 "(확정)" / "(구현 예정 — 아직 코드 미반영)" / "(현재 구현 — 아직 새 규칙 미반영)" 3가지 표시로 명확히 구분해 향후 구현 task 담당자가 무엇을 바꿔야 하는지 문서만 보고 파악 가능하게 처리
+- 배경 이미지 비율 보정(`BackgroundFitter`/`WallFitter`)은 볼 충돌벽/캐릭터 위치 등에 영향을 주는 위험도 높은 별도 선행 task로 분리하기로 확정되어 있어, `MonsterRules.md` 2장에 "그리드는 정사각형 셀 전제, 배경 비율 보정은 별도 선행 task 예정"이라는 한 줄만 남기고 상세 내용은 다루지 않음
+- `WaveTableData`의 정확한 신규 필드 설계(가중치를 배열로 표현할지, 몬스터별 확률 테이블로 표현할지 등)는 이 문서에서 확정하지 않고 "추후 plan.md에서 결정"으로 명시 — 문서 작업 단계에서 구현 세부사항을 임의로 확정하지 않기 위함
+
+---
+
+## 2026-07-04
+
+### 작업 내용
+- 배경 격자 정사각형 보정 task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/16-40_background-square-grid-fix/research.md`
+- 작업 전 `BackgroundFitter.cs`, `WallFitter.cs`, `ProjectHistory.md`(2026-07-03 "배경/해상도 대응" 섹션), `MonsterRules.md` 2장/3장, `SceneSetupEditor.cs`(Step4/5/6, `ConnectBackgroundFitterRefs`/`Step5_PlaceWallsAndGround`/`Step6_SetupWallFitter`)를 모두 Read로 직접 확인
+- 오케스트레이터가 사전 제공한 `Background_1_Stage.png` 실측 수치(세로 140px×가로 85px 비정사각형 격자, 몬스터/블록 스프라이트는 정사각형 1유닛, 원본 게임 레퍼런스는 약 97×97px 정사각형 격자)는 재측정 없이 그대로 인용
+
+### 결과
+- research.md 생성 완료: "현재 상태"(배경 텍스처 실측치, `BackgroundFitter`의 가로/세로 독립 Stretch 계산식, `WallFitter`의 실측 기준 좌표×동일 배율 연동 방식, `SceneSetupEditor` Step4/5/6 연결부, `MonsterRules.md`의 선행 작업 언급), "관련 파일 및 의존성" 표, "문제점/구현 대상 파악"(핵심 쟁점: 텍스처 고유 비율 보정 vs 모든 기기 최종 렌더링 정사각형 보장의 트레이드오프, 파생 쟁점: 픽셀 완전 정합 vs 육안 자연스러움, 영향 범위), "결론"(선택지만 나열, 결정은 plan.md로 유보) 순서로 작성
+- 해결책은 확정하지 않았으며 plan.md는 작성하지 않음 (사용자 지시대로 이번 범위에서 제외)
+
+### 주요 결정사항
+- Stretch 방식(기기별 가로/세로 독립 배율)이 유지되는 한 "모든 기기에서 최종 화면상 격자가 항상 정사각형"임을 수학적으로 보장하기 어렵다는 점, 반대로 "텍스처 자체의 비정사각형 셀을 보정 계수로 정사각형화"하는 것은 Stretch 정책과 공존 가능하다는 점을 구분해 서술 — 이 구분이 이번 문서의 핵심 목적이므로 결론에서도 재차 강조
+- `ProjectHistory.md`에 이미 기록된 "Wall 좌표가 배경 격자 그림과 애초에 픽셀 단위로 일치하지 않았고, 실기기 테스트로 육안 자연스러움 기준까지만 조정해 확정한 선례"를 근거로, 몬스터 스폰용 논리적 그리드도 배경 텍스처와 완전한 픽셀 정합이 필수는 아닐 수 있다는 점을 파생 쟁점으로 함께 제시
+- AGENTS.md는 "개별 task 폴더 목록은 이 문서에서 별도로 관리하지 않는다"는 기존 방침에 따라 이번 task 등록을 위한 갱신은 하지 않음
+
+---
+
+### 작업 내용 (추가)
+- 배경 격자 정사각형 보정 task plan.md 신규 생성 (research.md 후속, 오케스트레이터·사용자 논의로 확정된 해결 방향을 그대로 반영)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/16-40_background-square-grid-fix/plan.md`
+- 작업 전 research.md, TaskRules.md, `BackgroundFitter.cs`, `WallFitter.cs`, `SceneSetupEditor.cs`(`Step4_PlaceBackground`/`ConnectBackgroundFitterRefs`/`Step5_PlaceWallsAndGround`/`Step6_SetupWallFitter` 라인 번호 포함)를 모두 Read로 직접 재확인. 톤/형식 일관성을 위해 `_Task/2026-07-03/12-30_background-resolution-fix/plan.md`(가장 유사한 선례)도 Read로 참고
+
+### 결과
+- plan.md 생성 완료: 확정된 해결 방향("격자 영역 기준 균일 스케일 + 장식 테두리는 여백으로 흡수")을 그대로 반영한 2단계 계산 공식(1. 고정 상수 `_cellAspectCorrection≈1.647`/`_gridAreaWidth=14.53`/`_gridAreaHeight=10.16`으로 격자 셀 정사각형 보정, 2. `Mathf.Max` Cover 방식 균일 배율 계산 후 `scaleY = uniformScale × _cellAspectCorrection`)을 구체 코드 스니펫으로 작성. 이 공식이 "셀 정사각형 보장"과 "격자 영역 Cover 보장" 두 조건을 동시에 만족함을 수식으로 직접 검증한 뒤 문서에 반영
+- 단계별 계획 5단계 구성: 1단계(공식 정리), 2단계(`BackgroundFitter.cs` 계산식 교체), 3단계(`WallFitter.cs` 동일 계산식 교체 + `_native*` 값 재조정 필요성 명시), 4단계(`SceneSetupEditor.cs`의 `ConnectBackgroundFitterRefs()`/`Step6_SetupWallFitter()`에 신규 필드 3개 주입 코드 추가), 5단계(사용자 로컬 Scene Setup 재실행 + 실기기 검증 필요성을 이번 task 범위 밖으로 명시)
+- 예상 변경 파일 목록(`BackgroundFitter.cs`/`WallFitter.cs`/`SceneSetupEditor.cs` 수정, `SampleScene.unity`는 간접 영향, PNG는 변경 없음)과 주의사항(리소스 미수정, 두 스크립트 계산식 일관성 필수, 벽/발사 위치 직접 영향, 원격 환경엔 Unity 없어 실기기 검증 불가, `_zoomFactor` 유지 여부는 dev 판단, 기존 중복 계산 구조를 리팩토링하지 않음) 작성 완료
+- 문서 말미에 사용자의 명시적 승인 후에만 구현 시작한다는 문구 포함
+
+### 주요 결정사항
+- 텍스처 고유 보정(고정, 기기 무관)과 기기별 Cover 균일 배율(가변)을 명확히 분리된 2개 레이어로 공식화 — `scaleX = uniformScale`, `scaleY = uniformScale × _cellAspectCorrection` 형태로, "가로/세로 동일 배율"이 문자 그대로 `scaleX == scaleY`를 의미하는 게 아니라 "기기별 가변 배율 레이어가 두 축에 동일하게 적용된다"는 뜻임을 계산식과 검증 과정을 통해 명확히 하고 plan.md에 그대로 기술
+- Cover 기준값을 전체 스프라이트 크기가 아닌 "격자 영역"의 실측 월드유닛 크기(`_gridAreaWidth=14.53`, `_gridAreaHeight=10.16`, 이미지 픽셀 실측 x199~1652/y540~1556 기준)로 새로 정의 — 기존 `_spriteRenderer.sprite.bounds.size` 참조는 새 계산식에서 불필요해지지만, 외과적 변경 원칙에 따라 필드 자체를 삭제하는 리팩토링은 하지 않기로 명시
+- `WallFitter`의 `_nativeLeftX`/`_nativeRightX`/`_nativeTopY`/`_nativeBottomY`/`_nativeLaunchPointY` 5개 값은 계산식 교체만 하고 값 자체는 이번 코드 구현에서 건드리지 않음 — 스케일 비율 구조가 근본적으로 바뀌므로(scaleY가 항상 scaleX×1.647의 고정비) 재조정은 사용자의 로컬 실기기 검증 몫으로 명시적으로 넘김
+- `BackgroundFitter`/`WallFitter`의 기존 계산 로직 중복 구조(공용 유틸리티 미분리)는 이번에도 그대로 유지 — 요청 범위를 벗어나는 리팩토링이므로 손대지 않음
+- Bash 미사용, Read/Write만 사용해 작업 완료
+
+---
+
+### 작업 내용 (추가)
+- 배경 격자 정사각형 보정 task plan.md 사용자 피드백 반영 수정 (Bash 미사용, Read/Edit만 사용)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/16-40_background-square-grid-fix/plan.md`
+- 사용자 요청: 이미 여러 Step으로 커진 기존 `SceneSetupEditor.cs`를 신규 필드 3개 주입을 위해 계속 편집하면 혼선이 생긴다는 우려로, `SceneSetupEditor.cs`는 전혀 건드리지 않고 신규 필드 3개(`_cellAspectCorrection`/`_gridAreaWidth`/`_gridAreaHeight`) 주입 전용의 완전히 별도인 신규 에디터 스크립트를 작성하는 방식으로 변경. `BackgroundFitter.cs`/`WallFitter.cs`(런타임 계산식 자체 교체)는 기존 계획대로 "수정"이 맞다는 것을 사용자가 재확인 — 바뀐 범위는 4단계(에디터 연동 부분)뿐
+
+### 결과
+- 4단계 제목/내용을 "`SceneSetupEditor.cs` 연동"에서 "`BackgroundGridFitSetupEditor.cs` 신규 작성 (필드 3개 주입 전용)"으로 전면 교체: 신규 파일 `Assets/_Project/Scripts/Editor/BackgroundGridFitSetupEditor.cs`, 별도 `MenuItem`(`PurpleCow/Setup/Background Grid Fit Setup`), 기존 `SceneSetupEditor.cs`/`MonsterSetupEditor.cs`와 동일한 탐색(`GameObject.Find`/`FindObjectOfType`) + `SerializedObject`/`FindProperty` 주입 패턴을 그대로 따르되 완전히 독립된 신규 스크립트로 작성한다는 점을 명시
+- 5단계(사용자 로컬 검증)에 "신규 메뉴 `Background Grid Fit Setup`을 별도로 실행" 문구 반영, 기존 `Scene Setup` 메뉴는 이번에 수정되지 않았으므로 그대로 두고 신규 메뉴만 추가 실행하면 된다는 점 명시
+- 예상 변경/생성 파일 목록에서 `SceneSetupEditor.cs` 항목 삭제, `BackgroundGridFitSetupEditor.cs`(신규 생성) 항목으로 교체
+- 주의사항에 "기존 `SceneSetupEditor.cs`는 이번 작업에서 수정하지 않으며, 신규 필드 주입은 별도의 새 에디터 스크립트로 분리한다" 문장 추가
+- 문서 전반의 교차 참조(3단계의 "4단계 참고"→"5단계 참고", 파일 목록/주의사항의 "Scene Setup 재실행"→"Background Grid Fit Setup 메뉴 실행") 일관성 있게 함께 수정
+- 1~3단계(구현 목표, 계산 공식, `BackgroundFitter.cs`/`WallFitter.cs` 수정 계획)는 요청대로 전혀 건드리지 않음
+
+### 주요 결정사항
+- `BackgroundFitter.cs`/`WallFitter.cs`는 계산식 자체를 바꾸는 목적이므로 기존 파일 "수정"이 맞고, 에디터 스크립트만 "신규 작성"으로 분리하는 것이 이번 피드백의 핵심 — 두 성격(런타임 스크립트 수정 vs 에디터 스크립트 신규 분리)을 문서에서 명확히 구분해 서술
+- 신규 에디터 스크립트는 `BackgroundFitter`와 `WallFitter` 두 컴포넌트 모두에 동일한 필드 3개 값을 주입하도록 범위를 명시 (씬 오브젝트 탐색은 기존 관행 그대로)
+- `_native*` 값 재조정이 필요해질 경우 어느 스크립트(기존 `SceneSetupEditor.cs` vs 신규 `BackgroundGridFitSetupEditor.cs`)에 반영할지는 이번 plan.md에서 미리 결정하지 않고 사용자의 실기기 검증 이후 시점으로 판단을 유보
+- Bash 미사용, Read/Edit만 사용해 작업 완료
+
+---
+
+## 2026-07-04 (추가)
+
+### 작업 내용
+- 배경 격자 정사각형 보정 task(`_Task/2026-07-04/16-40_background-square-grid-fix`)가 실기기 검증까지 완료됨에 따라, `ProjectHistory.md`/`ProjectStatus.md` 갱신
+- 작업 전 두 문서 및 해당 task의 research.md/plan.md를 모두 Read로 확인해 기존 문체/형식 파악 후 반영
+
+### 결과
+- `ProjectHistory.md`: 마지막 섹션(2026-07-03) 뒤에 `## 2026-07-04` 신규 날짜 섹션 추가 — 몬스터 시스템 개편 선행 작업이라는 배경, 격자 비정사각형(140×85px) 문제, `BackgroundFitter.cs`/`WallFitter.cs`의 2단계 계산식 교체(텍스처 고유 비율 보정 + 격자 영역 기준 균일 Cover 배율), 신규 필드 3개를 별도 `BackgroundGridFitSetupEditor.cs`로 분리 주입한 결정, 실기기 검증 결과(격자 정사각형 정상 렌더링 확인) 및 그 과정에서 발견된 `_zoomFactor` 과다 확대 문제와 최종값(1.3 → 0.5, 에디터 미리보기는 0.6) 조정을 기록
+- `ProjectStatus.md`: "현재 상태" 날짜를 2026-07-04로, 단계 설명을 "몬스터 시스템 개편 선행 작업(배경 격자 정사각형 보정)까지 실기기 검증 완료"로 갱신. "완료된 작업" 목록에 이번 task 항목 추가. "다음 작업 순서" 1번으로 "몬스터 시스템 개편 research.md 작성 착수"를 신규 추가하고 기존 "실제 플레이 테스트 진행" 항목은 2번으로 유지
+- `_nativeLeftX` 등 5개 벽 기준값 재조정 여부는 사용자가 이번에 별도 문제를 보고하지 않았다는 사용자 지시 내용을 그대로 반영해, "기존 값 유지로 마무리"라고만 서술하고 재조정 여부를 확정적으로 서술하지 않음 — 정확히 확인된 조정 사항은 `_zoomFactor` 값뿐이라는 점을 문서에 명시
+
+### 주요 결정사항
+- ProjectHistory.md 신규 섹션은 기존 날짜 섹션과 동일하게 `### 소제목 (task 경로)` 형식 + `- **문제**/**해결**/**실기기 검증**` 굵은 라벨 bullet 구조로 작성해 2026-07-03 섹션들과 문체 일관성 유지
+- ProjectStatus.md 완료 목록 항목은 기존 항목들과 동일하게 task 경로를 인라인 코드로 병기하고 한 문단으로 요약하는 기존 패턴을 그대로 따름
+- Bash 미사용, Read/Edit만 사용해 작업 완료
+
+---
+
+### 작업 내용 (추가)
+- 몬스터 시스템 개편 본작업 research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-04/22-53_monster-system-overhaul/research.md` (폴더 신규 생성 포함)
+- `MonsterRules.md`(최근 갱신본), `MonsterData.cs`, `MonsterBase.cs`, `WaveTableData.cs`, `WaveManager.cs`, `MonsterSetupEditor.cs`, `BackgroundFitter.cs`, `WallFitter.cs`, `UIRules.md` 9장을 모두 직접 Read로 확인 후 작성
+- 오케스트레이터가 이미 확인한 프리팹 구조(캐릭터 4종 vs 블록 스텁 4종 완전 분리, 블록+캐릭터 합성 프리팹 부재)와 스프라이트 픽셀 실측 결과(Pillow 측정값)를 그대로 인용해 재확인 없이 반영
+
+### 결과
+- research.md 작성 완료: 현재 상태(프리팹 구조/스프라이트 실측/`MonsterData` 필드/`MonsterBase` 동작/콜라이더/HP바/`WaveTableData` 구조/`WaveManager` 흐름/`MonsterSetupEditor` 자동화/격자 영역 정보 총 10개 세부 항목), 관련 파일 및 의존성 표(신규 파일 없이 기존 파일 14개 + asset 2종), 문제점/구현 대상 8개 항목(MonsterData 블록 크기 표현 선택지 A/B, 프리팹 재구성, 콜라이더 확장, HP바 재배치, WaveTableData 구조 변경, WaveManager 랜덤 배치+점유체크, MonsterSetupEditor 대체 방안, 기존 WaveTableData.asset 재생성 필요성), 결론(4갈래 요약) 작성
+- AGENTS.md는 개별 task 폴더 목록을 별도 인덱스로 관리하지 않는다는 기존 규칙(59번 줄)을 확인하여 인덱스 추가 작업은 수행하지 않음
+
+### 주요 결정사항
+- 해결책/구현 방법은 확정하지 않고 선택지만 나열하는 원칙을 지켜, MonsterData 블록 크기 필드 추가 여부·WaveEntry 가중치 필드 설계·그리드 열/행 계산 방식 등은 모두 복수 선택지로만 서술하고 plan.md로 결정을 미룸
+- 콜라이더/HP바 재배치 이슈는 "블록 크기를 어디서 읽어올지"(선택지 1번)와 서로 연결된 하위 질문이라는 점을 명시해 plan.md 논의 시 연계 검토가 필요함을 강조
+- 기존 `WaveTableData.asset`의 구조 변경 시 재직렬화 문제는 원격 텍스트 환경의 한계로 명시하고, 에디터 자동화 스크립트 처리 여부와 사용자 수동 처리 여부 모두 열어둠
+- Bash 미사용, Read/Write만 사용해 작업 완료

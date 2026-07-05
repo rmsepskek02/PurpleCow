@@ -72,7 +72,6 @@ public class UIManager : Singleton<UIManager>
     {
         Time.timeScale = 1f;
         ShowSkillSelection(false);
-        WaveManager.Instance.AdvanceToNextWave();
     }
 
     private void ShowHUD(bool show)            { if (show) _hudPanel.Show(); else _hudPanel.Hide(); }
