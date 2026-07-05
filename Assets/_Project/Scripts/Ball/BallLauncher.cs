@@ -36,6 +36,11 @@ public class BallLauncher : Singleton<BallLauncher>
     {
         base.Awake();
         _ballPool = new ObjectPool<Ball>(_ballPrefab, _poolParent, _initialPoolSize);
+
+        // 볼끼리 물리적으로 충돌(튕겨나감)하지 않도록 "Ball" 레이어끼리의 충돌을 전역적으로 비활성화한다.
+        // Wall/Ground/Monster는 Default 레이어에 그대로 남아있으므로 이 호출의 영향을 받지 않는다.
+        int ballLayer = LayerMask.NameToLayer("Ball");
+        Physics2D.IgnoreLayerCollision(ballLayer, ballLayer, true);
     }
 
     private void Start()
