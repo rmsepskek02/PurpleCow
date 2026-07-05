@@ -1,3 +1,24 @@
+## 2026-07-05 (조준 방향 Y 하한 제한 research)
+
+### 작업 내용
+- 볼 조준(터치 드래그) 시 목표 지점 Y좌표가 격자(그리드) 밑변보다 아래로 내려가지 못하게 제한하는 task의 research.md 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/18-30_aim-direction-y-clamp/research.md`
+
+### 결과
+- `InputHandler.ComputeAimDirection`(22~27행)에 Y좌표 제한이 전혀 없음을 재확인, 호출 지점이 `Update()`의 `OnDrag?.Invoke(ComputeAimDirection(...))`(62행) 한 곳뿐임을 확인
+- `WallFitter._ground`가 private 필드(11행)라 외부에서 직접 접근 불가함을 확인, `BallLauncher.LaunchPoint => _launchPoint` 같은 프로퍼티 노출 패턴이 `WallFitter`에는 없다는 점을 근거로 참조 확보 방식 후보 3가지(A: InputHandler에 `_ground` 직접 연결, B: WallFitter에 `GroundY` 프로퍼티 추가 후 참조, C: `FindFirstObjectByType<WallFitter>()` 자동 탐색) 정리
+- `WaveManager._bottomBoundaryY`(SampleScene.unity 720행, 하드코딩 `-5`)는 `WallFitter`가 디바이스별로 재계산하는 `Ground`의 실제 위치와 동기화되지 않는 별개 값임을 씬 파일 실측(Ground 실제 로컬 Y `-6.397638`, 677행)으로 재확인, 기준점으로 부적절함을 명시
+- `SceneSetupEditor.cs`의 `Step5_PlaceWallsAndGround`(392행, `GameObject.Find`/태그 둘 다로 조회 가능)와 `Step6_SetupWallFitter`(419~462행, `WallFitter._ground` 연결) 확인, `InputHandler`에는 대응하는 `Step*_ConnectInputHandlerRefs`가 없어 새 참조 필드 추가 시 수동 연결 또는 신규 Step 코드가 필요함을 지적
+- clamp 적용 위치 후보 (a) `worldPos.y`를 `Ground` Y 이상으로 clamp 후 방향 계산 vs (b) 방향 벡터 계산 후 사후 보정, (a)가 더 단순함을 언급하되 최종 결정은 plan.md로 유보
+- `LaunchPoint`가 `Ground`보다 항상 위에 위치하는 구조(`_nativeLaunchPointY=-6.0` vs `_nativeBottomY=-6.5`)를 근거로, 이 제한이 수평 조준까지는 방해하지 않고 그보다 더 아래(뒤쪽/바닥 방향)만 차단하는 비교적 좁은 범위의 제약이 될 것으로 기하학적 설명 정리
+- `GameplayMechanics.md` 섹션 1 기존 서술과 직접적인 모순은 없으나, 구현 완료 후 새 규칙을 문서에 추가해야 함을 결론에 명시 (이번 단계에서는 문서 미수정)
+
+### 주요 결정사항
+- plan.md는 작성하지 않음(사용자 확인 대기, TaskRules.md 워크플로우 준수), 코드는 읽기만 하고 수정하지 않음
+- 열린 질문(사용자 확인 필요): (1) Ground 참조 방식 A/B/C 중 선택, (2) SceneSetupEditor.cs에 연결 코드 추가 여부, (3) GameplayMechanics.md 문서화 시점(구현과 동시 vs 후속)
+
+---
+
 ## 2026-07-05 (볼-볼 충돌 버그 research)
 
 ### 작업 내용
