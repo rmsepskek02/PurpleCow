@@ -1,3 +1,20 @@
+## 2026-07-05 (MonsterRules.md 6장 하드코딩 잔여 표현 정정 — Random.Range(3, 8) → 필드 기반)
+
+### 작업 내용
+- `MonsterRules.md` 6장(194행)에 남아있던 `maxThisTick = Random.Range(3, 8)` 하드코딩 표현을 실제 코드 기준으로 정정 (2장에는 이미 올바르게 반영되어 있었으나 6장 한 곳만 누락됨)
+- 경로: `Assets/_Project/Docs/MonsterRules.md`
+- 작업 전 `WaveManager.cs`를 읽어 실제 구현이 `int maxThisTick = UnityEngine.Random.Range(_minSpawnPerTick, _maxSpawnPerTick + 1);`이고, `_minSpawnPerTick`/`_maxSpawnPerTick`가 `[SerializeField] private int` 필드(기본값 3/7, Inspector 조절 가능)임을 재확인
+
+### 결과
+- 194행의 `maxThisTick = Random.Range(3, 8)`을 `maxThisTick = Random.Range(_minSpawnPerTick, _maxSpawnPerTick + 1)`(기본값 3~7, `[SerializeField]`로 Inspector 조절 가능)으로 수정, 문장의 나머지 부분과 문서의 다른 부분은 전혀 건드리지 않음
+- `.cs` 파일은 읽기만 하고 수정하지 않음
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 지시받은 한 문장(한 곳)만 정확히 정정하는 외과적 수정 원칙 준수, 주변 문맥이나 다른 장(2장 등)은 이미 올바른 상태라 손대지 않음
+
+---
+
 ## 2026-07-05 (몬스터 로스터+컨베이어 스폰 plan.md에 A/B/C/D 추가 섹션 append)
 
 ### 작업 내용
