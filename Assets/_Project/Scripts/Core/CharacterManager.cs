@@ -10,6 +10,13 @@ public class CharacterManager : Singleton<CharacterManager>
     private int _currentXp;
     private int _currentLevel = 1;
 
+    public int CurrentHp => _currentHp;
+    public int MaxHp => _maxHp;
+    public int CurrentXp => _currentXp;
+    public int CurrentLevel => _currentLevel;
+    public int RequiredXp =>
+        _currentLevel - 1 < _xpPerLevel.Length ? _xpPerLevel[_currentLevel - 1] : 0;
+
     public static event Action<int, int> OnHpChanged;
     public static event Action<int, int> OnXpChanged;
     public static event Action<int>      OnLevelUp;
@@ -54,15 +61,14 @@ public class CharacterManager : Singleton<CharacterManager>
 
     private void AddXp(int amount)
     {
-        if (_currentLevel - 1 >= _xpPerLevel.Length) return;
+        if (RequiredXp <= 0) return;
         _currentXp += amount;
-        int required = _xpPerLevel[_currentLevel - 1];
-        OnXpChanged?.Invoke(_currentXp, required);
-        if (_currentXp >= required)
+        while (RequiredXp > 0 && _currentXp >= RequiredXp)
         {
-            _currentXp -= required;
+            _currentXp -= RequiredXp;
             _currentLevel++;
             OnLevelUp?.Invoke(_currentLevel);
         }
+        OnXpChanged?.Invoke(_currentXp, RequiredXp);
     }
 }

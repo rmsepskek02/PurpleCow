@@ -7,6 +7,7 @@ public class ResultPanel : MonoBehaviour
 {
     [SerializeField] private TMP_Text    _resultTitleText;
     [SerializeField] private TMP_Text    _finalScoreText;
+    [SerializeField] private TMP_Text    _waveText;
     [SerializeField] private Button      _restartButton;
 
     [SerializeField] private CanvasGroup _canvasGroup;
@@ -44,6 +45,8 @@ public class ResultPanel : MonoBehaviour
         bool isSuccess = GameManager.Instance.IsLastGameSuccess;
         _resultTitleText.text = isSuccess ? "SUCCESS" : "GAME OVER";
         _finalScoreText.text  = $"최종 점수: {UIManager.Instance.Score}";
+        if (_waveText != null)
+            _waveText.text = $"도달 웨이브: {WaveManager.Instance.CurrentWaveNumber} / {WaveManager.Instance.TotalWaves}";
     }
 
     private void HandleRestartClicked()
@@ -53,7 +56,8 @@ public class ResultPanel : MonoBehaviour
 
     public void Show()
     {
-        gameObject.SetActive(true);
+        transform.DOKill();
+        _canvasGroup.DOKill();
         _canvasGroup.blocksRaycasts = false;
         _canvasGroup.interactable   = false;
         transform.localPosition     = _originalPos + Vector3.down * _slideDist;
@@ -67,12 +71,14 @@ public class ResultPanel : MonoBehaviour
 
     public void Hide()
     {
+        transform.DOKill();
+        _canvasGroup.DOKill();
         _canvasGroup.blocksRaycasts = false;
         _canvasGroup.interactable   = false;
 
         Sequence seq = DOTween.Sequence();
         seq.Append(transform.DOLocalMoveY(_originalPos.y - _slideDist, _animDuration).SetEase(_ease));
         seq.Join(_canvasGroup.DOFade(0f, _animDuration));
-        seq.OnComplete(() => { transform.localPosition = _originalPos; gameObject.SetActive(false); });
+        seq.OnComplete(() => { transform.localPosition = _originalPos; });
     }
 }

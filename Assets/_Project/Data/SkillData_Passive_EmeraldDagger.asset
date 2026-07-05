@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: SkillData_Passive_EmeraldDagger
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   _skillId: 3004
-  _skillName: Emerald Dagger
-  _icon: {fileID: 0}
+  _skillName: "\uC5D0\uBA54\uB784\uB4DC \uB2E8\uAC80"
+  _icon: {fileID: -4751796939026496796, guid: 1fbb56a0468df374e937b8a8d44c3ecb, type: 3}
   _description: "\uBAAC\uC2A4\uD130 \uD6C4\uBA74 \uD0C0\uACA9 \uC2DC \uBCF4\uB108\uC2A4
     \uD06C\uB9AC\uD2F0\uCEEC \uD655\uB960\uC744 \uBD80\uC5EC\uD569\uB2C8\uB2E4."
   _skillType: 1

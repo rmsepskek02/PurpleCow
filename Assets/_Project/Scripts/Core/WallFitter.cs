@@ -14,7 +14,7 @@ public class WallFitter : MonoBehaviour
     [SerializeField] private float _nativeRightX = 6.3f;
     [SerializeField] private float _nativeTopY = 6.0f;
     [SerializeField] private float _nativeBottomY = -6.5f;
-    [SerializeField] private float _nativeLaunchPointY = -6.0f;
+    [SerializeField] private float _nativeLaunchPointY = -6.5f;
     [SerializeField] private float _zoomFactor = 0.5f;
     [SerializeField] private float _cellAspectCorrection = 1.647f;
     [SerializeField] private float _gridAreaWidth = 14.53f;

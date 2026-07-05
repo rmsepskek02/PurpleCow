@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: SkillData_Ghost
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   _skillId: 1003
-  _skillName: Ghost Ball
+  _skillName: "\uACE0\uC2A4\uD2B8 \uBCFC"
   _icon: {fileID: 778793131886074852, guid: ea98e927cf451ab4297ba6aaf23fda4c, type: 3}
   _description: "\uBCFC\uC774 \uBAAC\uC2A4\uD130\uB97C \uAD00\uD1B5\uD558\uC5EC \uACC4\uC18D
     \uC774\uB3D9\uD569\uB2C8\uB2E4."

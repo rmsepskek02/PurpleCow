@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: SkillData_Passive_AmethystDagger
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   _skillId: 3003
-  _skillName: Amethyst Dagger
-  _icon: {fileID: 0}
+  _skillName: "\uC790\uC218\uC815 \uB2E8\uAC80"
+  _icon: {fileID: -7508988934101286666, guid: a5196a0ce5f7f3d4d96b24b9d3d8641d, type: 3}
   _description: "\uBAAC\uC2A4\uD130 \uC815\uBA74 \uD0C0\uACA9 \uC2DC \uBCF4\uB108\uC2A4
     \uD06C\uB9AC\uD2F0\uCEEC \uD655\uB960\uC744 \uBD80\uC5EC\uD569\uB2C8\uB2E4."
   _skillType: 1

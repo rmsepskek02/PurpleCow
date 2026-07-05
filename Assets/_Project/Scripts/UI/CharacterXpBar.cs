@@ -19,6 +19,13 @@ public class CharacterXpBar : MonoBehaviour
         CharacterManager.OnLevelUp   -= UpdateLevel;
     }
 
+    private void Start()
+    {
+        if (CharacterManager.Instance == null) return;
+        UpdateXp(CharacterManager.Instance.CurrentXp, CharacterManager.Instance.RequiredXp);
+        UpdateLevel(CharacterManager.Instance.CurrentLevel);
+    }
+
     private void UpdateXp(int current, int required)
     {
         _slider.value = required > 0 ? (float)current / required : 0f;
@@ -26,6 +33,6 @@ public class CharacterXpBar : MonoBehaviour
 
     private void UpdateLevel(int level)
     {
-        if (_levelText != null) _levelText.text = $"Lv.{level}";
+        if (_levelText != null) _levelText.text = level.ToString();
     }
 }

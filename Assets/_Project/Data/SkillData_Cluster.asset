@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: SkillData_Cluster
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   _skillId: 1005
-  _skillName: Cluster Ball
+  _skillName: "\uD074\uB7EC\uC2A4\uD130 \uBCFC"
   _icon: {fileID: -8720277191398996379, guid: bfc5074e28dc4f049817874f5242cee3, type: 3}
   _description: "\uD655\uB960\uC801\uC73C\uB85C \uBAAC\uC2A4\uD130 \uCDA9\uB3CC \uC2DC
     \uC11C\uBE0C\uBCFC\uC744 \uCD94\uAC00 \uBC1C\uC0AC\uD569\uB2C8\uB2E4."

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: SkillData_Ice
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   _skillId: 1002
-  _skillName: Ice Ball
+  _skillName: "\uC544\uC774\uC2A4 \uBCFC"
   _icon: {fileID: 498749362002363885, guid: 76563e567bacdfa418353f355624acea, type: 3}
   _description: "\uD655\uB960\uC801\uC73C\uB85C \uCDA9\uB3CC\uD55C \uBAAC\uC2A4\uD130\uB97C
     \uBE59\uACB0/\uB454\uD654\uC2DC\uD0B5\uB2C8\uB2E4."

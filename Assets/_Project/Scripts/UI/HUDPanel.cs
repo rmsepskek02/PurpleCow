@@ -1,22 +1,23 @@
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class HUDPanel : MonoBehaviour
 {
-    [SerializeField] private TMP_Text    _waveText;
-    [SerializeField] private TMP_Text    _scoreText;
-    [SerializeField] private TMP_Text    _progressText;
-    [SerializeField] private GameObject  _launchReadyIndicator;
-    [SerializeField] private CanvasGroup _launchReadyCanvasGroup;
+    [SerializeField] private TMP_Text _stageTitleText;
+    [SerializeField] private Slider _stageProgressSlider;
+    [SerializeField] private TMP_Text _stageProgressText;
+    [SerializeField] private Slider _xpSlider;
+    [SerializeField] private TMP_Text _levelText;
+    [SerializeField] private Button _pauseButton;
+    [SerializeField] private PausePanel _pausePanel;
 
     [SerializeField] private CanvasGroup _canvasGroup;
     [SerializeField] private float _slideDist    = 50f;
     [SerializeField] private float _animDuration = 0.3f;
     [SerializeField] private Ease  _ease         = Ease.OutCubic;
     private Vector3 _originalPos;
-
-    private int _totalWaves;
 
     private void Awake()
     {
@@ -26,64 +27,61 @@ public class HUDPanel : MonoBehaviour
     private void OnEnable()
     {
         WaveManager.OnWaveStarted         += HandleWaveStarted;
-        WaveManager.OnMonsterCountChanged  += HandleMonsterCountChanged;
-        GameManager.OnGameStateChanged     += HandleGameStateChanged;
-        UIManager.OnScoreChanged          += HandleScoreChanged;
+        CharacterManager.OnXpChanged += HandleXpChanged;
+        CharacterManager.OnLevelUp += HandleLevelUp;
     }
 
     private void OnDisable()
     {
         WaveManager.OnWaveStarted         -= HandleWaveStarted;
-        WaveManager.OnMonsterCountChanged  -= HandleMonsterCountChanged;
-        GameManager.OnGameStateChanged     -= HandleGameStateChanged;
-        UIManager.OnScoreChanged          -= HandleScoreChanged;
+        CharacterManager.OnXpChanged -= HandleXpChanged;
+        CharacterManager.OnLevelUp -= HandleLevelUp;
     }
 
     private void Start()
     {
-        _totalWaves = WaveManager.Instance.TotalWaves;
-        UpdateScore(0);
-        SetLaunchIndicatorVisible(GameManager.Instance.CurrentState == GameManager.GameState.Playing);
+        _stageTitleText.text = "1. 깊은 숲";
+        _pauseButton.onClick.AddListener(_pausePanel.Show);
+        RefreshAll();
+    }
+
+    private void OnDestroy() => _pauseButton.onClick.RemoveListener(_pausePanel.Show);
+
+    private void RefreshAll()
+    {
+        HandleWaveStarted(WaveManager.Instance.CurrentWaveNumber);
+        CharacterManager character = CharacterManager.Instance;
+        HandleXpChanged(character.CurrentXp, character.RequiredXp);
+        HandleLevelUp(character.CurrentLevel);
     }
 
     private void HandleWaveStarted(int waveNumber)
     {
-        _waveText.text = $"WAVE {waveNumber} / {_totalWaves}";
-        SetLaunchIndicatorVisible(true);
+        float progress = WaveManager.Instance.StageProgress;
+        _stageProgressSlider.value = progress;
+        _stageProgressText.text = $"{Mathf.RoundToInt(progress * 100f)}%";
     }
 
-    private void HandleGameStateChanged(GameManager.GameState state)
+    private void HandleXpChanged(int current, int required)
     {
-        SetLaunchIndicatorVisible(state == GameManager.GameState.Playing);
+        _xpSlider.value = required > 0 ? (float)current / required : 1f;
     }
 
-    private void HandleMonsterCountChanged(int remaining, int total)
-    {
-        int percent = total > 0 ? Mathf.RoundToInt((float)(total - remaining) / total * 100f) : 0;
-        _progressText.text = $"{percent}%";
-    }
+    private void HandleLevelUp(int level) => _levelText.text = level.ToString();
 
-    private void HandleScoreChanged(int score)
+    public void SetCharacterProgressVisible(bool visible)
     {
-        UpdateScore(score);
-    }
+        if (_xpSlider != null)
+            _xpSlider.gameObject.SetActive(visible);
 
-    private void UpdateScore(int score)
-    {
-        _scoreText.text = $"처치: {score}";
-    }
-
-    private void SetLaunchIndicatorVisible(bool visible)
-    {
-        if (_launchReadyCanvasGroup != null)
-            _launchReadyCanvasGroup.alpha = visible ? 1f : 0f;
-        else
-            _launchReadyIndicator.SetActive(visible);
+        if (_levelText != null)
+            _levelText.transform.parent.gameObject.SetActive(visible);
     }
 
     public void Show()
     {
-        gameObject.SetActive(true);
+        transform.DOKill();
+        _canvasGroup.DOKill();
         _canvasGroup.blocksRaycasts = false;
         _canvasGroup.interactable   = false;
         transform.localPosition     = _originalPos + Vector3.down * _slideDist;
@@ -97,12 +95,14 @@ public class HUDPanel : MonoBehaviour
 
     public void Hide()
     {
+        transform.DOKill();
+        _canvasGroup.DOKill();
         _canvasGroup.blocksRaycasts = false;
         _canvasGroup.interactable   = false;
 
         Sequence seq = DOTween.Sequence();
         seq.Append(transform.DOLocalMoveY(_originalPos.y - _slideDist, _animDuration).SetEase(_ease));
         seq.Join(_canvasGroup.DOFade(0f, _animDuration));
-        seq.OnComplete(() => { transform.localPosition = _originalPos; gameObject.SetActive(false); });
+        seq.OnComplete(() => { transform.localPosition = _originalPos; });
     }
 }

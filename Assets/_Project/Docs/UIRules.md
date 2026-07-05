@@ -1,234 +1,454 @@
 # UIRules.md
 
-이 문서는 UI 시스템 구현 시 모든 에이전트가 따라야 할 규칙입니다.
-개발 공통 규칙은 [DevRules.md](DevRules.md)를 함께 참고하세요.
+이 문서는 PurpleCow 프로젝트의 UI를 설계·구현할 때 모든 에이전트가 따라야 할 기준입니다.
+개발 공통 규칙은 [DevRules.md](DevRules.md)를 함께 참고합니다.
 
 ---
 
-## 1. Canvas 구조 및 레이어
+## 1. 기준 자료 및 우선순위
 
-Canvas는 3개로 분리하며 Sort Order로 레이어를 관리합니다.
+UI 작업은 다음 우선순위로 판단합니다.
 
-```
-Canvas_HUD    (Sort Order: 10)  ← 항상 표시
-  ├─ SafeAreaPanel              ← SafeAreaFitter 컴포넌트 부착
-  │    ├─ HUD_Static Canvas     ← 변하지 않는 배경/테두리/아이콘
-  │    └─ HUD_Dynamic Canvas    ← HP바, 웨이브 진행바, 텍스트
-  ├─ TopBar   (스테이지명, %, 아이콘*)
-  ├─ TopButtons (▶ 재생, ⏸ 일시정지)
-  ├─ WaveBar  (진행바 + 웨이브 번호 배지)
-  ├─ CharacterHP (캐릭터 HP바 - 하단)
-  └─ CharacterXP (캐릭터 경험치바 + 레벨 텍스트 - 하단)
+1. 공식 요구사항 PDF: 레포 루트의 `PurpleCow_클라이언트_채용과제.pdf`
+2. 실제 게임 캡처: `Assets/_Project/Docs/targetUI/` 루트의 JPG 13장
+3. 프로젝트 확정 기획 문서
+4. 이 문서의 구현 규칙
+5. 현재 코드와 씬
 
-Canvas_Panel  (Sort Order: 20)  ← 패널 오픈 시 표시
-  ├─ LevelUpPanel
-  ├─ PausePanel
-  └─ BallLevelUpPanel
+현재 코드나 씬이 상위 기준과 다르면 현재 구현을 유지하지 않고 상위 기준에 맞게 수정합니다.
+`targetUI/TestResult/` 이미지는 원본 UI 기준에서 제외합니다.
 
-Canvas_Popup  (Sort Order: 30)  ← 최상위
-  └─ BallAcquirePopup
-```
+### 1-1. 재현 원칙
 
-모든 Canvas는 `Screen Space - Overlay` 방식을 사용합니다.
+- 실제 게임 캡처의 배치, 비율, 색상, 정보 계층을 가능한 한 동일하게 재현합니다.
+- 원본 전용 UI 리소스가 없으면 Unity 기본 UI 컴포넌트와 프로젝트 내 리소스로 유사하게 제작합니다.
+- 대체 제작에는 `Image`, 9-slice, 중첩 Image, Mask, Slider, CanvasGroup, TMP를 사용합니다.
+- 기능과 시각이 충돌하면 PDF 요구사항을 우선합니다.
+- 임의의 추가 정보나 버튼을 만들지 않습니다.
 
-> `TopButtons`는 PDF(`PurpleCow_클라이언트_채용과제.pdf`)에서 "배속 기능"과 "자동 조준 기능"을 구현 제외 항목으로 명시하고 있어, 배속 버튼과 Auto 버튼은 이번 프로토타입에서 만들지 않는다. 재생/일시정지 버튼만 구현 대상이다.
->
-> \* `TopBar`의 "아이콘"은 원본 게임에서 보스 등장 아이콘 역할이었으나, 이번 프로토타입은 보스를 구현하지 않는다(PDF 제외 항목). 따라서 이 아이콘은 장식용으로만 유지하거나 생략 가능하며, 진행률 바(%) 자체는 정상 구현 대상이다.
+### 1-2. PDF 기준 제외 항목
+
+원본 캡처에 보이더라도 다음 항목은 구현하지 않습니다.
+
+- 튜토리얼
+- 배속 기능과 배속 버튼
+- 1스테이지 보스
+- 자동 조준 기능과 Auto 버튼
+- 선택지 다시 뽑기 버튼
+- 융합 시스템과 융합 표시
+
+보스 제외에 따라 스테이지 진행바 끝의 보스 얼굴 아이콘도 제거합니다.
+
+### 1-3. 프로젝트 추가 콘텐츠
+
+버서크와 분신은 PDF 필수 항목이나 원본 게임 복제 범위가 아니라 가산점용 추가 콘텐츠입니다.
+기능 구현은 완료된 상태를 보존하며, 최종 HUD에 어울리도록 위치와 외형만 조정할 수 있습니다.
+세부 기능 규칙은 [PlayerActiveSkillDesign.md](PlayerActiveSkillDesign.md)를 따릅니다.
 
 ---
 
-## 2. 해상도 대응 (Canvas Scaler)
+## 2. 공통 텍스트 규칙
 
-세로(Portrait) 모바일 게임 기준입니다.
+프로젝트 내 모든 UI 텍스트는 다음 TMP Font Asset으로 통일합니다.
+
+`Assets/_Project/Fonts/Maplestory Bold SDF.asset`
+
+- 일반 텍스트, 숫자, 버튼, 카드, 팝업, 데미지 텍스트에 모두 동일하게 적용합니다.
+- Unity 기본 폰트나 다른 TMP Font Asset을 혼용하지 않습니다.
+- 원본처럼 밝은 본문과 어두운 외곽선 조합을 기본으로 사용합니다.
+- 배경 위 가독성이 필요한 텍스트는 TMP Outline 또는 Underlay를 사용합니다.
+- 텍스트 크기와 외곽선 두께는 요소별로 Inspector에서 조정할 수 있어야 합니다.
+
+---
+
+## 3. 화면 해상도와 Safe Area
+
+게임은 세로형 모바일 화면을 기준으로 합니다.
+주요 원본 캡처 해상도는 1080 x 2340이며, 추가 캡처는 648 x 1368입니다.
 
 | 항목 | 설정값 |
 |------|--------|
 | UI Scale Mode | Scale With Screen Size |
-| Reference Resolution | 1080 x 1920 |
+| Reference Resolution | 1080 x 2340 |
 | Screen Match Mode | Match Width Or Height |
 | Match | 0 (Width 기준) |
 
-가로폭을 기준으로 스케일하며, 세로가 긴 기기는 상하 여백이 늘어납니다.
-따라서 상단 요소는 `Anchor Top`, 하단 요소는 `Anchor Bottom`, 중앙 패널은 `Anchor Center`로 설정해야 합니다.
+- 가로폭을 기준으로 스케일합니다.
+- 상단 HUD는 Top Anchor, 하단 조작 UI는 Bottom Anchor를 사용합니다.
+- 전체 화면 패널은 Stretch Anchor를 사용합니다.
+- 서로 다른 세로 비율에서도 플레이 필드와 HUD가 겹치지 않게 상·하단 여백을 유지합니다.
+
+### 3-1. Safe Area
+
+- `Canvas_HUD` 아래에 `SafeAreaPanel`을 두고 `SafeAreaFitter`를 부착합니다.
+- 상단 HUD, 일시정지 버튼, 가산점 액티브 스킬 버튼은 `SafeAreaPanel` 아래에 배치합니다.
+- 전체 화면 딤 배경은 Safe Area 밖까지 화면 전체를 덮습니다.
+- 중앙 패널의 주요 텍스트와 버튼은 Safe Area 안에 유지합니다.
+- `Screen.safeArea`가 변경되면 다시 적용할 수 있어야 합니다.
 
 ---
 
-## 3. Safe Area 처리
+## 4. Canvas 구조 및 레이어
 
-노치, 펀치홀, 홈 인디케이터 등 기기 침범 영역을 대응합니다.
+화면 UI는 3개의 Screen Space - Overlay Canvas로 구분합니다.
 
-- `SafeAreaFitter` 컴포넌트를 `Canvas_HUD` 내 `SafeAreaPanel`에 부착
-- `Screen.safeArea`를 읽어 RectTransform의 offsetMin/offsetMax를 자동 조정
-- `Canvas_Panel` / `Canvas_Popup`은 Safe Area 미적용 (전체 화면 덮는 용도)
+```text
+Canvas_HUD (Sort Order: 10)
+└─ SafeAreaPanel
+   ├─ HUD_Static Canvas
+   │  ├─ StageHeader
+   │  ├─ StageProgressFrame
+   │  ├─ CharacterXpFrame
+   │  └─ PauseButtonFrame
+   └─ HUD_Dynamic Canvas
+      ├─ StageTitleText
+      ├─ StageProgressFill
+      ├─ StageProgressText
+      ├─ CharacterXpFill
+      ├─ CharacterLevelBadge
+      ├─ PauseButton
+      └─ PlayerActiveSkillBar
+
+Canvas_Panel (Sort Order: 20)
+├─ LevelUpPanel
+│  ├─ FullScreenDim
+│  ├─ LevelUpHeader
+│  ├─ EquippedSkillSlots
+│  └─ SkillCardGroup
+└─ PausePanel
+   ├─ FullScreenDim
+   ├─ PauseHeader
+   ├─ StageInfo
+   ├─ EquippedSkillSlots
+   ├─ StageDropArea
+   └─ ContinueButton
+
+Canvas_Popup (Sort Order: 30)
+└─ ResultPopup
+   ├─ FullScreenDim
+   ├─ ResultPanel
+   └─ RestartButton
+```
+
+캐릭터 HP바와 몬스터 HP바는 월드 오브젝트를 따라야 하므로 HUD Canvas에 두지 않습니다.
+각 대상 프리팹의 World Space Canvas에 배치합니다.
+
+### 4-1. 정적·동적 Canvas 분리
+
+- 프레임, 테두리, 고정 장식은 `HUD_Static Canvas`에 둡니다.
+- 게이지 Fill과 변경되는 텍스트는 `HUD_Dynamic Canvas`에 둡니다.
+- 동적 요소 변경으로 정적 HUD 전체가 다시 배칭되지 않게 분리합니다.
 
 ---
 
-## 4. 패널 표시/숨김 방식
+## 5. 인게임 HUD
 
-`SetActive` 대신 `CanvasGroup` 컴포넌트를 사용합니다.
-`SetActive(false)` 시 `Awake()`/`Start()`가 호출되지 않는 초기화 문제를 방지하기 위함입니다.
+### 5-1. 상단 스테이지 정보
+
+원본 캡처의 상단 중앙 구성을 기준으로 합니다.
+
+- 첫 줄 중앙에 `스테이지 번호. 스테이지명`을 표시합니다.
+- 1스테이지 표기는 `1. 깊은 숲`을 사용합니다.
+- 제목 아래에 가느다란 적색 스테이지 진행바를 배치합니다.
+- 진행바 중앙에 진행률 퍼센트를 표시합니다.
+- 진행률은 20웨이브 전체 진행 상태를 나타냅니다.
+- 보스 얼굴 아이콘은 표시하지 않습니다.
+- Auto 버튼과 배속 버튼은 만들지 않습니다.
+- 일시정지 버튼만 우측 상단에 배치합니다.
+
+### 5-2. 캐릭터 경험치와 레벨
+
+스테이지 진행바 아래의 긴 노란 게이지는 캐릭터 경험치바입니다.
+
+- 경험치바는 화면 상단 폭의 대부분을 차지하는 긴 가로 바입니다.
+- 비어 있는 부분은 어두운 색, 채워진 부분은 밝은 노란색과 주황색 계열로 표현합니다.
+- Fill에는 원본처럼 은은한 반짝임 패턴이나 하이라이트를 Unity Image로 표현할 수 있습니다.
+- 바 오른쪽 끝에 캐릭터 레벨 숫자 배지를 배치합니다.
+- 레벨 배지는 경험치가 가득 차 레벨이 오르면 즉시 갱신합니다.
+- 경험치 Fill과 레벨 숫자는 `CharacterManager` 이벤트로만 갱신합니다.
+- 하단에 별도의 화면 폭 XP바를 만들지 않습니다.
+
+### 5-3. 일시정지 버튼
+
+- 우측 상단에 원형 테두리와 일시정지 아이콘으로 표시합니다.
+- Auto나 배속 버튼을 제거해도 일시정지 버튼의 우측 정렬 위치는 유지합니다.
+- 버튼 터치 시 `PausePanel`을 표시하고 게임 시간을 정지합니다.
+
+### 5-4. 캐릭터 HP바
+
+- 캐릭터 HP바는 캐릭터 바로 아래에 붙는 작은 World Space UI입니다.
+- 화면 하단 전체 폭을 사용하는 Slider로 만들지 않습니다.
+- 초록색 Fill, 어두운 배경, 밝은 외곽선을 사용합니다.
+- 중앙에 `현재 HP/최대 HP` 형식으로 표시합니다.
+- 캐릭터가 조준 방향에 따라 좌우 반전되어도 HP 텍스트와 바는 정방향을 유지합니다.
+- 캐릭터 이동이나 화면 비율 변화와 무관하게 캐릭터를 따라갑니다.
+- HP 변경 이벤트가 발생할 때만 갱신합니다.
+
+### 5-4-1. 캐릭터와 발사 지점 배치
+
+- 캐릭터와 `LaunchPoint`는 같은 위치 기준을 사용하며 함께 이동합니다.
+- `WallFitter._nativeLaunchPointY`는 `-6.5`를 사용해 캐릭터 중심이 배경 격자 최하단보다 아래에 오도록 배치합니다.
+- 볼 발사, 귀환, 궤적 프리뷰는 이동된 `LaunchPoint`를 동일하게 사용합니다.
+
+### 5-5. 가산점 액티브 스킬 버튼
+
+버서크와 분신 버튼은 원본 HUD를 가리지 않는 우측 하단에 세로로 배치합니다.
+
+- Bottom Right Anchor를 사용하고 Safe Area 안쪽 여백을 둡니다.
+- 캐릭터, 캐릭터 HP바, 볼 발사 지점과 겹치지 않아야 합니다.
+- 두 버튼은 동일한 크기와 간격을 사용합니다.
+- 기존 스킬 아이콘과 기능 연결을 그대로 유지합니다.
+- 버튼 위에 반투명 검정 방사형 쿨다운 오버레이를 표시합니다.
+- 쿨다운 중 중앙에 남은 시간을 초 단위 숫자로 표시합니다.
+- 쿨다운 중에는 입력을 차단하고 종료 후 다시 활성화합니다.
+
+---
+
+## 6. 레벨업 3택지 패널
+
+PDF의 로그라이크 선택지 시스템과 실제 캡처를 함께 기준으로 합니다.
+
+### 6-1. 표시 조건
+
+- 캐릭터 경험치가 가득 차 레벨이 상승하면 표시합니다.
+- 패널이 표시되는 동안 게임 시간을 정지합니다.
+- 스킬 하나를 선택하면 패널을 닫고 게임 시간을 복구합니다.
+- 선택 가능한 카드 구성 규칙은 PDF의 액티브 최대 4개, 패시브 최대 2개 규칙을 따릅니다.
+
+### 6-2. 전체 레이아웃
+
+- 게임 화면 전체에 반투명 검정 딤을 적용합니다.
+- 상단 중앙에 `레벨 업` 제목을 표시합니다.
+- 제목 아래에 가득 찬 노란 경험치바와 상승한 레벨 배지를 표시합니다.
+- 중단 상단에 액티브 4칸, 패시브 2칸의 보유 슬롯을 표시합니다.
+- 그 아래에 동일한 크기의 세로형 선택 카드 3장을 가로 배치합니다.
+- 카드 그룹은 화면 중앙을 기준으로 균등한 간격을 유지합니다.
+- 다시 뽑기 버튼과 융합 표시는 만들지 않습니다.
+
+### 6-3. 보유 스킬 슬롯
+
+- 액티브 슬롯은 적갈색 계열 프레임과 `Active Skill` 라벨을 사용합니다.
+- 패시브 슬롯은 청록색 계열 프레임과 `Passive Skill` 라벨을 사용합니다.
+- 빈 슬롯은 검정에 가까운 어두운 색으로 표시합니다.
+- 보유 슬롯에는 아이콘과 현재 레벨을 `x1`, `x2`, `Max` 형식으로 표시합니다.
+- 액티브 4칸과 패시브 2칸의 그룹 경계를 색상으로 명확히 구분합니다.
+
+### 6-4. 스킬 카드
+
+카드 하나는 다음 정보를 포함합니다.
+
+1. 신규 획득일 경우 `New!`
+2. 액티브/패시브 타입 아이콘
+3. 스킬명
+4. 스킬 아이콘
+5. 액티브 스킬의 볼 데미지
+6. 효과 설명
+7. 현재 또는 다음 레벨 단계 표시
+
+- 액티브 카드는 적갈색 계열입니다.
+- 패시브 카드는 청록색 계열입니다.
+- 카드 배경과 테두리는 Unity Image 중첩과 9-slice로 제작합니다.
+- 카드 전체 영역을 하나의 선택 버튼으로 사용합니다.
+- 세 카드가 겹치거나 텍스트가 카드 밖으로 넘치지 않아야 합니다.
+- 숫자나 핵심 수치는 원본처럼 노란색으로 강조할 수 있습니다.
+- `Best!` 추천 표시는 이번 구현 범위에서 제외합니다.
+
+---
+
+## 7. 일시정지 패널
+
+실제 캡처의 정보 계층과 색상을 기준으로 제작합니다.
+
+- 전체 화면 딤 위에 `일시정지` 제목을 표시합니다.
+- 현재 스테이지와 난이도 정보를 표시합니다.
+- 액티브 4칸과 패시브 2칸의 현재 보유 스킬을 표시합니다.
+- 현재 스테이지 드롭 영역을 표시합니다.
+- 하단 중앙에 큰 `이어하기` 버튼을 배치합니다.
+- 이어하기는 패널을 닫고 게임 시간을 복구합니다.
+- 홈 버튼과 설정 버튼은 이번 구현 범위에서 제외합니다.
+
+---
+
+## 8. 성공·실패 결과 팝업
+
+결과 팝업은 PDF 필수 항목이며 직접적인 원본 캡처가 없으므로 기존 원본 UI의 색상과 형태를 응용합니다.
+
+### 8-1. 공통 구성
+
+- `Canvas_Popup`에 배치합니다.
+- 전체 화면에 반투명 검정 딤을 적용합니다.
+- 중앙에 석판 또는 양피지 느낌의 패널을 Unity Image 조합으로 제작합니다.
+- 스테이지명, 도달 웨이브, 처치 수를 표시합니다.
+- 하단에 큰 주황색 `다시 시작` 버튼 하나를 배치합니다.
+- 다시 시작 버튼은 1스테이지를 초기 상태로 재시작합니다.
+- 원본에 없는 추가 보상, 광고, 다음 스테이지 버튼은 만들지 않습니다.
+
+### 8-2. 성공과 실패 구분
+
+- 성공 제목은 금색 계열로 표시합니다.
+- 실패 제목은 적갈색 계열로 표시합니다.
+- 레이아웃은 동일하게 유지하고 제목, 색상, 보조 문구만 변경합니다.
+
+### 8-3. 애니메이션
+
+- 딤은 FadeIn 합니다.
+- 중앙 패널은 작은 크기에서 원래 크기로 확대되며 FadeIn 합니다.
+- 애니메이션 중에는 버튼 입력을 차단합니다.
+
+---
+
+## 9. 패널 표시와 애니메이션
+
+### 9-1. 표시 상태
+
+패널과 팝업은 `CanvasGroup`으로 시각과 입력을 제어합니다.
 
 | 상태 | alpha | interactable | blocksRaycasts |
 |------|-------|-------------|----------------|
 | 숨김 | 0 | false | false |
 | 표시 | 1 | true | true |
 
-모든 패널/팝업은 씬 시작부터 활성화 상태(`SetActive(true)`)를 유지하며 CanvasGroup으로만 제어합니다.
+- 이벤트 구독과 초기화를 유지해야 하는 패널 루트는 활성 상태를 유지합니다.
+- 표시와 숨김을 위해 `SetActive`와 `CanvasGroup`을 혼용하지 않습니다.
+- 하위의 장식성 오브젝트는 필요하면 개별적으로 활성화할 수 있습니다.
+
+### 9-2. 공통 애니메이션
+
+라이브러리는 DOTween을 사용합니다.
+
+- LevelUp/Pause 진입: 아래에서 위로 짧게 이동하며 FadeIn
+- LevelUp/Pause 종료: 아래로 이동하며 FadeOut
+- Result 진입: Scale Up과 FadeIn
+- 딤: 별도 FadeIn/Out
+- 모든 시간, 이동 거리, Ease는 `[SerializeField]`로 Inspector에서 조정합니다.
+- 애니메이션은 DOTween `Sequence`로 묶습니다.
+- `Time.timeScale = 0` 상태에서도 동작해야 하는 패널 애니메이션은 `SetUpdate(true)`를 사용합니다.
+- 중복 Show/Hide 호출 전에 기존 Tween을 종료해 위치와 alpha가 누적되지 않게 합니다.
 
 ---
 
-## 5. UI 애니메이션
+## 10. 버튼 피드백
 
-**라이브러리**: DOTween 사용
+모든 사용자 입력 버튼에는 `UIButton`을 부착합니다.
+Unity 기본 `Button`의 Transition은 None으로 설정합니다.
 
-**패널 전환 기본 패턴** (모든 패널/팝업 동일하게 적용, 추후 개별 보완):
-- 진입: 아래에서 위로 슬라이드 + FadeIn
-- 종료: 위에서 아래로 슬라이드 + FadeOut
-- 배경 딤: 별도 FadeIn/Out
+- `OnPointerDown`: Scale 1.0 → 0.9
+- `OnPointerUp`: Scale 0.9 → 1.0
+- `OnPointerExit`과 비정상 입력 취소 시에도 Scale 1.0으로 복구합니다.
+- 비활성 버튼은 alpha를 낮추고 입력을 차단합니다.
+- Tween 재생 전 기존 Scale Tween을 종료합니다.
+- 수치는 `[SerializeField]`로 조절합니다.
 
-**공통 규칙**:
-- 모든 수치(시간, 이동 거리, ease 타입 등)는 `[SerializeField]`로 Inspector에서 조절
-- 애니메이션은 DOTween `Sequence`로 묶어 순서 보장
-- 애니메이션 재생 중 `CanvasGroup.interactable = false`로 입력 차단
-- 애니메이션 완료 후 입력 다시 허용
-
----
-
-## 6. 버튼 피드백
-
-모든 버튼에 `UIButton` 컴포넌트를 부착합니다.
-Unity 기본 `Button`의 Transition은 **None**으로 설정하고, `UIButton`이 전담합니다.
-
-- `OnPointerDown`: Scale 1.0 → 0.9 (DOTween)
-- `OnPointerUp`: Scale 0.9 → 1.0 (DOTween)
-- 수치는 `[SerializeField]`로 Inspector 조절
-
-**비활성 버튼 처리**:
-- `CanvasGroup.alpha` 낮춤 (시각적 표현)
-- `CanvasGroup.interactable = false` (입력 차단)
-
-**사운드**: 추후 별도 처리 예정
+사운드는 별도 기획이 확정될 때 추가합니다.
 
 ---
 
-## 7. 성능 최적화 규칙
+## 11. 데미지 텍스트
+
+데미지 텍스트는 World Space TMP와 오브젝트 풀을 사용합니다.
+
+- 일반 데미지: 밝은 흰색 또는 연한 색 본문 + 짙은 외곽선
+- 치명타 데미지: 붉은색 본문 + 밝은 테두리
+- 피격 지점 위에 나타나 위로 이동하며 FadeOut 합니다.
+- 여러 타격이 겹쳐도 읽을 수 있도록 위치에 작은 랜덤 오프셋을 적용할 수 있습니다.
+- 모든 데미지 텍스트는 `Maplestory Bold SDF.asset`을 사용합니다.
+- 매번 Instantiate/Destroy하지 않고 `ObjectPool<DamageTextFx>`를 사용합니다.
+
+---
+
+## 12. 몬스터 HP바
+
+몬스터 HP바는 원본 캡처와 현재 확정 구현을 기준으로 합니다.
+
+- 몬스터 머리 위가 아니라 블록 앞면 하단에 임베드합니다.
+- 블록의 자식인 World Space Canvas로 구성합니다.
+- HP가 최대일 때는 숨깁니다.
+- 처음 데미지를 받은 순간부터 죽거나 풀로 반환될 때까지 표시합니다.
+- 풀에서 재사용될 때 HP와 표시 상태를 초기화합니다.
+- 가로 폭은 블록의 가로 크기에 비례합니다.
+- 2x1 블록의 HP바는 1x1 블록보다 두 배 넓게 표시합니다.
+- 어두운 배경 위에 붉은 Fill을 사용합니다.
+- `MonsterBase.OnHpChanged` 구독과 해제는 `OnEnable/OnDisable`에서 처리합니다.
+
+현재 몬스터 프리팹에는 Background, Fill Area, Fill과 Slider 참조가 구성되어 있으므로 과거의 “시각 그래픽 없음” 기록은 폐기합니다.
+
+---
+
+## 13. 캐릭터 HP·경험치·레벨 이벤트
+
+담당 클래스는 `CharacterManager`입니다.
+
+### 13-1. HP
+
+- `OnHpChanged(int current, int max)` 이벤트로 캐릭터 HP바를 갱신합니다.
+- 몬스터가 하단 경계를 통과하면 데미지를 받습니다.
+- HP가 0이 되면 실패 결과 팝업을 표시합니다.
+
+### 13-2. 경험치와 레벨
+
+- 몬스터 처치 또는 통과 보상으로 경험치를 획득합니다.
+- `OnXpChanged(int current, int required)`로 상단 노란 경험치바를 갱신합니다.
+- 경험치가 요구량에 도달하면 캐릭터 레벨을 올립니다.
+- `OnLevelUp(int newLevel)`로 레벨 배지와 3택지 패널을 갱신합니다.
+- 레벨업 후 남은 경험치는 다음 레벨 경험치에 반영합니다.
+
+---
+
+## 14. 궤적 프리뷰 시각 규칙
+
+담당 클래스는 `TrajectoryPreview`입니다.
+게임플레이 동작 규칙은 [GameplayMechanics.md](GameplayMechanics.md)를 따릅니다.
+
+- 터치 여부와 무관하게 항상 표시합니다.
+- 조준 중에는 현재 드래그 방향, 비조준 중에는 마지막 조준 방향을 사용합니다.
+- 점선은 첫 충돌 지점과 반사 후 두 번째 충돌 지점까지 표시합니다.
+- 두 번째 충돌 지점에는 붉은 점과 회전하는 점선 고리를 표시합니다.
+- 선과 점은 원본 캡처의 밝기와 두께를 기준으로 맞춥니다.
+- UI 버튼에서 시작한 터치는 조준 입력으로 처리하지 않습니다.
+
+---
+
+## 15. 성능 및 입력 규칙
 
 | 규칙 | 내용 |
 |------|------|
-| HUD Canvas 분리 | HUD_Static(정적 요소)과 HUD_Dynamic(동적 요소)을 별도 Canvas로 분리 |
-| Raycast Target | Image/Text 컴포넌트 기본값 OFF, 버튼만 ON |
-| GraphicRaycaster | Canvas당 하나씩만 유지 |
-| HP바/진행바 갱신 | 매 프레임 갱신 금지, 값 변경 시 이벤트로만 갱신 |
-| 비활성 패널 | SetActive 사용 금지, CanvasGroup으로만 처리 |
+| HUD Canvas 분리 | 정적 프레임과 동적 텍스트/Fill을 별도 Canvas로 분리 |
+| Raycast Target | 장식 Image와 Text는 OFF, 실제 버튼만 ON |
+| GraphicRaycaster | 입력이 필요한 Canvas에만 하나씩 유지 |
+| 값 갱신 | HP, XP, 진행률, 텍스트는 이벤트 발생 시에만 갱신 |
+| 월드 UI | 캐릭터·몬스터 HP바는 대상 프리팹을 따라가도록 구성 |
+| 패널 입력 | 표시 중인 최상위 패널만 Raycast를 차단 |
+| 조준 충돌 방지 | 버튼과 패널 위 터치는 볼 조준에서 제외 |
 
 ---
 
-## 8. 데미지 텍스트
+## 16. 리소스 사용 규칙
 
-**방식**: World Space TMP 직접 배치 — Canvas 없이 월드 좌표에 배치
-
-- `DamageTextFx` (MonoBehaviour + IPoolable): TMP_Text 컴포넌트, 위로 떠오르며 FadeOut (DOTween)
-- `DamageTextManager` (Singleton): `ObjectPool<DamageTextFx>` 보유, `ShowDamage(Vector3 worldPos, float damage, bool isCritical)` 제공
-- 크리티컬 여부에 따라 텍스트 색상/크기 차이 적용
-- 수치(이동 거리, 지속 시간, 폰트 크기 등)는 `[SerializeField]`로 Inspector 조절
-
----
-
-## 9. 몬스터 HP바
-
-이 섹션은 원본 게임 레퍼런스 스크린샷(`Assets/_Project/Docs/targetUI/`)을 실측 확인한 결과에 따라 전면 재작성되었습니다. 기존에 서술되어 있던 "몬스터 머리 위에 뜨는 월드 스페이스 캔버스 + 슬라이더" 방식은 폐기되었습니다.
-
-### 확정된 방식 — 블록(베이스) 앞면 임베드
-
-- 몬스터 프리팹은 **블록(베이스, 발판) + 캐릭터 스프라이트**가 합쳐진 하나의 프리팹이다(`MonsterRules.md` 3장 참고). HP바는 몬스터 머리 위가 아니라 **이 블록의 앞면(정면 하단)에 임베드된 형태**로 표시된다.
-- HP바의 폭은 **블록의 가로 길이에 비례**한다. 1칸 블록(`Block_1x1`, Fluffy/Spider)과 세로 2칸 블록(`Block_1x2`, ForestDeer)은 좁은 폭으로, 가로 2칸 블록(`Block_2x1`, StoneBug)은 그 2배 폭으로 표시된다.
-- 정확한 배치 좌표/두께/색상 등 세부 비율은 이 문서에서 수치로 못박지 않으며, `Assets/_Project/Docs/targetUI/` 레퍼런스 이미지를 그대로 재현하는 것을 기준으로 삼는다.
-- **(신규 확정 — 아직 코드 미반영)** 몬스터 HP바는 스폰 직후(만피 상태)에는 숨겨져 있다가, 몬스터가 데미지를 받아 현재 HP가 최대 HP보다 작아지는 순간부터 표출된다. 즉 "피격된 대상만 HP바가 보인다"가 확정된 설계다. 한 번 표출되면 해당 몬스터가 죽거나(풀 반납) 필드에서 사라질 때까지 계속 표출 상태를 유지하며, 몬스터가 풀에서 재사용되어 다시 스폰될 때는 HP가 만피로 리셋되므로 HP바도 다시 숨김 상태로 리셋되어야 한다.
-- 배치(블록 앞면 임베드) 자체는 이미 구현 완료 상태다. `Fluffy.prefab`/`StoneBug.prefab`을 직접 확인한 결과 `HpBarCanvas`(World Space Canvas)가 `BlockVisual`의 자식으로 이미 옮겨져 있고, 앞면 하단 오프셋(`m_AnchoredPosition`)으로 앵커링되어 있다. 아래 "배치 방식" 소섹션은 과거에 미구현이었던 시점의 기록이며, 현재는 완료된 상태로 정정한다.
-
-### 배치 방식 (앵커/부모 구조 변경) — 구현 완료
-
-- 기존(폐기됨): 몬스터 프리팹 최상위에 `World Space Canvas`를 자식으로 두고, 몬스터 머리 위쪽으로 오프셋된 위치에 배치.
-- 현재(구현 완료): HP바(Slider)는 **블록 오브젝트(`BlockVisual`)의 자식**으로 옮겨 붙여져 있고, 블록 앞면 하단에 앵커링되어 있다. 블록 크기가 종류별로 다르므로(3장 참고) HP바의 `RectTransform` 가로 크기도 블록 크기에 맞춰 종류별로 다르게 설정된다(2칸 블록은 1칸 블록의 2배 폭). 이 폭 조정은 `MonsterBase.ApplyBlockSize()`에서 `HpBarWidthMap`을 참조해 런타임에 적용된다.
-- Canvas 설정은 기존과 동일하게 유지한다: Render Mode = World Space, Sorting Layer = UI.
-
-### 발견된 버그 (아직 코드 미반영)
-
-코드/프리팹을 직접 읽어 확인한 결과, 아래 2가지 문제가 발견되었다. 수정은 이 문서 갱신 범위가 아니며 별도 task 문서(`research.md`/`plan.md`)에서 다룬다.
-
-- **버그 1 (오브젝트 풀링과 구독 로직 충돌, 아직 코드 미반영)**: `MonsterHpBar.cs`의 `Start()`가 `_monster.OnHpChanged`를 구독하는데, Unity의 `Start()`는 오브젝트 생애 동안 딱 한 번만 호출된다. 몬스터는 풀링되어 재사용되므로(`ObjectPool.Get()`이 `SetActive(true)`만 호출하고 `Start()`는 다시 호출하지 않음), 최초 스폰 때만 구독이 성립하고 이후 `OnDisable()`(풀 반납 시 매번 호출)에서 구독 해제만 계속 쌓여, 두 번째 재사용부터는 HP바가 데미지에 전혀 반응하지 않는다.
-- **버그 2 (HP바가 시각적으로 아예 렌더링되지 않음, 아직 코드 미반영)**: `Fluffy.prefab`/`StoneBug.prefab`의 `HpSlider` 오브젝트를 확인한 결과, `Slider` 컴포넌트의 `m_FillRect`와 `m_HandleRect`가 모두 비어있고(`{fileID: 0}`), Background/Fill Area/Fill/Handle 같은 시각적 자식 오브젝트가 아예 없다. `Slider.value`가 바뀌어도 실제로 그려줄 그래픽이 없어 HP바가 항상 화면에 보이지 않는 상태다.
-
-### 재사용 가능한 부분
-
-- `MonsterHpBar` (MonoBehaviour)와 `MonsterBase.OnHpChanged(float current, float max)` 이벤트 구독 구조는 배치 방식만 바뀔 뿐 **그대로 재사용 가능**하다.
-- `MonsterBase`의 `public event Action<float, float> OnHpChanged` 발행 시점(TakeDamage/Die/OnSpawn/ApplyData)도 변경 없이 그대로 사용한다.
-- HP 0이 되면 HP바 오브젝트는 풀 반납 시 자동 비활성화되는 동작도 유지한다.
-- 변경되는 것은 HP바의 **부모 오브젝트(월드 캔버스의 부착 위치)와 앵커/크기 설정**뿐이다.
+- 스킬과 볼 아이콘은 `Assets/_Project/Sprites/`의 기존 리소스를 우선 사용합니다.
+- 캐릭터와 몬스터는 기존 Sprite를 그대로 사용합니다.
+- UI 프레임, 게이지 배경, 버튼 테두리처럼 전용 리소스가 없는 요소는 Unity UI로 제작합니다.
+- 원본과 유사한 형태를 만들기 위해 단색 Image를 여러 겹 배치하거나 9-slice를 사용합니다.
+- 프로젝트에 없는 이미지를 존재한다고 가정하지 않습니다.
+- 새 외부 리소스가 필요하면 생성하거나 추가하기 전에 사용자 확인을 받습니다.
 
 ---
 
-## 10. 캐릭터 HP / 경험치 / 레벨 시스템
+## 17. 현재 구현과 목표 UI의 차이
 
-**담당 클래스**: `CharacterManager` (Singleton)
+다음은 문서 작성 시점의 확인 결과이며 UI 구현 단계에서 수정해야 합니다.
 
-### HP
+- `SafeAreaPanel`이 비어 있어 현재 HUD에 Safe Area가 적용되지 않습니다.
+- `ResultPanel`과 `SkillSelectionPanel`이 `Canvas_HUD` 아래에 있어 목표 Canvas 구조와 다릅니다.
+- `Canvas_Popup`이 비어 있습니다.
+- 현재 CharacterHP와 CharacterXP Slider에는 화면에 그릴 Fill 그래픽이 없습니다.
+- CharacterHP가 화면 하단 전체 폭으로 배치되어 원본과 다릅니다.
+- CharacterXP가 하단에 배치되어 원본의 상단 경험치바와 다릅니다.
+- 스킬 카드 3장이 기본 100 x 100 중앙 위치에 겹쳐 있습니다.
+- 스킬 카드와 슬롯의 전용 레이아웃·프레임이 없습니다.
+- `PausePanel`은 빈 오브젝트입니다.
+- HUD의 `WAVE n / 20`, 처치 점수, 중앙 퍼센트 텍스트는 원본 정보 구조와 다릅니다.
+- 패널 코드가 `SetActive`와 CanvasGroup을 혼용하고 있어 이 문서의 패널 규칙과 다릅니다.
+- 버서크와 분신 버튼은 `Canvas_Panel`에 직접 배치되어 있으므로 `Canvas_HUD/SafeAreaPanel` 아래로 이동해야 합니다.
+- 몬스터 HP바의 이벤트 구독, 피격 후 표시, Background/Fill 구성은 현재 구현에 반영되어 있습니다.
 
-- `[SerializeField] private int _maxHp` — Inspector 설정
-- 몬스터가 맨 아래줄을 통과하면 `MonsterData._damage`만큼 HP 차감
-- HP 0 → `GameManager.EndGame(false)`
-- 이벤트: `public static event Action<int, int> OnHpChanged` (현재, 최대)
-- HUD: `CharacterHpBar` (MonoBehaviour, Slider + TMP_Text 현재/최대 HP 숫자 표시), `CharacterHP` 오브젝트에 부착
-
-### 경험치 / 레벨
-
-- `[SerializeField] private int[] _xpPerLevel` — 레벨별 필요 XP (Inspector 배열 설정)
-- XP 획득 조건: 몬스터 처치 / 몬스터 통과 모두 `MonsterData.reward`만큼 획득 (원본 게임 실제 플레이 경험으로 검증 완료된 사항, 규칙 변경 없음)
-- XP 가득 차면 레벨업 → `OnLevelUp(int newLevel)` 이벤트 발행 → `LevelUpPanel` 오픈
-- 이벤트: `public static event Action<int, int> OnXpChanged` (현재, 필요량)
-- HUD: `CharacterXpBar` (MonoBehaviour, Slider + TMP_Text 레벨 표시), `CharacterXP` 오브젝트에 부착
-
-### WaveManager 연동
-
-- `WaveManager`에 `public static event Action<MonsterBase> OnMonsterReachedBottom` 추가 필요
-- `CharacterManager`가 이 이벤트를 구독하여 HP/XP 처리
-
----
-
-## 11. 궤적 프리뷰 시각 규칙
-
-**담당 클래스**: `TrajectoryPreview` (`Assets/_Project/Scripts/Ball/TrajectoryPreview.cs`)
-
-원본 스펙은 [GameplayMechanics.md](GameplayMechanics.md) 섹션 1을 참고합니다.
-
-- 터치 여부와 무관하게 항상 표시되며, 매 프레임 실시간으로 갱신된다(터치 중에는 드래그 방향을, 터치하지 않을 때는 마지막 조준 방향을 기준으로 갱신).
-- 궤적선은 점선(dashed line) 형태이며, 1차 충돌 지점까지 + 반사 후 2차 충돌 지점까지 총 2단계 선분으로 그려진다. 3차 충돌 이후는 표시하지 않는다.
-- 2차 충돌 지점에는 빨간 점(레드닷)과 그 점을 감싸는 원형 궤적선(고리)이 표시된다. 고리는 실선이 아니라 끊어진 점선 형태이며, 조준(터치) 여부와 무관하게 항상 시계방향으로 계속 회전한다.
-- 충돌 판정은 `Physics2D.RaycastAll` + `Wall`/`Ground`/`Monster` 태그 화이트리스트 필터링으로 처리한다. 태그가 없는 다른 볼 오브젝트는 자동으로 제외된다.
-
-### 구현 방식
-
-- `LineRenderer` 기반으로 그린다. 별도 스프라이트 에셋은 사용하지 않는다.
-- 궤적선의 점선은 런타임 생성한 텍스처(4x1)와 `LineRenderer.textureMode = Tile` 조합으로 구현한다.
-- 레드닷은 `CreateSolidTexture()`로 만든 단색 텍스처를 사용하는 원형 점열(정다각형 근사, `LineRenderer`)로 구현하며, 회전하지 않는다.
-- 원형 궤적선(고리)은 텍스처 자체는 레드닷과 동일하게 `CreateSolidTexture()`로 만든 단색 텍스처를 사용하며, 점선처럼 보이는 효과는 텍스처 타일링이 아니라 `_hitRing.colorGradient`(`BuildRingDashGradient()`)로 만든다. 원 둘레를 4등분해 각 등분의 정중앙(t = 0, 0.25, 0.5, 0.75)은 알파 1(가장 밝음), 등분 경계(t = 0.125, 0.375, 0.625, 0.875)는 알파 0(안 보임)이 되도록 8개의 alphaKeys를 배치하고 그 사이를 선형 보간함으로써, 정확히 4개의 밝은 호가 고리 둘레에 고르게 나타난다(`colorKeys`는 시작/끝 2개만 두고 둘 다 `_ringColor`로 고정해 색상 자체는 균일하게 유지한다). 참고로 이전에는 `CreateRingDashTexture()`로 전용 점선 텍스처를 만들고 `RING_DASH_COUNT`(10개) 기준으로 `mainTextureScale`을 계산해 타일링하는 방식을 시도했으나, 실제 렌더링 결과가 의도한 개수(10개)와 다르게 나타나(2개로 보임) 이 방식은 폐기되었다.
-- 고리의 회전은 `transform.Rotate()`가 아니라, 정점 좌표를 계산하는 `DrawCircle()` 메서드에 `rotationOffsetDeg` 선택적 파라미터를 추가해 `angle = 기존각도 - offsetRad`로 정점 각도 자체를 시간에 따라 감소시키는 방식으로 구현한다. `_hitRing`을 그릴 때만 `Time.time * _ringRotationSpeed`(deg/sec)로 계산한 오프셋을 넘겨 매 프레임 시계방향으로 회전시키며, 이 회전은 `Update()`가 터치(조준) 여부와 무관하게 항상 실행되는 기존 구조를 그대로 따르므로 조준 중이 아닐 때도(2차 충돌 지점이 존재해 고리가 보이는 동안은) 고리는 계속 회전한다. `colorGradient`는 정점의 월드 좌표가 아니라 정점 순서(인덱스)를 기준으로 알파값을 매기므로, 정점 각도가 매 프레임 회전해도 4개의 밝은 호는 형태를 유지한 채 고리 전체와 함께 계속 회전하는 것처럼 보인다.
-
-### Inspector 조절 값
-
-| 필드 | 설명 |
-|------|------|
-| `_lineWidth` | 궤적선 두께 |
-| `_lineColor` | 궤적선 색상 |
-| `_hitColor` | 레드닷 색상 |
-| `_ringColor` | 원형 궤적선(고리) 색상 |
-| `_dotRadius` | 레드닷 반경 |
-| `_ringRadius` | 원형 궤적선(고리) 반경 |
-| `_ringRotationSpeed` | 원형 궤적선(고리) 회전 속도 (deg/sec, 기본값 90) |
-
----
-
-## 12. 리소스 참고 사항
-
-- 필드에 떠 있는 아이템(다이아몬드 젬처럼 보이는 것)은 별도 전용 에셋이 아니라 볼 스프라이트 재사용으로 추정된다 (`Assets/_Project/Sprites/Ball/`에 6종 이미 존재).
-- 스킬 카드의 "Best!" 추천 아이콘은 프로젝트에 관련 리소스가 없으며, 추가할 계획도 없으므로 이번 구현 범위에서 완전히 제외한다.
+이 섹션은 UI 구현 완료 후 실제 상태에 맞게 갱신합니다.

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 
 public class SkillSelectionPanel : MonoBehaviour
@@ -10,6 +11,8 @@ public class SkillSelectionPanel : MonoBehaviour
 
     [SerializeField] private SkillSlotGroup _activeSlotGroup;
     [SerializeField] private SkillSlotGroup _passiveSlotGroup;
+    [SerializeField] private TMP_Text _levelText;
+    [SerializeField] private HUDPanel _hudPanel;
 
     [SerializeField] private CanvasGroup _canvasGroup;
     [SerializeField] private float _slideDist    = 50f;
@@ -20,11 +23,13 @@ public class SkillSelectionPanel : MonoBehaviour
     private void Awake()
     {
         _originalPos = transform.localPosition;
+        if (_hudPanel == null)
+            _hudPanel = FindFirstObjectByType<HUDPanel>();
     }
 
     private void OnEnable()
     {
-        WaveManager.OnKillCountReached  += OpenPanel;
+        CharacterManager.OnLevelUp += OpenPanel;
         GameManager.OnGameStateChanged  += HandleGameStateChanged;
         SkillManager.OnActiveSkillsChanged  += HandleActiveSkillsChanged;
         SkillManager.OnPassiveSkillsChanged += HandlePassiveSkillsChanged;
@@ -32,7 +37,7 @@ public class SkillSelectionPanel : MonoBehaviour
 
     private void OnDisable()
     {
-        WaveManager.OnKillCountReached  -= OpenPanel;
+        CharacterManager.OnLevelUp -= OpenPanel;
         GameManager.OnGameStateChanged  -= HandleGameStateChanged;
         SkillManager.OnActiveSkillsChanged  -= HandleActiveSkillsChanged;
         SkillManager.OnPassiveSkillsChanged -= HandlePassiveSkillsChanged;
@@ -53,9 +58,11 @@ public class SkillSelectionPanel : MonoBehaviour
             data.ResetLevel();
     }
 
-    private void OpenPanel()
+    private void OpenPanel(int newLevel)
     {
         Time.timeScale = 0f;
+        _hudPanel?.SetCharacterProgressVisible(false);
+        if (_levelText != null) _levelText.text = newLevel.ToString();
         ShowRandomSkills();
         RefreshSlotGroups();
         Show();
@@ -144,7 +151,8 @@ public class SkillSelectionPanel : MonoBehaviour
 
     public void Show()
     {
-        gameObject.SetActive(true);
+        transform.DOKill();
+        _canvasGroup.DOKill();
         _canvasGroup.blocksRaycasts = false;
         _canvasGroup.interactable   = false;
         transform.localPosition     = _originalPos + Vector3.down * _slideDist;
@@ -158,12 +166,18 @@ public class SkillSelectionPanel : MonoBehaviour
 
     public void Hide()
     {
+        transform.DOKill();
+        _canvasGroup.DOKill();
         _canvasGroup.blocksRaycasts = false;
         _canvasGroup.interactable   = false;
 
         Sequence seq = DOTween.Sequence().SetUpdate(true);
         seq.Append(transform.DOLocalMoveY(_originalPos.y - _slideDist, _animDuration).SetEase(_ease));
         seq.Join(_canvasGroup.DOFade(0f, _animDuration));
-        seq.OnComplete(() => { transform.localPosition = _originalPos; gameObject.SetActive(false); });
+        seq.OnComplete(() =>
+        {
+            transform.localPosition = _originalPos;
+            _hudPanel?.SetCharacterProgressVisible(true);
+        });
     }
 }

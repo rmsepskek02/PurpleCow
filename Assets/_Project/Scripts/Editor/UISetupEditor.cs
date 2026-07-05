@@ -23,31 +23,7 @@ public static class UISetupEditor
     [MenuItem("PurpleCow/Setup/UI Setup")]
     private static void SetupUI()
     {
-        EnsurePrefabFolders();
-        EnsureEventSystem();
-
-        Canvas hudCanvas    = Step1_CreateCanvas("Canvas_HUD",   10);
-        Canvas panelCanvas  = Step1_CreateCanvas("Canvas_Panel", 20);
-        Canvas popupCanvas  = Step1_CreateCanvas("Canvas_Popup", 30);
-
-        Step2_SetupHUDCanvas(hudCanvas);
-        Step3_SetupPanelCanvas(panelCanvas);
-        Step4_SetupManagers();
-        Step5_ConnectUIManagerRefs();
-        Step6_CreateSkillCardPrefab();
-        Step7_CreateDamageTextFxPrefab();
-        Step8_ConnectDamageTextManagerRefs();
-        Step9_SetupHUDPanelContent();
-        Step10_SetupResultPanelContent();
-        Step11_SetupSkillSelectionPanelContent();
-        Step12_CreateSkillSlotPrefab();
-        Step13_SetupSkillSlotGroups();
-        Step14_SetupPlayerActiveSkills();
-
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
-        Debug.Log("[UISetupEditor] UI Setup 완료.");
+        UIOverhaulSetupEditor.Run();
     }
 
     private static void EnsureEventSystem()

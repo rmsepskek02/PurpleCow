@@ -14,7 +14,8 @@ public class SkillSlotIcon : MonoBehaviour
         _filledRoot.SetActive(true);
         _emptyRoot.SetActive(false);
         _iconImage.sprite = icon;
-        _levelText.text   = $"x{level}";
+        _iconImage.preserveAspect = true;
+        _levelText.text   = level >= 3 ? "Max" : $"x{level}";
     }
 
     public void SetEmpty()

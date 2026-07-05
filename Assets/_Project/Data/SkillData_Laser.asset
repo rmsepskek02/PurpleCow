@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: SkillData_Laser
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   _skillId: 1004
-  _skillName: Laser Ball
+  _skillName: "\uB808\uC774\uC800 \uBCFC"
   _icon: {fileID: 6460537984911393379, guid: 34a7f58c5d4863f4bb455a1067ecec0a, type: 3}
   _description: "\uCDA9\uB3CC\uD55C \uBAAC\uC2A4\uD130\uC640 \uAC19\uC740 \uD589\uC758
     \uB2E4\uB978 \uBAAC\uC2A4\uD130\uC5D0\uAC8C \uCD94\uAC00 \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."

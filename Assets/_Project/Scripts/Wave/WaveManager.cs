@@ -36,6 +36,8 @@ public class WaveManager : Singleton<WaveManager>
     public static event Action<int, int>    OnMonsterCountChanged; // (남은 수, 전체 수)
 
     public int TotalWaves => _waveTable.TotalWaves;
+    public int CurrentWaveNumber => Mathf.Clamp(_currentWaveIndex + 1, 1, TotalWaves);
+    public float StageProgress => TotalWaves > 0 ? (float)(CurrentWaveNumber - 1) / TotalWaves : 0f;
     public float BottomBoundaryY => _bottomBoundaryY;
 
     protected override void Awake()

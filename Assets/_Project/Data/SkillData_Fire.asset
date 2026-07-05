@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: SkillData_Fire
   m_EditorClassIdentifier: Assembly-CSharp::SkillData
   _skillId: 1001
-  _skillName: Fire Ball
+  _skillName: "\uD30C\uC774\uC5B4 \uBCFC"
   _icon: {fileID: 6749790375628077161, guid: 0963d3d83ee3404489e86aefb842d808, type: 3}
   _description: "\uCDA9\uB3CC\uD55C \uBAAC\uC2A4\uD130\uC5D0\uAC8C \uC9C0\uC18D \uD654\uC0C1
     \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
