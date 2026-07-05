@@ -52,6 +52,7 @@ MonoBehaviour:
   _headTransform: {fileID: 6442401597588401250}
   _weaponPivot: {fileID: 279564391493668630}
   _headRotationRatio: 0.25
+  _horizontalBiasDegrees: 15
 --- !u!1 &6184966786333906158
 GameObject:
   m_ObjectHideFlags: 0
@@ -131,7 +132,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 30
+  m_SortingOrder: 10000
   m_MaskInteraction: 0
   m_Sprite: {fileID: 8550400324698198242, guid: ea06e710b2a5d594e8b5870a43a75741, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -222,7 +223,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 2
+  m_SortingOrder: 10000
   m_MaskInteraction: 0
   m_Sprite: {fileID: 8416484648392494308, guid: 75111b9cfc853594ba28f7402f7e46a8, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -313,7 +314,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 10000
   m_MaskInteraction: 0
   m_Sprite: {fileID: -2985422761399586504, guid: bb4235f415e22fd429dd9f357b956ee1, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
