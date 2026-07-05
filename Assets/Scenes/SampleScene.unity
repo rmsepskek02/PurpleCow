@@ -200,11 +200,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrajectoryPreview
   _lineWidth: 0.05
-  _lineColor: {r: 0.88235295, g: 0.88235295, b: 0.8627451, a: 1}
+  _lineColor: {r: 0.5999999, g: 0.5999999, b: 0.5966037, a: 1}
   _hitColor: {r: 0.80784315, g: 0.3529412, b: 0.32156864, a: 1}
-  _ringColor: {r: 0.88235295, g: 0.88235295, b: 0.8627451, a: 1}
+  _ringColor: {r: 1, g: 1, b: 1, a: 1}
   _dotRadius: 0.05
   _ringRadius: 0.3
+  _ringRotationSpeed: 180
 --- !u!4 &71915424
 Transform:
   m_ObjectHideFlags: 0
@@ -2499,7 +2500,6 @@ RectTransform:
   - {fileID: 483312832}
   - {fileID: 513350062}
   - {fileID: 755817642}
-  - {fileID: 1731188297}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -3984,54 +3984,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 387945f3b41c8a24f84acbb8e7b5d8b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkillCardUI
---- !u!1 &1731188296
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1731188297}
-  - component: {fileID: 1731188298}
-  m_Layer: 0
-  m_Name: PrismPanel
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1731188297
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1731188296}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 849164776}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!225 &1731188298
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1731188296}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1 &1799650614
 GameObject:
   m_ObjectHideFlags: 0

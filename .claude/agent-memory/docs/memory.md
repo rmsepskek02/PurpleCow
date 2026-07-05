@@ -1,3 +1,80 @@
+## 2026-07-05 (조준 방향 Y 하한 제한 research)
+
+### 작업 내용
+- 볼 조준(터치 드래그) 시 목표 지점 Y좌표가 격자(그리드) 밑변보다 아래로 내려가지 못하게 제한하는 task의 research.md 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/18-30_aim-direction-y-clamp/research.md`
+
+### 결과
+- `InputHandler.ComputeAimDirection`(22~27행)에 Y좌표 제한이 전혀 없음을 재확인, 호출 지점이 `Update()`의 `OnDrag?.Invoke(ComputeAimDirection(...))`(62행) 한 곳뿐임을 확인
+- `WallFitter._ground`가 private 필드(11행)라 외부에서 직접 접근 불가함을 확인, `BallLauncher.LaunchPoint => _launchPoint` 같은 프로퍼티 노출 패턴이 `WallFitter`에는 없다는 점을 근거로 참조 확보 방식 후보 3가지(A: InputHandler에 `_ground` 직접 연결, B: WallFitter에 `GroundY` 프로퍼티 추가 후 참조, C: `FindFirstObjectByType<WallFitter>()` 자동 탐색) 정리
+- `WaveManager._bottomBoundaryY`(SampleScene.unity 720행, 하드코딩 `-5`)는 `WallFitter`가 디바이스별로 재계산하는 `Ground`의 실제 위치와 동기화되지 않는 별개 값임을 씬 파일 실측(Ground 실제 로컬 Y `-6.397638`, 677행)으로 재확인, 기준점으로 부적절함을 명시
+- `SceneSetupEditor.cs`의 `Step5_PlaceWallsAndGround`(392행, `GameObject.Find`/태그 둘 다로 조회 가능)와 `Step6_SetupWallFitter`(419~462행, `WallFitter._ground` 연결) 확인, `InputHandler`에는 대응하는 `Step*_ConnectInputHandlerRefs`가 없어 새 참조 필드 추가 시 수동 연결 또는 신규 Step 코드가 필요함을 지적
+- clamp 적용 위치 후보 (a) `worldPos.y`를 `Ground` Y 이상으로 clamp 후 방향 계산 vs (b) 방향 벡터 계산 후 사후 보정, (a)가 더 단순함을 언급하되 최종 결정은 plan.md로 유보
+- `LaunchPoint`가 `Ground`보다 항상 위에 위치하는 구조(`_nativeLaunchPointY=-6.0` vs `_nativeBottomY=-6.5`)를 근거로, 이 제한이 수평 조준까지는 방해하지 않고 그보다 더 아래(뒤쪽/바닥 방향)만 차단하는 비교적 좁은 범위의 제약이 될 것으로 기하학적 설명 정리
+- `GameplayMechanics.md` 섹션 1 기존 서술과 직접적인 모순은 없으나, 구현 완료 후 새 규칙을 문서에 추가해야 함을 결론에 명시 (이번 단계에서는 문서 미수정)
+
+### 주요 결정사항
+- plan.md는 작성하지 않음(사용자 확인 대기, TaskRules.md 워크플로우 준수), 코드는 읽기만 하고 수정하지 않음
+- 열린 질문(사용자 확인 필요): (1) Ground 참조 방식 A/B/C 중 선택, (2) SceneSetupEditor.cs에 연결 코드 추가 여부, (3) GameplayMechanics.md 문서화 시점(구현과 동시 vs 후속)
+
+---
+
+## 2026-07-05 (볼-볼 충돌 버그 research)
+
+### 작업 내용
+- 볼-볼 물리 충돌 버그 task research.md 생성 (오케스트레이터가 사전 조사한 원인을 코드/설정 파일 직접 열람으로 검증)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/research.md`
+
+### 결과
+- `Ball.prefab`(m_Layer:0, Untagged), `Physics2DSettings.asset`(m_LayerCollisionMatrix 전부 ffff), `TagManager.asset`(태그 3개만 등록, 레이어 전부 미사용) 직접 확인
+- `SceneSetupEditor.cs`/`MonsterSetupEditor.cs`에 레이어 설정 코드 전무함을 확인, Monster/Block 프리팹 4+4종 및 실제 게임 씬(`Assets/Scenes/SampleScene.unity`) 전체 오브젝트가 m_Layer:0임을 grep으로 재확인
+- 부가 발견: `SceneSetupEditor.Step1_CreateBallPrefab()`이 `TrySetTag(go, "Ball")`을 호출하지만 "Ball" 태그가 `BallSetupEditor.AddRequiredTags()`의 등록 목록(Monster/Wall/Ground)에 빠져 있어 조용히 실패 → Ball.prefab이 Untagged로 남은 실제 이유임을 특정
+- `TrajectoryPreview.cs` line 96 주석이 이 "태그 없음" 상태를 다른 볼 필터링에 의존하고 있음을 확인 → 해결 방식 선택 시 상호작용 검토 필요 항목으로 명시
+- `ObjectPool.Get()`이 고정 크기가 아니라 동적으로 늘어나는 구조임을 검증, 이를 근거로 해결 방식 (a) 전용 Ball 레이어 신설+`IgnoreLayerCollision` vs (b) 볼 쌍마다 `IgnoreCollision` 두 후보의 트레이드오프를 "문제점/구현 대상 파악" 섹션에 정리
+- AGENTS.md는 "개별 task 폴더 목록은 별도 관리하지 않음" 정책이 명시되어 있어 인덱스 등록 생략 (정책 재확인 후 판단)
+
+### 주요 결정사항
+- plan.md는 작성하지 않음 (사용자 확인 대기, TaskRules.md 워크플로우 준수)
+- 코드/프리팹/ProjectSettings 파일은 읽기만 하고 수정하지 않음
+- 열린 질문(사용자 확인 필요): (a) 전용 Ball 레이어 신설 방식 vs (b) 볼 쌍마다 IgnoreCollision 호출 방식 중 선택 필요, (a) 선택 시 TrajectoryPreview.cs의 태그 기반 필터링 로직과의 상호작용 처리 방식도 함께 결정 필요
+
+---
+
+## 2026-07-05 (추가 정정)
+
+### 작업 내용
+- UIRules.md 섹션 11 "구현 방식" 항목 재정정: dev 에이전트가 `_hitRing`의 텍스처 타일링 방식(`CreateRingDashTexture()`, `RING_DASH_COUNT`, `mainTextureScale` 계산)을 완전 폐기하고 `LineRenderer.colorGradient` 기반 방식(`BuildRingDashGradient()`)으로 교체한 실제 구현(오케스트레이터가 git diff로 검증)에 맞춰 문서 서술 갱신
+- 경로: `Assets/_Project/Docs/UIRules.md` (코드 미수정, GameplayMechanics.md는 확인만 하고 변경 없음)
+
+### 결과
+- 섹션 11 "구현 방식" 고리(ring) 관련 문단: `_hitRing`도 레드닷과 동일하게 `CreateSolidTexture()`(단색 텍스처)를 사용하고, 점선 효과는 `_hitRing.colorGradient`(`BuildRingDashGradient()`)의 alphaKeys 8개(4등분 중앙 t=0/0.25/0.5/0.75 알파 1, 경계 t=0.125/0.375/0.625/0.875 알파 0)로 만들어 정확히 4개의 밝은 호가 나타남을 서술, 폐기된 이전 텍스처 타일링 방식(10개 의도했으나 실제 2개로 렌더링되어 폐기)도 참고용으로 한 문장 남김
+- 회전 로직 문단에 "`colorGradient`는 정점 인덱스 기준으로 알파를 매기므로 정점 각도가 회전해도 4개 호 형태가 유지된 채 함께 회전한다" 설명 추가 (회전 로직 자체는 `rotationOffsetDeg`/`Time.time * _ringRotationSpeed`로 기존과 동일, 변경 없음)
+- Inspector 조절 값 표 `_ringRotationSpeed` 행은 변경 없이 유지
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 코드는 이미 구현 완료 상태이므로 건드리지 않고 문서만 실제 구현에 정확히 맞춤
+- GameplayMechanics.md는 사용자 관점 서술("점선(끊어진 호) + 시계방향 회전")만 담고 구현 디테일(텍스처/Gradient)을 언급하지 않으므로 이번 정정 범위에서 제외
+
+---
+
+## 2026-07-05
+
+### 작업 내용
+- `_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/plan.md` STEP 3~4에 따라 GameplayMechanics.md / UIRules.md 갱신 (dev 에이전트가 이미 구현 완료한 `TrajectoryPreview.cs`의 실제 코드 내용을 오케스트레이터가 git diff로 검증해 전달, 이를 문서에 반영만 함 — 코드 미수정)
+- 경로: `Assets/_Project/Docs/GameplayMechanics.md`, `Assets/_Project/Docs/UIRules.md`
+
+### 결과
+- GameplayMechanics.md 섹션 1: 2차 충돌 지점 고리 설명 문장에 "실선이 아니라 끊어진 점선 형태이며, 조준(터치) 여부와 무관하게 항상 시계방향으로 계속 회전한다" 추가
+- UIRules.md 섹션 11: (1) 2차 충돌 지점 서술에 점선/회전 특징 추가, (2) 구현 방식 항목을 레드닷(`CreateSolidTexture()`, 회전 없음)과 고리(`CreateRingDashTexture()`, `RING_DASH_COUNT=10`, 둘레 기준 스케일)로 분리 서술 + 회전이 `DrawCircle()`의 `rotationOffsetDeg` 파라미터(`angle = 기존각도 - offsetRad`, `Time.time * _ringRotationSpeed`)로 구현되며 터치 여부와 무관하게 항상 진행됨을 명시, (3) Inspector 조절 값 표에 `_ringRotationSpeed`(deg/sec, 기본값 90) 행 추가
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 코드/씬 파일은 건드리지 않고 문서 서술만 실제 구현(오케스트레이터 제공 git diff 검증 내용)에 정확히 맞춰 갱신
+- GameplayMechanics.md의 "구현 현황" 하위 섹션(task 이력 기록)은 이번 지시 범위(섹션 1의 특정 문장 정정)를 벗어나므로 건드리지 않음 (외과적 변경 원칙)
+
+---
+
 ## 2026-07-04
 
 ### 작업 내용
@@ -937,6 +1014,22 @@
 
 ---
 
+## 2026-07-05 (PrismPanel 제거)
+
+### 작업 내용
+- `UIRules.md` 1장 Canvas 계층도에서 융합 시스템 잔재로 판단된 `PrismPanel` 줄 제거
+- 경로: `Assets/_Project/Docs/UIRules.md`
+
+### 결과
+- `Canvas_Panel` 하위 목록에서 `└─ PrismPanel` 줄 삭제, 그 앞 `BallLevelUpPanel` 줄의 트리 문자를 `├─` → `└─`로 수정해 마지막 항목으로 정리 (LevelUpPanel/PausePanel/BallLevelUpPanel 3개만 남음)
+- 문서 전체 `Prism` grep 결과 해당 계층도 1곳(수정 전 27번째 줄)뿐이었고 다른 언급은 없어 추가 조치 불필요
+- Read/Grep/Edit만 사용, Bash 미사용, `UIRules.md` 외 다른 파일은 수정하지 않음
+
+### 주요 결정사항
+- PDF 스펙 "구현 제외 항목"에 명시된 융합 시스템 관련 잔재 패널이라는 사용자 판단을 그대로 반영해 삭제, 별도 대체 문구 없이 목록만 축소
+
+---
+
 ### 작업 내용 (추가)
 - 캐릭터 프리팹 구성 + 무기 조준 회전 애니메이션 task plan.md 신규 생성
 - 경로: `Assets/_Project/Docs/_Task/2026-07-05/04-03_character-weapon-aim/plan.md`
@@ -971,3 +1064,42 @@
 - research.md 새 섹션은 기존 섹션 뒤에 이어붙이는 방식으로 추가하고 기존 문장은 전혀 수정하지 않음(연혁을 남기는 것이 목적이므로 기존 결론 문단도 그대로 보존)
 - AGENTS.md는 이번에도 별도 갱신하지 않음(기존 파일 수정이라 신규 문서 등록 대상 아님, 개별 task 폴더 목록 미관리 정책 유지)
 - Bash 미사용, Read/Edit/Write만 사용해 작업 완료
+
+---
+
+## 2026-07-05 (궤적 프리뷰 고리 research.md)
+
+### 작업 내용
+- 궤적 프리뷰 고리(Ring) 점선화 및 회전 효과 task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/research.md` (폴더 신규 생성 포함)
+- `TrajectoryPreview.cs`, `GameplayMechanics.md` 섹션 1, `UIRules.md` 섹션 11, `Assets/Scenes/SampleScene.unity`의 `TrajectoryPreview` 컴포넌트 직렬화 값, `Assets/_Project/Docs/targetUI/` 레퍼런스 이미지 3장(`KakaoTalk_20260701_190324151.jpg`, `_01.jpg`, `_02.jpg`)을 모두 직접 Read로 확인 후 작성
+
+### 결과
+- research.md 작성 완료: `_hitRing`이 `CreateSolidTexture()` 기반 24각형 실선이며 회전 로직이 전혀 없다는 점, `_trajectoryLine`은 이미 `CreateDashTexture()` + `textureMode=Tile` 점선 패턴을 쓰고 있어 재사용 가능한 기존 구조라는 점을 확인해 기술
+- 사용자가 별도 요청한 "궤적선 색상 Inspector 조절 가능화"는 코드(`_lineColor`/`_hitColor`/`_ringColor` 등 6개 `[SerializeField]` 필드)와 씬 오버라이드 값(코드 기본값과 6개 필드 전부 완전 일치, 표로 정리) 양쪽 모두 이미 충족되어 있어 추가 구현 불필요하다는 점을 명확히 기술 — 과거(2026-07-03) 씬 오버라이드가 코드 기본값을 가리던 전례를 재확인했으나 이번 건은 문제 없음
+- 레퍼런스 이미지 3장에서 레드닷 주변 고리 마커가 완전한 이어진 실선이 아니라 끊어진 호/틱 형태로 보인다는 시각적 근거를 이미지 좌표와 함께 서술(회전 자체는 정지 이미지로 검증 불가하다는 한계도 명시)
+- 문제점/구현 대상에 점선화(둘레 길이 기준 `mainTextureScale` 별도 계산 필요성), 회전(`DrawCircle()`이 매 프레임 월드 좌표를 직접 `SetPosition`하므로 `transform.Rotate()`가 무의미할 수 있고 각도 계산 자체에 시간 기반 오프셋을 더하는 방식이 필요하다는 방향성), 회전 속도 Inspector 노출 여부 등 3개 항목 기술
+- plan.md는 작성하지 않음(TaskRules.md 워크플로우에 따라 사용자 확인 대기)
+
+### 주요 결정사항
+- 구체적 구현 방법(점선 세그먼트 개수, 회전 속도/방향, Inspector 노출 여부)은 research.md에서 확정하지 않고 열린 질문 3건으로 명시해 plan.md 단계로 미룸
+- 코드는 읽기만 하고 수정하지 않음, git 커밋/푸시 없음, Bash 미사용, Read/Edit/Write/Glob/Grep만 사용
+
+---
+
+## 2026-07-05 (볼-볼 충돌 버그 plan.md)
+
+### 작업 내용
+- 볼-볼 물리 충돌 버그 task plan.md 신규 생성 (research.md는 이미 사용자 확인 완료 상태, 오케스트레이터-사용자 논의로 확정된 해결 방식 (a)를 그대로 STEP 구조로 반영)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/plan.md`
+- 작성 전 `BallSetupEditor.cs`, `BallLauncher.cs`, `ProjectSettings/TagManager.asset`을 직접 재확인해 레이어 배열 빈 슬롯 위치(인덱스 8)와 기존 태그 등록 패턴(`AddRequiredTags()`)을 재검증
+
+### 결과
+- plan.md 작성 완료: 구현 목표(전용 "Ball" Physics2D 레이어 신설 + `Ball.prefab` 레이어 재배치 + `BallLauncher.Awake()`에 `Physics2D.IgnoreLayerCollision` 1회 호출), 단계별 작업 계획 4단계(레이어 등록 에디터 코드, 프리팹 레이어 할당, 런타임 1회 호출, 문서 갱신 불필요 판단), 예상 변경/생성 파일 목록(`BallSetupEditor.cs`, `Ball.prefab`, `BallLauncher.cs`, `TagManager.asset`), 주의사항 6건 작성
+- "Ball" 태그 미등록 버그는 이번 범위에서 고치지 않고 그대로 둠(사용자 확정), `TrajectoryPreview.cs`의 `IsBlockingTag()`가 순수 태그 기준(`CompareTag`)이라 레이어 변경과 무관함을 주의사항에 명시(오케스트레이터가 이미 확인 완료한 사실을 근거로 인용)
+- 신규 문서 생성이 아니라 기존 task 폴더에 plan.md만 추가하는 것이라 AGENTS.md 인덱스 변경 불필요(개별 task 폴더는 별도 관리하지 않는 기존 정책)
+
+### 주요 결정사항
+- 해결 방식은 (a) 전용 Ball 레이어 + `IgnoreLayerCollision` 전역 1회 호출로 확정(사용자 결정 그대로 반영), Wall/Ground/Monster는 Default 레이어에 유지
+- 레이어 등록(`TagManager.asset`)과 프리팹 `m_Layer` 할당 순서 보장 필요성(`LayerMask.NameToLayer` 값 조회가 저장 이후여야 함)을 주의사항에 명시
+- 코드/프리팹은 건드리지 않고 plan.md만 작성, git 커밋/푸시 없음, Bash 미사용, Read/Write만 사용
