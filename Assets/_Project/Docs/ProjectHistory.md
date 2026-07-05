@@ -258,3 +258,11 @@ Assets/_Project/Scripts/
 - **구현**: `WaveManager.cs`에 `public float BottomBoundaryY => _bottomBoundaryY;` 프로퍼티를 추가하였다. `InputHandler.ComputeAimDirection()`에서 터치 위치를 월드 좌표로 변환한 직후 `worldPos.y = Mathf.Max(worldPos.y, WaveManager.Instance.BottomBoundaryY);`로 clamp한 뒤 발사 지점 기준 방향을 계산하도록 수정하였다. `GameplayMechanics.md` 섹션 1에도 이 규칙을 문서화하는 줄을 함께 추가하였다.
 - **참고**: 이 clamp는 "조준 가능한 목표 지점의 범위"만 제한하며, 발사된 볼이 물리 반사로 실제 기준선 아래까지 내려가는 것 자체를 막는 장치는 아니다(별개 사안). `TrajectoryPreview.cs`는 `BallLauncher.Instance.LaunchDirection`(이미 clamp된 방향)을 그대로 받아 그리므로 수정이 필요 없었다.
 - **검증**: 사용자가 로컬 Unity에서 직접 플레이 테스트하여 정상 동작을 확인하였다("잘되니까"라고 명시적으로 확인). 이 작업 역시 위 볼-볼 물리 충돌 방지 항목과 같은 브랜치(`claude/project-review-bugs-qq65d1`)에 커밋되어 있으며 아직 main에 병합되지 않았다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-05/18-30_aim-direction-y-clamp/research.md`, `plan.md` 참고.
+
+### 플레이어 액티브 스킬 2종 구현 (`_Task/2026-07-05/21-30_player-active-skill-system`)
+
+- 회수된 원본/분신 볼을 도착 순서대로 FIFO 큐에 넣고, 초기 볼 발사와 같은 간격으로 현재 조준 궤도에 맞춰 재발사하도록 변경하였다.
+- 버서크는 30초 쿨타임과 6초 지속시간을 사용하며, 지속 중 활성 상태이거나 새로 발사되는 모든 볼에 속도 1.5배를 적용한다.
+- 분신은 원본 로스터 볼만 복제해 순차 발사한다. 복사본은 복사 대상에서 제외되며, 두 번째 회수 시 발사 지점에서 풀로 반환된다.
+- `PlayerActiveSkillData`, `PlayerActiveSkillManager`, `PlayerActiveSkillButton`과 Skill/UI/Scene Setup Editor 자동 구성을 추가하고, 기존 4종 기획 문서를 이번 범위인 버서크/분신 2종으로 갱신하였다.
+- 런타임/에디터 C# 어셈블리 빌드는 오류 0개로 통과했다. Setup 메뉴 실행 후 실제 플레이 검증은 남아 있다.

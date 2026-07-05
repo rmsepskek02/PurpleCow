@@ -124,8 +124,7 @@ public class Ball : MonoBehaviour, IPoolable
                 return;
             }
 
-            // 로스터 소속 볼은 벽 반사 횟수 개념이 없다. 몇 번을 튕기든 순수 반사만 하며,
-            // 오직 Ground 충돌에서만 귀환한다.
+            // 원본 로스터 볼과 분신은 벽 반사 횟수를 소모하지 않고 Ground에서만 귀환한다.
             if (BallLauncher.Instance.IsRosterMember(this) || _isClone)
                 return;
 
@@ -135,8 +134,7 @@ public class Ball : MonoBehaviour, IPoolable
         }
         else if (collision.gameObject.CompareTag("Ground"))
         {
-            // 로스터 소속 볼만 캐릭터 위치로 귀환 후 재발사한다.
-            // 로스터 밖의 볼(서브볼 등)은 기존과 동일하게 즉시 풀로 반환한다.
+            // 원본 로스터 볼과 분신은 캐릭터 위치로 귀환하고, 서브볼은 즉시 풀로 반환한다.
             if (BallLauncher.Instance.IsRosterMember(this) || _isClone)
                 ReturnToLaunchPoint();
             else
@@ -243,7 +241,7 @@ public class Ball : MonoBehaviour, IPoolable
 
     // Ground 충돌 시점의 자연 반사 방향을 무시하고, 위치는 그대로 둔 채
     // 이동 방향만 LaunchPoint 쪽으로 강제 재설정해 계속 날아가게 한다(순간이동 아님).
-    // LaunchPoint에 도달하면 FixedUpdate()에서 재발사(BallLauncher.RelaunchBall)를 트리거한다.
+    // LaunchPoint에 도달하면 FixedUpdate()에서 FIFO 재발사 큐 등록을 트리거한다.
     private void ReturnToLaunchPoint()
     {
         Vector2 direction = ((Vector2)BallLauncher.Instance.LaunchPoint.position - (Vector2)transform.position).normalized;
