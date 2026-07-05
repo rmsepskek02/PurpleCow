@@ -1,3 +1,22 @@
+## 2026-07-05 (캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 research)
+
+### 작업 내용
+- 캐릭터 스프라이트(몸통/머리/무기 분리본)를 프리팹으로 만들어 배치하고, 조준 방향에 따라 무기(+보조로 머리)가 회전하도록 구현하는 task의 research.md 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-27_character-sprite-prefab/research.md`
+
+### 결과
+- `Assets/_Project/Sprites/Character/` 4개 스프라이트(`Character_Main.png` 합성본 141x178, `_body.png` 48x48, `_head.png` 131x92, `_weapon.png` 59x116) 전부 `.meta` 직접 확인, 커스텀 피벗/보더 없이 임포트 기본값(`spritePivot 0.5,0.5`, `spriteBorder 0`) 그대로임을 확정 — 특히 무기 스프라이트가 손 위치가 아닌 스프라이트 중앙을 축으로 회전하게 될 위험 지적
+- `Assets/_Project/Prefabs/`에 `Ball/`, `Monster/`, `UI/`만 있고 `Character/` 폴더 없음 재확인, `SampleScene.unity`를 직접 grep해 캐릭터를 그리는 `SpriteRenderer` 오브젝트가 씬 어디에도 없음을 확정(`CharacterHP`/`CharacterXP`는 HUD, `CharacterManager`는 순수 로직, `LaunchPoint`는 Transform 하나뿐이고 자식 없음)
+- `LaunchPoint`가 `BallLauncher`의 자식이고 `WallFitter.Apply()`(라인 33-54)가 화면비 기준으로 Y좌표를 매번 재계산해 덮어씀을 확인(씬 파일 실측 로컬Y `-5.610236`, 코드 기본값 `-8`과 다름) → 캐릭터를 `LaunchPoint` 자식으로 붙일지 별도 Transform으로 둘지의 트레이드오프(리프레임 자동 상속 vs 책임 분리) 정리
+- `BallLauncher.LaunchDirection`(마지막 값 유지, 폴링 가능) vs `InputHandler.OnDrag`(터치 중에만 발행되는 이벤트) 차이를 근거로, `TrajectoryPreview.Update()`가 이미 쓰고 있는 매 프레임 폴링 패턴이 무기 회전에도 안전하게 재사용 가능함을 확인
+- `UIRules.md` 섹션 9/10/11/12 확인 결과 캐릭터 본체 스프라이트/회전 관련 기존 규칙 없음(충돌 없음), `CharacterManager.cs`가 HP/XP 로직 전용이라 시각 회전 로직을 섞지 않는 것이 기존 뷰/로직 분리 패턴(Ball vs TrajectoryPreview)과 일관됨을 결론에 명시
+
+### 주요 결정사항
+- plan.md는 작성하지 않음(사용자 확인 대기, TaskRules.md 워크플로우 준수), 코드/프리팹/스프라이트 임포트 설정은 읽기만 하고 수정하지 않음
+- 열린 질문(사용자 확인 필요): (1) 캐릭터를 LaunchPoint 자식으로 둘지 별도 Transform으로 둘지, (2) 무기 회전 피벗을 스프라이트 임포트 설정 수정으로 해결할지 빈 부모 GameObject 계층으로 해결할지, (3) 좌우 반전+회전각 보정을 어느 컴포넌트가 계산할지, (4) 새 뷰 전용 스크립트의 위치/이름
+
+---
+
 ## 2026-07-05 (조준 방향 Y 하한 제한 research)
 
 ### 작업 내용
