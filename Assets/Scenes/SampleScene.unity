@@ -1355,7 +1355,7 @@ MonoBehaviour:
   _nativeRightX: 6.3
   _nativeTopY: 6
   _nativeBottomY: -6.5
-  _nativeLaunchPointY: -6
+  _nativeLaunchPointY: -5.7
   _zoomFactor: 0.5
   _cellAspectCorrection: 1.647
   _gridAreaWidth: 14.53
@@ -2589,7 +2589,7 @@ Transform:
   m_GameObject: {fileID: 859741422}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -5.905512, z: 0}
+  m_LocalPosition: {x: 0, y: -5.610236, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
