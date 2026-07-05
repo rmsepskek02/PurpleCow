@@ -916,3 +916,19 @@
 - 콜라이더/HP바 재배치 이슈는 "블록 크기를 어디서 읽어올지"(선택지 1번)와 서로 연결된 하위 질문이라는 점을 명시해 plan.md 논의 시 연계 검토가 필요함을 강조
 - 기존 `WaveTableData.asset`의 구조 변경 시 재직렬화 문제는 원격 텍스트 환경의 한계로 명시하고, 에디터 자동화 스크립트 처리 여부와 사용자 수동 처리 여부 모두 열어둠
 - Bash 미사용, Read/Write만 사용해 작업 완료
+
+---
+
+## 2026-07-05
+
+### 작업 내용
+- `UIRules.md` 1장 Canvas 계층도에서 융합 시스템 잔재로 판단된 `PrismPanel` 줄 제거
+- 경로: `Assets/_Project/Docs/UIRules.md`
+
+### 결과
+- `Canvas_Panel` 하위 목록에서 `└─ PrismPanel` 줄 삭제, 그 앞 `BallLevelUpPanel` 줄의 트리 문자를 `├─` → `└─`로 수정해 마지막 항목으로 정리 (LevelUpPanel/PausePanel/BallLevelUpPanel 3개만 남음)
+- 문서 전체 `Prism` grep 결과 해당 계층도 1곳(수정 전 27번째 줄)뿐이었고 다른 언급은 없어 추가 조치 불필요
+- Read/Grep/Edit만 사용, Bash 미사용, `UIRules.md` 외 다른 파일은 수정하지 않음
+
+### 주요 결정사항
+- PDF 스펙 "구현 제외 항목"에 명시된 융합 시스템 관련 잔재 패널이라는 사용자 판단을 그대로 반영해 삭제, 별도 대체 문구 없이 목록만 축소

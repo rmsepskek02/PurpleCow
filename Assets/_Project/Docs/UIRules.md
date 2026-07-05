@@ -23,8 +23,7 @@ Canvas_HUD    (Sort Order: 10)  ← 항상 표시
 Canvas_Panel  (Sort Order: 20)  ← 패널 오픈 시 표시
   ├─ LevelUpPanel
   ├─ PausePanel
-  ├─ BallLevelUpPanel
-  └─ PrismPanel
+  └─ BallLevelUpPanel
 
 Canvas_Popup  (Sort Order: 30)  ← 최상위
   └─ BallAcquirePopup

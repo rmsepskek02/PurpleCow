@@ -164,7 +164,7 @@ public static class UISetupEditor
         if (panelCanvas == null) return;
         Transform panelRoot = panelCanvas.transform;
 
-        string[] panelNames = { "LevelUpPanel", "PausePanel", "BallLevelUpPanel", "PrismPanel" };
+        string[] panelNames = { "LevelUpPanel", "PausePanel", "BallLevelUpPanel" };
         foreach (string pname in panelNames)
         {
             GameObject obj = EnsureChildObject(panelRoot, pname);
