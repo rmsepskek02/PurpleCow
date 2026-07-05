@@ -265,4 +265,5 @@ Assets/_Project/Scripts/
 - 버서크는 30초 쿨타임과 6초 지속시간을 사용하며, 지속 중 활성 상태이거나 새로 발사되는 모든 볼에 속도 1.5배를 적용한다.
 - 분신은 원본 로스터 볼만 복제해 순차 발사한다. 복사본은 복사 대상에서 제외되며, 두 번째 회수 시 발사 지점에서 풀로 반환된다.
 - `PlayerActiveSkillData`, `PlayerActiveSkillManager`, `PlayerActiveSkillButton`과 Skill/UI/Scene Setup Editor 자동 구성을 추가하고, 기존 4종 기획 문서를 이번 범위인 버서크/분신 2종으로 갱신하였다.
+- 테스트 단계에서는 씬의 `berserk`/`illusion` 버튼을 직접 재사용하고, 두 스킬 모두 게임 시작 즉시 사용할 수 있도록 시작 쿨타임을 0초로 설정하였다.
 - 런타임/에디터 C# 어셈블리 빌드는 오류 0개로 통과했다. Setup 메뉴 실행 후 실제 플레이 검증은 남아 있다.

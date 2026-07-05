@@ -32,9 +32,15 @@ public class PlayerActiveSkillButton : MonoBehaviour
             return;
         }
 
-        _icon.sprite = skill.Icon;
-        _icon.enabled = skill.Icon != null;
-        _nameText.text = skill.DisplayName;
+        if (_icon != null)
+        {
+            _icon.sprite = skill.Icon;
+            _icon.enabled = skill.Icon != null;
+        }
+
+        if (_nameText != null)
+            _nameText.text = skill.DisplayName;
+
         RefreshCooldown(_manager.GetRemainingCooldown(_skillIndex), skill.Cooldown);
     }
 
@@ -62,8 +68,15 @@ public class PlayerActiveSkillButton : MonoBehaviour
     {
         bool isCoolingDown = remaining > 0f;
         _button.interactable = !isCoolingDown;
-        _cooldownOverlay.fillAmount = total > 0f ? remaining / total : 0f;
-        _cooldownText.gameObject.SetActive(isCoolingDown);
-        _cooldownText.text = isCoolingDown ? Mathf.CeilToInt(remaining).ToString() : string.Empty;
+
+        if (_cooldownOverlay != null)
+            _cooldownOverlay.fillAmount = total > 0f ? remaining / total : 0f;
+
+        if (_cooldownText != null)
+        {
+            _cooldownText.gameObject.SetActive(isCoolingDown);
+            _cooldownText.text =
+                isCoolingDown ? Mathf.CeilToInt(remaining).ToString() : string.Empty;
+        }
     }
 }

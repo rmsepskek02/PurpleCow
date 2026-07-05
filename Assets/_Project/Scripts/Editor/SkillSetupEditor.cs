@@ -190,19 +190,19 @@ public static class SkillSetupEditor
         );
     }
 
-    private static void CreatePlayerActiveSkillDataAssets()
+    public static void CreatePlayerActiveSkillDataAssets()
     {
         CreatePlayerActiveSkillData(
             "Assets/_Project/Data/PlayerActiveSkillData_Berserk.asset",
             PlayerActiveSkillType.Berserk,
             "Berserk",
-            "Assets/_Project/Sprites/BallSkillIcon/Ball_Fire_ball.png");
+            "Assets/_Project/Sprites/SpeedUp.png");
 
         CreatePlayerActiveSkillData(
             "Assets/_Project/Data/PlayerActiveSkillData_Clone.asset",
             PlayerActiveSkillType.Clone,
-            "Clone",
-            "Assets/_Project/Sprites/BallSkillIcon/Ball_Cluster_Ball.png");
+            "Illusion",
+            "Assets/_Project/Sprites/Copy.png");
     }
 
     private static void CreatePlayerActiveSkillData(

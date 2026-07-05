@@ -7,6 +7,16 @@ using TMPro;
 
 public static class UISetupEditor
 {
+    [MenuItem("PurpleCow/Setup/Connect Player Active Skill Buttons")]
+    private static void ConnectPlayerActiveSkillButtons()
+    {
+        SkillSetupEditor.CreatePlayerActiveSkillDataAssets();
+        Step14_SetupPlayerActiveSkills();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
+    }
+
     [MenuItem("PurpleCow/Setup/UI Setup")]
     private static void SetupUI()
     {
@@ -698,13 +708,6 @@ public static class UISetupEditor
 
     private static void Step14_SetupPlayerActiveSkills()
     {
-        GameObject hudPanelObj = GameObject.Find("HUDPanel");
-        if (hudPanelObj == null)
-        {
-            Debug.LogWarning("[UISetupEditor] HUDPanel is missing.");
-            return;
-        }
-
         GameObject managerObj = GameObject.Find("PlayerActiveSkillManager");
         if (managerObj == null)
         {
@@ -724,6 +727,23 @@ public static class UISetupEditor
         skills.GetArrayElementAtIndex(0).objectReferenceValue = berserk;
         skills.GetArrayElementAtIndex(1).objectReferenceValue = clone;
         managerSo.ApplyModifiedPropertiesWithoutUndo();
+
+        Button berserkButton = FindSceneButton("berserk");
+        Button illusionButton = FindSceneButton("illusion");
+        if (berserkButton != null && illusionButton != null)
+        {
+            SetupExistingPlayerActiveSkillButton(berserkButton, 0);
+            SetupExistingPlayerActiveSkillButton(illusionButton, 1);
+            Debug.Log("[UISetupEditor] Existing berserk/illusion buttons connected.");
+            return;
+        }
+
+        GameObject hudPanelObj = GameObject.Find("HUDPanel");
+        if (hudPanelObj == null)
+        {
+            Debug.LogWarning("[UISetupEditor] HUDPanel is missing.");
+            return;
+        }
 
         GameObject barObj = EnsureChildObject(hudPanelObj.transform, "PlayerActiveSkillBar");
         RectTransform barRect = EnsureRectTransform(barObj);
@@ -745,6 +765,59 @@ public static class UISetupEditor
             barObj.transform, "BerserkButton", 0, new Color(0.78f, 0.18f, 0.14f));
         SetupPlayerActiveSkillButton(
             barObj.transform, "CloneButton", 1, new Color(0.12f, 0.55f, 0.68f));
+    }
+
+    private static Button FindSceneButton(string objectName)
+    {
+        Button[] buttons = Object.FindObjectsByType<Button>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        foreach (Button button in buttons)
+        {
+            if (string.Equals(
+                    button.gameObject.name,
+                    objectName,
+                    System.StringComparison.OrdinalIgnoreCase))
+                return button;
+        }
+
+        return null;
+    }
+
+    private static void SetupExistingPlayerActiveSkillButton(Button button, int skillIndex)
+    {
+        GameObject buttonObj = button.gameObject;
+        Image icon = buttonObj.GetComponent<Image>();
+        EnsureComponent<UIButton>(buttonObj);
+        PlayerActiveSkillButton skillButton = EnsureComponent<PlayerActiveSkillButton>(buttonObj);
+
+        GameObject overlayObj = EnsureChildObject(buttonObj.transform, "CooldownOverlay");
+        StretchFill(EnsureRectTransform(overlayObj));
+        Image overlay = EnsureComponent<Image>(overlayObj);
+        overlay.color = new Color(0f, 0f, 0f, 0.72f);
+        overlay.type = Image.Type.Filled;
+        overlay.fillMethod = Image.FillMethod.Radial360;
+        overlay.fillOrigin = (int)Image.Origin360.Top;
+        overlay.fillClockwise = true;
+        overlay.raycastTarget = false;
+
+        GameObject cooldownTextObj = EnsureChildObject(buttonObj.transform, "CooldownText");
+        StretchFill(EnsureRectTransform(cooldownTextObj));
+        TextMeshProUGUI cooldownText = EnsureComponent<TextMeshProUGUI>(cooldownTextObj);
+        cooldownText.alignment = TextAlignmentOptions.Center;
+        cooldownText.fontSize = 36f;
+        cooldownText.color = Color.white;
+        cooldownText.raycastTarget = false;
+
+        SerializedObject so = new SerializedObject(skillButton);
+        so.FindProperty("_skillIndex").intValue = skillIndex;
+        so.FindProperty("_button").objectReferenceValue = button;
+        so.FindProperty("_icon").objectReferenceValue = icon;
+        so.FindProperty("_cooldownOverlay").objectReferenceValue = overlay;
+        so.FindProperty("_cooldownText").objectReferenceValue = cooldownText;
+        so.FindProperty("_nameText").objectReferenceValue = null;
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void SetupPlayerActiveSkillButton(

@@ -5,6 +5,7 @@ using UnityEngine;
 public class PlayerActiveSkillManager : Singleton<PlayerActiveSkillManager>
 {
     [SerializeField] private PlayerActiveSkillData[] _skills = new PlayerActiveSkillData[2];
+    [SerializeField] private bool _startReady = true;
 
     private float[] _remainingCooldowns;
     private Coroutine _berserkCoroutine;
@@ -18,7 +19,7 @@ public class PlayerActiveSkillManager : Singleton<PlayerActiveSkillManager>
 
         for (int i = 0; i < _skills.Length; i++)
         {
-            if (_skills[i] != null)
+            if (!_startReady && _skills[i] != null)
                 _remainingCooldowns[i] = _skills[i].Cooldown;
         }
     }

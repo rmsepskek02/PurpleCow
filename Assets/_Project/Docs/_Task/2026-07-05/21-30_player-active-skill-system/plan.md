@@ -53,5 +53,6 @@
 ## 구현 결과
 
 - 계획한 런타임 코드, 데이터 구조, HUD 버튼, Setup Editor 확장을 구현했다.
+- 테스트용 `berserk`/`illusion` 버튼을 재사용하며, 게임 시작 시 두 스킬을 즉시 사용할 수 있도록 설정했다.
 - `Assembly-CSharp.csproj`와 `Assembly-CSharp-Editor.csproj` 빌드 결과 신규 오류 0개를 확인했다.
 - 실제 볼 회수 순서, 버서크 속도 체감, 분신 2회 회수 소멸은 Unity 플레이 테스트가 남아 있다.
