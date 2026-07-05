@@ -15,9 +15,15 @@ public class BallLauncher : Singleton<BallLauncher>
     private ObjectPool<Ball> _ballPool;
     private Vector2 _launchDirection = Vector2.up;
     private int _activeBallCount;
+    private float _speedMultiplier = 1f;
     private GameManager.GameState _currentGameState;
+    private Coroutine _relaunchCoroutine;
 
     private readonly List<BallRosterEntry> _roster = new List<BallRosterEntry>();
+    private readonly List<Ball> _activeBalls = new List<Ball>();
+    private readonly Queue<Ball> _relaunchQueue = new Queue<Ball>();
+    private readonly HashSet<Ball> _queuedBalls = new HashSet<Ball>();
+    private readonly Dictionary<Ball, SkillData> _cloneSkills = new Dictionary<Ball, SkillData>();
 
     public static event Action OnAllBallsReturned;
 
@@ -98,24 +104,29 @@ public class BallLauncher : Singleton<BallLauncher>
     private void LaunchRosterEntry(BallRosterEntry entry, Vector2 direction)
     {
         entry.Ball.transform.position = _launchPoint.position;
+        entry.Ball.SetSpeedMultiplier(_speedMultiplier);
         entry.Ball.Launch(direction);
         ApplyRosterSkill(entry);
-        _activeBallCount++;
+        RegisterActiveBall(entry.Ball);
     }
 
     // 귀환(Ground 충돌 후 LaunchPoint 도달)한 로스터 볼을 최신 조준 방향으로 재발사한다.
-    public void RelaunchBall(Ball ball)
+    public void HandleBallRecovered(Ball ball)
     {
-        if (_currentGameState != GameManager.GameState.Playing)
+        ball.ParkAtLaunchPoint(_launchPoint.position);
+
+        if (ball.IsClone && ball.ConsumeCloneReturn())
+        {
+            ReturnBall(ball);
+            return;
+        }
+
+        if (_currentGameState != GameManager.GameState.Playing || !_queuedBalls.Add(ball))
             return;
 
-        BallRosterEntry entry = _roster.Find(e => e.Ball == ball);
-        if (entry == null)
-            return;
-
-        ball.PrepareForRelaunch();
-        ball.Launch(_launchDirection);
-        ApplyRosterSkill(entry);
+        _relaunchQueue.Enqueue(ball);
+        if (_relaunchCoroutine == null)
+            _relaunchCoroutine = StartCoroutine(CoRelaunchQueuedBalls());
     }
 
     public bool IsRosterMember(Ball ball)
@@ -129,6 +140,78 @@ public class BallLauncher : Singleton<BallLauncher>
             entry.Ball.AddSkill(SkillFactory.CreateActiveSkill(entry.SkillData));
     }
 
+    private IEnumerator CoRelaunchQueuedBalls()
+    {
+        var interval = new WaitForSeconds(_rosterLaunchInterval);
+
+        while (_relaunchQueue.Count > 0)
+        {
+            Ball ball = _relaunchQueue.Dequeue();
+            _queuedBalls.Remove(ball);
+            RelaunchQueuedBall(ball);
+            yield return interval;
+        }
+
+        _relaunchCoroutine = null;
+    }
+
+    private void RelaunchQueuedBall(Ball ball)
+    {
+        if (_currentGameState != GameManager.GameState.Playing || !_activeBalls.Contains(ball))
+            return;
+
+        ball.PrepareForRelaunch();
+        ball.SetSpeedMultiplier(_speedMultiplier);
+        ball.Launch(_launchDirection);
+
+        BallRosterEntry entry = _roster.Find(e => e.Ball == ball);
+        if (entry != null)
+        {
+            ApplyRosterSkill(entry);
+            return;
+        }
+
+        if (_cloneSkills.TryGetValue(ball, out SkillData skillData) && skillData != null)
+            ball.AddSkill(SkillFactory.CreateActiveSkill(skillData));
+    }
+
+    public void LaunchRosterClones(int returnCount)
+    {
+        StartCoroutine(CoLaunchRosterClones(new List<BallRosterEntry>(_roster), returnCount));
+    }
+
+    private IEnumerator CoLaunchRosterClones(List<BallRosterEntry> originals, int returnCount)
+    {
+        var interval = new WaitForSeconds(_rosterLaunchInterval);
+
+        for (int i = 0; i < originals.Count; i++)
+        {
+            BallRosterEntry original = originals[i];
+            Ball clone = _ballPool.Get();
+            clone.transform.position = _launchPoint.position;
+            clone.ConfigureClone(returnCount);
+            clone.SetSpeedMultiplier(_speedMultiplier);
+            _cloneSkills[clone] = original.SkillData;
+            clone.Launch(_launchDirection);
+
+            if (original.SkillData != null)
+                clone.AddSkill(SkillFactory.CreateActiveSkill(original.SkillData));
+
+            RegisterActiveBall(clone);
+
+            if (i < originals.Count - 1)
+                yield return interval;
+        }
+    }
+
+    public void SetSpeedMultiplier(float multiplier)
+    {
+        _speedMultiplier = Mathf.Max(0f, multiplier);
+
+        for (int i = 0; i < _activeBalls.Count; i++)
+            _activeBalls[i].SetSpeedMultiplier(_speedMultiplier);
+    }
+
     public void LaunchSubBalls(Vector2 origin, int count, float damage = 0f)
     {
         for (int i = 0; i < count; i++)
@@ -138,20 +221,34 @@ public class BallLauncher : Singleton<BallLauncher>
             Vector2 randomDir = UnityEngine.Random.insideUnitCircle.normalized;
             // 아래 방향 제외 (y > 0 보정)
             if (randomDir.y < 0) randomDir.y = -randomDir.y;
+            ball.SetSpeedMultiplier(_speedMultiplier);
             ball.Launch(randomDir);
             if (damage > 0f) ball.SetSubBallDamage(damage);
-            _activeBallCount++;
+            RegisterActiveBall(ball);
         }
     }
 
     public void ReturnBall(Ball ball)
     {
+        _queuedBalls.Remove(ball);
+        _cloneSkills.Remove(ball);
+        bool wasActive = _activeBalls.Remove(ball);
         _ballPool.Return(ball);
-        _activeBallCount--;
+        if (wasActive)
+            _activeBallCount = Mathf.Max(0, _activeBallCount - 1);
 
         if (_activeBallCount == 0)
         {
             OnAllBallsReturned?.Invoke();
         }
+    }
+
+    private void RegisterActiveBall(Ball ball)
+    {
+        if (_activeBalls.Contains(ball))
+            return;
+
+        _activeBalls.Add(ball);
+        _activeBallCount++;
     }
 }

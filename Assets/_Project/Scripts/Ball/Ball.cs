@@ -15,9 +15,13 @@ public class Ball : MonoBehaviour, IPoolable
     private List<BallSkillBase>  _skills = new List<BallSkillBase>();
     private int                  _remainingBounces;
     private float                _subBallDamageOverride;
+    private float                _speedMultiplier = 1f;
+    private bool                 _isClone;
+    private int                  _remainingCloneReturns;
 
     public Vector2 LaunchDirection { get; private set; }
     public float   LastDamage      { get; private set; }
+    public bool    IsClone         => _isClone;
 
     public static event Action<MonsterBase, float, bool> OnHitMonster;
     public static event Action                    OnWallHit;
@@ -36,6 +40,9 @@ public class Ball : MonoBehaviour, IPoolable
         _isReturning            = false;
         _remainingBounces      = _ballData.MaxBounces;
         _subBallDamageOverride = 0f;
+        _speedMultiplier       = 1f;
+        _isClone               = false;
+        _remainingCloneReturns = 0;
         _skills.Clear();
         _rigidbody.linearVelocity = Vector2.zero;
     }
@@ -53,8 +60,7 @@ public class Ball : MonoBehaviour, IPoolable
     public void Launch(Vector2 direction)
     {
         LaunchDirection = direction;
-        float speed = _ballData.Speed;
-        _rigidbody.linearVelocity = direction * speed;
+        _rigidbody.linearVelocity = direction.normalized * CurrentSpeed;
     }
 
     // 귀환 후 재발사 직전 호출 — 반사 횟수/서브볼 데미지/장착 스킬을 초기화한다.
@@ -80,13 +86,12 @@ public class Ball : MonoBehaviour, IPoolable
             if (toLaunchPoint.magnitude <= RETURN_ARRIVAL_DISTANCE)
             {
                 _isReturning = false;
-                BallLauncher.Instance.RelaunchBall(this);
+                BallLauncher.Instance.HandleBallRecovered(this);
                 return;
             }
         }
 
-        float speed = _ballData.Speed;
-        _rigidbody.linearVelocity = _rigidbody.linearVelocity.normalized * speed;
+        _rigidbody.linearVelocity = _rigidbody.linearVelocity.normalized * CurrentSpeed;
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -121,7 +126,7 @@ public class Ball : MonoBehaviour, IPoolable
 
             // 로스터 소속 볼은 벽 반사 횟수 개념이 없다. 몇 번을 튕기든 순수 반사만 하며,
             // 오직 Ground 충돌에서만 귀환한다.
-            if (BallLauncher.Instance.IsRosterMember(this))
+            if (BallLauncher.Instance.IsRosterMember(this) || _isClone)
                 return;
 
             _remainingBounces--;
@@ -132,7 +137,7 @@ public class Ball : MonoBehaviour, IPoolable
         {
             // 로스터 소속 볼만 캐릭터 위치로 귀환 후 재발사한다.
             // 로스터 밖의 볼(서브볼 등)은 기존과 동일하게 즉시 풀로 반환한다.
-            if (BallLauncher.Instance.IsRosterMember(this))
+            if (BallLauncher.Instance.IsRosterMember(this) || _isClone)
                 ReturnToLaunchPoint();
             else
                 ReturnToPool();
@@ -191,6 +196,36 @@ public class Ball : MonoBehaviour, IPoolable
         _subBallDamageOverride = damage;
     }
 
+    public void SetSpeedMultiplier(float multiplier)
+    {
+        _speedMultiplier = Mathf.Max(0f, multiplier);
+
+        if (_isActive && _rigidbody.linearVelocity.sqrMagnitude > 0f)
+            _rigidbody.linearVelocity = _rigidbody.linearVelocity.normalized * CurrentSpeed;
+    }
+
+    public void ConfigureClone(int returnCount)
+    {
+        _isClone = true;
+        _remainingCloneReturns = Mathf.Max(1, returnCount);
+    }
+
+    public bool ConsumeCloneReturn()
+    {
+        if (!_isClone)
+            return false;
+
+        _remainingCloneReturns--;
+        return _remainingCloneReturns <= 0;
+    }
+
+    public void ParkAtLaunchPoint(Vector3 position)
+    {
+        transform.position = position;
+        _rigidbody.linearVelocity = Vector2.zero;
+        _isReturning = false;
+    }
+
     public void SetGhostMode(bool isGhost)
     {
         _collider.isTrigger = isGhost;
@@ -212,7 +247,9 @@ public class Ball : MonoBehaviour, IPoolable
     private void ReturnToLaunchPoint()
     {
         Vector2 direction = ((Vector2)BallLauncher.Instance.LaunchPoint.position - (Vector2)transform.position).normalized;
-        _rigidbody.linearVelocity = direction * _ballData.Speed;
+        _rigidbody.linearVelocity = direction * CurrentSpeed;
         _isReturning = true;
     }
+
+    private float CurrentSpeed => _ballData.Speed * _speedMultiplier;
 }
