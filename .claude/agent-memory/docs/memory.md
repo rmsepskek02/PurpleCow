@@ -932,3 +932,21 @@
 
 ### 주요 결정사항
 - PDF 스펙 "구현 제외 항목"에 명시된 융합 시스템 관련 잔재 패널이라는 사용자 판단을 그대로 반영해 삭제, 별도 대체 문구 없이 목록만 축소
+
+---
+
+### 작업 내용 (추가)
+- 궤적 프리뷰 고리(Ring) 점선화 및 회전 효과 task research.md 신규 생성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/research.md` (폴더 신규 생성 포함)
+- `TrajectoryPreview.cs`, `GameplayMechanics.md` 섹션 1, `UIRules.md` 섹션 11, `Assets/Scenes/SampleScene.unity`의 `TrajectoryPreview` 컴포넌트 직렬화 값, `Assets/_Project/Docs/targetUI/` 레퍼런스 이미지 3장(`KakaoTalk_20260701_190324151.jpg`, `_01.jpg`, `_02.jpg`)을 모두 직접 Read로 확인 후 작성
+
+### 결과
+- research.md 작성 완료: `_hitRing`이 `CreateSolidTexture()` 기반 24각형 실선이며 회전 로직이 전혀 없다는 점, `_trajectoryLine`은 이미 `CreateDashTexture()` + `textureMode=Tile` 점선 패턴을 쓰고 있어 재사용 가능한 기존 구조라는 점을 확인해 기술
+- 사용자가 별도 요청한 "궤적선 색상 Inspector 조절 가능화"는 코드(`_lineColor`/`_hitColor`/`_ringColor` 등 6개 `[SerializeField]` 필드)와 씬 오버라이드 값(코드 기본값과 6개 필드 전부 완전 일치, 표로 정리) 양쪽 모두 이미 충족되어 있어 추가 구현 불필요하다는 점을 명확히 기술 — 과거(2026-07-03) 씬 오버라이드가 코드 기본값을 가리던 전례를 재확인했으나 이번 건은 문제 없음
+- 레퍼런스 이미지 3장에서 레드닷 주변 고리 마커가 완전한 이어진 실선이 아니라 끊어진 호/틱 형태로 보인다는 시각적 근거를 이미지 좌표와 함께 서술(회전 자체는 정지 이미지로 검증 불가하다는 한계도 명시)
+- 문제점/구현 대상에 점선화(둘레 길이 기준 `mainTextureScale` 별도 계산 필요성), 회전(`DrawCircle()`이 매 프레임 월드 좌표를 직접 `SetPosition`하므로 `transform.Rotate()`가 무의미할 수 있고 각도 계산 자체에 시간 기반 오프셋을 더하는 방식이 필요하다는 방향성), 회전 속도 Inspector 노출 여부 등 3개 항목 기술
+- plan.md는 작성하지 않음(TaskRules.md 워크플로우에 따라 사용자 확인 대기)
+
+### 주요 결정사항
+- 구체적 구현 방법(점선 세그먼트 개수, 회전 속도/방향, Inspector 노출 여부)은 research.md에서 확정하지 않고 열린 질문 3건으로 명시해 plan.md 단계로 미룸
+- 코드는 읽기만 하고 수정하지 않음, git 커밋/푸시 없음, Bash 미사용, Read/Edit/Write/Glob/Grep만 사용
