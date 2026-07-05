@@ -934,3 +934,22 @@
 - 콜라이더/HP바 재배치 이슈는 "블록 크기를 어디서 읽어올지"(선택지 1번)와 서로 연결된 하위 질문이라는 점을 명시해 plan.md 논의 시 연계 검토가 필요함을 강조
 - 기존 `WaveTableData.asset`의 구조 변경 시 재직렬화 문제는 원격 텍스트 환경의 한계로 명시하고, 에디터 자동화 스크립트 처리 여부와 사용자 수동 처리 여부 모두 열어둠
 - Bash 미사용, Read/Write만 사용해 작업 완료
+
+---
+
+## 2026-07-05
+
+### 작업 내용
+- "Gameplay HUD 진행도 개편 및 삼택지 스킬 선택 UI 개편" task(`_Task/2026-07-04/20-04_gameplay-hud-and-skill-selection-ui`)에서, 사용자의 원본 게임 실제 플레이 확인을 근거로 정정된 핵심 설계 이해를 문서 3건에 반영(순수 문서 작업, 코드 미수정)
+- 수정 문서: `Assets/_Project/Docs/UIRules.md`(1번/10번 섹션), 위 task 폴더의 `research.md`, `plan.md`
+
+### 결과
+- **UIRules.md**: 1번 섹션 Canvas 구조 코드블록에서 `WaveBar` 항목 완전 삭제, `CharacterXP`를 하단 목록에서 `TopBar` 바로 아래(상단)로 이동, `CharacterHP`는 하단 유지. 기존 각주 뒤에 "TopBar %=스테이지 전체 누적 처치율" 각주 1개, "WaveBar는 오추측이었고 실제로는 CharacterXpBar" 각주(`**`) 1개 추가. 10번 섹션 `CharacterXpBar` 서술에 "(1번 섹션 참고 — 상단 배치)" 짧은 문구만 추가, 나머지 HP 서술은 미변경
+- **research.md**: 기존 "결론" 5번 항목("WaveBar 신규 구현")을 "~~WaveBar 신규 구현~~ → CharacterXpBar 상단 재배치 + TopBar 신규 계산 로직 (정정됨)"으로 교체. 문서 끝에 "## 추가 정정 (사용자 실플레이 확인 반영)" 신규 섹션 추가(빨간 바=스테이지 전체 누적 처치율, 금색 바=CharacterXpBar였음, WaveManager 신규 계산/이벤트 필요성 재확인 등 기록). 기존 조사 본문(1~5번 문제점 목록 등)은 그대로 유지, 삭제 없이 추가 방식으로만 정정
+- **plan.md**: A-0 섹션 전체를 "데이터 매핑 (정정 완료)"로 교체(TopBar=새 계산 로직 필요, 상단 두 번째 바=CharacterXpBar 코드 수정 없이 재배치만). A-1의 4번 항목을 `OnStageKillProgressChanged` 이벤트 구독 방식으로 교체하고 웨이브 배지 관련 5번 항목(`_waveBadgeText`/`_waveProgressFillImage`) 삭제, 번호 재정렬(기존 6/7번 → 5/6번). 신규 소단계 "A-1b. WaveManager.cs 수정" 추가(스테이지 전체 몬스터 총수 사전 계산, `OnStageKillProgressChanged` 이벤트, `HandleMonsterDied`에서 발행, 기존 웨이브 단위 로직 불변 원칙 명시). A-3에 `CharacterXP` 오브젝트 배치 위치를 TopBar 하위로 옮기는 6번 항목 추가, `WaveBadgeText`/`WaveProgressFillImage` 관련 생성 코드 서술 제거. 파일 목록 표에 `WaveManager.cs` 행 신규 추가, `HUDPanel.cs` 행에서도 정합성 위해 `_waveBadgeText`/`_waveProgressFillImage` 언급 제거(요청 목록 외 추가 수정, 아래 참고). "주의사항"에서 "TopBar/WaveBar 데이터 매핑은 가정" 문구 삭제, "스폰 공식 중복 위험"/"CharacterXpBar는 코드 수정 없음" 2건 신규 추가
+- **요청 범위를 벗어난 추가 일관성 수정(사용자에게 투명하게 보고)**: plan.md 서문(3번째 줄)과 "구현 목표" 1번 항목에 남아있던 "TopBar/WaveBar 2단 구조"라는 표현이 정정 내용과 정면으로 모순되어, 이 두 곳도 "TopBar + CharacterXpBar 상단 재배치" 표현으로 함께 수정함. 파일 목록 표의 `HUDPanel.cs` 행도 같은 이유로 동일하게 수정. 사용자가 원치 않으면 되돌릴 수 있도록 결과 보고 시 별도로 명시함
+
+### 주요 결정사항
+- 코드 파일은 전혀 건드리지 않고 Read/Edit만 사용해 문서 3건만 순수 정정
+- research.md/plan.md 모두 기존 내용을 삭제하지 않고 "정정됨" 표기 + 추가 섹션 방식으로 이력을 보존(사용자 지시대로 "이후 사용자 확인으로 정정됨" 취지 유지)
+- WaveManager 신규 로직(스테이지 전체 몬스터 총수 계산, `OnStageKillProgressChanged` 이벤트)은 아직 계획 단계이며 dev 에이전트 구현은 사용자의 별도 승인 필요(plan.md 서문의 기존 승인 절차 문구 그대로 유지)
