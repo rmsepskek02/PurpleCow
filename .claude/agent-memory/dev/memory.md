@@ -1244,3 +1244,25 @@
 - `SceneSetupEditor.cs`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음 — `WaveManager`가 이미 싱글톤이라 별도 참조 연결이 불필요
 - 이 원격 환경엔 Unity 에디터가 없어 실제 clamp 동작(터치 위치가 기준선 아래로 내려갈 때 조준 방향이 실제로 잘리는지)을 시각적으로 검증하지 못함 — C# 문법과 로직만 재확인함. 최종 검증은 사용자 로컬 플레이 테스트 필요
 - git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: Character Setup에 씬 배치 통합 (Scene Setup의 Step11 제거)
+
+**작업 내용:**
+- 사용자 승인 완료 후 바로 진행. task 문서(plan.md) 없이 사용자 지시 원문을 그대로 구현
+- 기존 파일 2개 수정 (신규 파일 없음)
+- 지금까지 `Character Setup`(프리팹 생성)과 `Scene Setup`의 `Step11_PlaceCharacter()`(씬 배치)로 나뉘어 있던 것을 `Character Setup` 메뉴 하나로 통합 — `Scene Setup`을 별도로 실행할 필요 없이 `Character Setup` 한 번으로 프리팹 생성 + 씬 배치가 끝나도록 변경
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs` — `using UnityEditor.SceneManagement;` 추가. `SetupCharacter()`에서 `CreateCharacterPrefab()` 다음에 `PlaceCharacterInScene()` 호출 추가, 메서드 끝에 `EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene())` 추가(기존 `AssetDatabase.SaveAssets()/Refresh()`는 유지). `PlaceCharacterInScene()` 신규 메서드 추가 — `SceneSetupEditor.Step11_PlaceCharacter()`와 동일 로직(씬에 "Character" 있으면 스킵 로그 후 리턴 / `PrefabPath`로 프리팹 로드해 `PrefabUtility.InstantiatePrefab()`으로 배치 / `GameObject.Find("LaunchPoint")`로 좌표 맞춤, 없으면 경고 로그만)이되 `FindTransformOrWarn` 헬퍼 없이 `GameObject.Find` 직접 사용
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs` — `SetupScene()`에서 `Step11_PlaceCharacter();` 호출 줄과 그 위 주석("Character는 LaunchPoint의 월드 좌표에 맞춰...") 제거. `Step11_PlaceCharacter()` 메서드 전체 삭제(죽은 코드 방지)
+
+**주요 결정사항:**
+- `CreateCharacterPrefab()`이 "이미 존재, 스킵"하고 리턴하더라도 `PlaceCharacterInScene()`은 `SetupCharacter()`에서 독립적으로 계속 호출되도록 구성 — 프리팹 존재 여부(에셋)와 씬 배치 여부(씬 오브젝트)를 서로 다른 멱등성 체크로 분리해, "프리팹은 이미 있고 씬에만 없는 경우"도 정상적으로 배치됨
+- `SceneSetupEditor.FindTransformOrWarn`은 `SceneSetupEditor.cs` 내부 private 정적 메서드라 `CharacterSetupEditor.cs`에서 재사용할 수 없고, 이 배치 로직은 `CharacterSetupEditor.cs`에서 딱 한 곳에서만 쓰이므로 헬퍼를 새로 만들지 않고 `GameObject.Find` + null 체크를 인라인으로 그대로 사용
+- Body/Head/WeaponPivot/Weapon 생성 로직, `CharacterAimController` 연결 로직 등 `CreateCharacterPrefab()` 내부는 전혀 건드리지 않음(요청 범위 외)
+- 이 원격 환경엔 Unity 에디터가 없어 메뉴 실행 자체를 검증하지 못함 — `using UnityEditor.SceneManagement;` 추가 여부와 C# 문법만 재확인함. 최종 검증은 사용자 로컬에서 `PurpleCow/Setup/Character Setup` 메뉴를 재실행해 프리팹 생성 스킵 여부와 씬 배치가 모두 정상 동작하는지 확인 필요
+- git 커밋/푸시는 수행하지 않음

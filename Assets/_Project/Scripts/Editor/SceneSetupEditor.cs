@@ -22,8 +22,6 @@ public static class SceneSetupEditor
         Step6_SetupWallFitter();
         Step9_ConnectBallPrefabRefs();
         Step10_ConnectWaveManagerRefs();
-        // Character는 LaunchPoint의 월드 좌표에 맞춰 배치해야 하므로 WallFitter 적용 이후에 실행한다.
-        Step11_PlaceCharacter();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -566,35 +564,6 @@ public static class SceneSetupEditor
         so.ApplyModifiedPropertiesWithoutUndo();
 
         Debug.Log("[SceneSetupEditor] BallLauncher 참조 연결 완료.");
-    }
-
-    // ──────────────────────────────────────────
-    //  Step 11. Character 프리팹 씬 배치
-    // ──────────────────────────────────────────
-
-    private static void Step11_PlaceCharacter()
-    {
-        if (GameObject.Find("Character") != null)
-        {
-            Debug.Log("[SceneSetupEditor] Character 이미 존재, 스킵.");
-            return;
-        }
-
-        const string prefabPath = "Assets/_Project/Prefabs/Character/Character.prefab";
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-        if (prefab == null)
-        {
-            Debug.LogWarning("[SceneSetupEditor] Character.prefab 없음. Character Setup을 먼저 실행하세요.");
-            return;
-        }
-
-        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-
-        Transform launchPoint = FindTransformOrWarn("LaunchPoint");
-        if (launchPoint != null)
-            instance.transform.position = launchPoint.position;
-
-        Debug.Log("[SceneSetupEditor] Character 배치 완료.");
     }
 
     // ──────────────────────────────────────────

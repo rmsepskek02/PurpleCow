@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 public static class CharacterSetupEditor
@@ -16,9 +17,11 @@ public static class CharacterSetupEditor
     {
         EnsurePrefabFolder();
         CreateCharacterPrefab();
+        PlaceCharacterInScene();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene());
 
         Debug.Log("[CharacterSetupEditor] Character Setup 완료.");
     }
@@ -73,6 +76,32 @@ public static class CharacterSetupEditor
         Object.DestroyImmediate(root);
 
         Debug.Log("[CharacterSetupEditor] Character.prefab 생성 완료.");
+    }
+
+    private static void PlaceCharacterInScene()
+    {
+        if (GameObject.Find("Character") != null)
+        {
+            Debug.Log("[CharacterSetupEditor] Character 이미 존재, 스킵.");
+            return;
+        }
+
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        if (prefab == null)
+        {
+            Debug.LogWarning("[CharacterSetupEditor] Character.prefab 없음. 씬 배치를 건너뜁니다.");
+            return;
+        }
+
+        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+
+        GameObject launchPointObj = GameObject.Find("LaunchPoint");
+        if (launchPointObj != null)
+            instance.transform.position = launchPointObj.transform.position;
+        else
+            Debug.LogWarning("[CharacterSetupEditor] LaunchPoint 오브젝트를 찾을 수 없어 위치 정렬을 건너뜁니다.");
+
+        Debug.Log("[CharacterSetupEditor] Character 배치 완료.");
     }
 
     private static GameObject CreateSpritePart(string name, Transform parent, string spritePath, Vector2 localPosition, int sortingOrder)
