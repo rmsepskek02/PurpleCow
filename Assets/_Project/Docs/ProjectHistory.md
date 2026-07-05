@@ -249,3 +249,12 @@ Assets/_Project/Scripts/
 - **검증**: 사용자가 로컬에서 `PurpleCow/Setup/Ball System Setup` 메뉴를 재실행해 "Ball" 레이어 등록 및 `Ball.prefab` 레이어 할당을 완료한 뒤, 실제 플레이 테스트로 "볼 발사 정상 동작"과 "볼-볼 물리 충돌 방지(서로 안 튕김)" 둘 다 검증 완료를 확인하였다. 이 항목은 위 궤적 고리 작업과 달리 **구현 완료 + 사용자 실기기/로컬 검증 완료**로 명확히 구분된다.
 - **잠재적 위험(참고)**: `BallLauncher.Awake()`에 `Physics2D.IgnoreLayerCollision` 호출을 추가할 때, "Ball" 레이어가 아직 등록되지 않은 상태(로컬에서 Setup 메뉴를 먼저 재실행하지 않은 경우)에서 실행하면 `LayerMask.NameToLayer("Ball")`이 -1을 반환해 예외가 발생할 수 있는 위험이 있었으나, 사용자가 먼저 Setup 메뉴를 재실행해 레이어를 등록한 뒤 테스트했기 때문에 실제로는 문제없이 정상 동작이 확인되었다.
 - **병합 상태**: 이 작업은 아직 main에 병합되지 않았으며, 현재 브랜치(`claude/project-review-bugs-qq65d1`)에만 커밋되어 있다. main 병합은 다음 작업으로 남아있다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/research.md`, `plan.md` 참고.
+
+### 볼 조준 방향 Y좌표 하한 제한 (`_Task/2026-07-05/18-30_aim-direction-y-clamp`, 아직 main에 병합 안 됨)
+
+실제 플레이 테스트 중 사용자가 "볼 궤도를 설정할 때 일정 y좌표 밑으로는 설정하지 못하게 하자"고 요청하여 진행하였다.
+
+- **기준점 논의 과정**: 처음에는 기준점을 "격자타일 밑변"(배경 그리드의 시각적 바닥, `WallFitter`가 기기별로 동적 재계산하는 `Ground` Transform 위치)으로 잡고 research.md까지 작성했으나, `WallFitter._ground`가 private 필드라 `InputHandler`에서 접근하려면 씬 참조 연결이 추가로 필요하다는 복잡성이 확인되었다. 이후 사용자가 방향을 단순화하여, 이미 존재하는 몬스터 바닥 도달 게임오버 판정 기준선(`WaveManager._bottomBoundaryY`)을 그대로 재사용하기로 확정하였다. `WaveManager`가 이미 싱글톤이라 씬 참조 연결이나 에디터 스크립트 수정이 전혀 필요 없어져 구현이 단순해졌다.
+- **구현**: `WaveManager.cs`에 `public float BottomBoundaryY => _bottomBoundaryY;` 프로퍼티를 추가하였다. `InputHandler.ComputeAimDirection()`에서 터치 위치를 월드 좌표로 변환한 직후 `worldPos.y = Mathf.Max(worldPos.y, WaveManager.Instance.BottomBoundaryY);`로 clamp한 뒤 발사 지점 기준 방향을 계산하도록 수정하였다. `GameplayMechanics.md` 섹션 1에도 이 규칙을 문서화하는 줄을 함께 추가하였다.
+- **참고**: 이 clamp는 "조준 가능한 목표 지점의 범위"만 제한하며, 발사된 볼이 물리 반사로 실제 기준선 아래까지 내려가는 것 자체를 막는 장치는 아니다(별개 사안). `TrajectoryPreview.cs`는 `BallLauncher.Instance.LaunchDirection`(이미 clamp된 방향)을 그대로 받아 그리므로 수정이 필요 없었다.
+- **검증**: 사용자가 로컬 Unity에서 직접 플레이 테스트하여 정상 동작을 확인하였다("잘되니까"라고 명시적으로 확인). 이 작업 역시 위 볼-볼 물리 충돌 방지 항목과 같은 브랜치(`claude/project-review-bugs-qq65d1`)에 커밋되어 있으며 아직 main에 병합되지 않았다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-05/18-30_aim-direction-y-clamp/research.md`, `plan.md` 참고.
