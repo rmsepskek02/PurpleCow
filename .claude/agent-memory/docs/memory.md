@@ -1,3 +1,23 @@
+## 2026-07-05 (캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 — 최종 실기기/로컬 확인 반영 문서 갱신)
+
+### 작업 내용
+- 사용자의 로컬 Unity 실제 플레이 테스트로 최종 확인 완료된 캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 작업을 `ProjectStatus.md`/`ProjectHistory.md`/`GameplayMechanics.md`에 반영
+- plan.md(초기 설계: `WeaponPivot` 빈 부모 + `flipX` 반전)는 과거 계획 기록으로 그대로 두고 수정하지 않음, 대신 최종 실제 구현 내용을 기준으로 세 문서를 갱신
+- 경로: `Assets/_Project/Docs/ProjectStatus.md`, `Assets/_Project/Docs/ProjectHistory.md`, `Assets/_Project/Docs/GameplayMechanics.md`, `AGENTS.md`(설명 한 줄만 수정)
+
+### 결과
+- `ProjectStatus.md`: "완료된 작업" 목록에 신규 항목 추가(최종 구조/좌우 반전 확정 방식/`FromToRotation` 회전 방식/`_horizontalBiasDegrees` 고정 보정/의도적 미사용 필드/`CharacterManager.cs` 미수정 명시), 현재 상태 문단에 이번 작업의 사용자 검증 완료 사실 반영. "다음 작업 순서"에는 이 작업 관련 항목이 원래 없어 별도 제거 불필요
+- `ProjectHistory.md`: 2026-07-05 날짜 하위에 신규 섹션 추가, 시행착오 과정 전체(1차 WeaponPivot+flipX → 좌우반전 버그 → 루트 스케일 반전 재설계+WeaponPivot 제거 → Atan2 각도 계산 반복 실패 → Quaternion.FromToRotation 전면 교체 → 수평 보정치 고정값 미세조정) 시간 순으로 서술
+- `GameplayMechanics.md`: 섹션 2(몬스터, MonsterRules.md로 이관됨) 다음에 신규 "3. 캐릭터 조준 연동 시각 표현" 섹션 추가 — 좌우 반전 조건, `FromToRotation` 기반 회전(루트 반전 시 x부호 미리 뒤집기), 머리 추종 비율, `_horizontalBiasDegrees` 고정 보정, `WeaponPivot` 제거 및 무기 스프라이트 자체 피벗 재설정 사실을 모두 명시. "구현 현황" 하위 섹션도 추가
+- `AGENTS.md`: GameplayMechanics.md 설명 한 줄에 "캐릭터 조준 연동 시각 표현(좌우 반전, 무기/머리 회전)" 문구만 추가(신규 문서 추가가 아니므로 인덱스 신규 등록은 불필요)
+
+### 주요 결정사항
+- plan.md는 절대 수정하지 않고 과거 계획 기록으로 보존 — ProjectStatus.md/ProjectHistory.md/GameplayMechanics.md에만 최종 구현 기준 서술 반영
+- 코드 필드명(`_weaponPivot`, `_bodySpriteRenderer`, `_headSpriteRenderer`)이 실제 역할과 달라진/미사용된 이유(`CharacterSetupEditor.cs` 기존 참조 연결 코드를 건드리지 않기 위함)를 세 문서 모두에서 일관되게 명시해 향후 혼동 방지
+- `CharacterManager.cs`(HP/XP 로직)는 이번 작업과 무관함을 ProjectStatus.md/ProjectHistory.md 양쪽에 명시
+
+---
+
 ## 2026-07-05 (캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 plan)
 
 ### 작업 내용
