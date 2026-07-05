@@ -1197,3 +1197,21 @@
 - `CheckRosterDepleted()` → `AdvanceToNextWave()` → `SpawnWave()`(index 0/10이면 `SpawnRosterAcrossFullGrid()` 재호출 → 그 끝에서 다시 `CheckRosterDepleted()`) 형태의 재귀적 연쇄 호출이 발생할 수 있으나, 이는 plan.md 주석("초반 웨이브들은 오버랩이 연쇄적으로 일어나 웨이브 인덱스가 실제 체감 진행 속도보다 빠르게 올라갈 수 있다")에 명시된 의도된 동작이라 별도 방어 로직을 추가하지 않음
 - 컴파일 가능 여부는 코드 리딩(참조하는 프로퍼티/타입명/`_currentWaveIndex`/`_waveTable.TotalWaves` 등 기존 필드·프로퍼티 존재 확인)으로만 검증, 실제 Unity 컴파일/플레이 테스트는 사용자 로컬 환경에서 필요
 - 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: TryDispenseRoster() 틱당 스폰 수 min/max Inspector 노출
+
+**작업 내용:**
+- 문서 작성 없이 사용자가 바로 구현 승인. 기존 파일 1개(`WaveManager.cs`)만 수정 (신규 파일 없음)
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs`
+  - `_killCountForSkill` 필드 바로 아래에 `[SerializeField] private int _minSpawnPerTick = 3;` / `[SerializeField] private int _maxSpawnPerTick = 7;` 추가
+  - `TryDispenseRoster()` 내부 `int maxThisTick = UnityEngine.Random.Range(3, 8);` → `UnityEngine.Random.Range(_minSpawnPerTick, _maxSpawnPerTick + 1)`로 교체 (기존 3~7 포함 범위와 동일 의미 유지 위해 `+1` 사용)
+
+**주요 결정사항:**
+- 필드명/기본값은 사용자 지시 그대로 사용, 다른 로직 변경 없음
+- 커밋/푸시는 수행하지 않음

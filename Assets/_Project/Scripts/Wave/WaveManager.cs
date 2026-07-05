@@ -17,6 +17,8 @@ public class WaveManager : Singleton<WaveManager>
     [SerializeField] private int _gridRows = 5;
     [SerializeField] private float _bottomBoundaryY;
     [SerializeField] private int _killCountForSkill = 5;
+    [SerializeField] private int _minSpawnPerTick = 3;
+    [SerializeField] private int _maxSpawnPerTick = 7;
 
     private Dictionary<MonsterData, ObjectPool<MonsterBase>> _poolByData;
     private List<MonsterBase> _activeMonsters = new List<MonsterBase>();
@@ -140,7 +142,7 @@ public class WaveManager : Singleton<WaveManager>
         int topRow = _gridRows - 1;
 
         // C. 이번 틱에 배치할 최대 수를 3~7 사이 무작위로 결정 (Random.Range(int,int)는 min 포함, max 미포함)
-        int maxThisTick = UnityEngine.Random.Range(3, 8);
+        int maxThisTick = UnityEngine.Random.Range(_minSpawnPerTick, _maxSpawnPerTick + 1);
         int placedThisTick = 0;
 
         bool[] topRowFree = new bool[_gridColumns];
