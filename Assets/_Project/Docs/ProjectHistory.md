@@ -267,3 +267,17 @@ Assets/_Project/Scripts/
 - `PlayerActiveSkillData`, `PlayerActiveSkillManager`, `PlayerActiveSkillButton`과 Skill/UI/Scene Setup Editor 자동 구성을 추가하고, 기존 4종 기획 문서를 이번 범위인 버서크/분신 2종으로 갱신하였다.
 - 테스트 단계에서는 씬의 `berserk`/`illusion` 버튼을 직접 재사용하고, 두 스킬 모두 게임 시작 즉시 사용할 수 있도록 시작 쿨타임을 0초로 설정하였다.
 - 런타임/에디터 C# 어셈블리 빌드는 오류 0개로 통과했다. Setup 메뉴 실행 후 실제 플레이 검증은 남아 있다.
+
+### 캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 (`_Task/2026-07-05/17-27_character-sprite-prefab`)
+
+plan.md 작성 당시의 초기 설계(`WeaponPivot`이라는 빈 부모 오브젝트 + `flipX` 기반 좌우 반전)는 로컬 실플레이 테스트 과정에서 여러 버그가 발견되며 시행착오를 거쳐 최종적으로 상당히 다른 구조로 귀결되었다. plan.md 자체는 과거 계획 기록으로 그대로 두고, 이 항목은 최종 구현 기준으로 기록한다.
+
+- **신규 파일**: `Assets/_Project/Scripts/Character/CharacterAimView.cs`(신규 폴더), `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs`(신규, 메뉴 `PurpleCow/Setup/Character System Setup`, 기존 에디터 스크립트는 수정하지 않음), `Assets/_Project/Prefabs/Character/Character.prefab`(사용자가 로컬 Unity에서 위 메뉴 실행 후 직접 여러 차례 수동 수정을 거쳐 완성).
+- **최종 구조**: `Character`(루트, `CharacterAimView` 컴포넌트) → `Body`/`Head`(SpriteRenderer) + `Weapon`(SpriteRenderer). 원래 계획에 있던 `WeaponPivot`(빈 부모, 회전축 용도)은 무기 스프라이트 자체의 피벗을 Sprite Editor에서 손잡이 위치로 재설정하면서 더 이상 필요 없어져 최종적으로 제거되었다. 다만 `CharacterSetupEditor.cs`의 기존 참조 연결 코드를 건드리지 않기 위해 코드상 필드명(`_weaponPivot`)은 그대로 유지하고, 실제로는 그 슬롯에 `Weapon` 오브젝트를 연결하였다. `Character.prefab`은 `BallLauncher`의 자식인 `LaunchPoint` 밑에 배치되어 `WallFitter`의 화면비 대응 리프레임을 자동으로 상속받는다.
+- **시행착오 1 (좌우 반전 방식)**: 캐릭터 기본 아트가 왼쪽을 바라보는 모습이라, 1차 구현에서는 개별 스프라이트 `flipX` + 무기 위치 수동 반전 방식을 시도했으나 실제 로컬 테스트에서 반전 조건이 반대로 되는 버그가 발견되었다. 최종적으로 조준 방향(`BallLauncher.Instance.LaunchDirection`)의 x가 양수(오른쪽 조준)일 때만 캐릭터 루트 전체의 `transform.localScale.x`를 -1로 반전시키는 방식으로 재설계하면서 확정하였다.
+- **시행착오 2 (무기/머리 회전 방식)**: 처음엔 `Mathf.Atan2` 기반으로 각도(도 단위)를 직접 계산하는 방식을 여러 차례 시도했으나, Unity의 Z축 회전 방향(CW/CCW) 규약을 매번 잘못 추측해 실제 플레이테스트에서 반복적으로 무기가 반대 방향을 가리키는 문제가 발생하였다. 사용자가 보내준 스크린샷 두 장을 픽셀 단위로 분석했으나 서로 다른 패턴을 보여 정확한 원인 특정에는 실패하였다. 최종적으로 `Quaternion.FromToRotation(Vector3.up, 목표방향)`으로 Unity가 직접 회전을 계산하게 하는 방식으로 전면 교체하여 각도 부호를 손으로 추측할 필요를 없애 근본적으로 해결하였다. 캐릭터 루트가 반전된 상태일 때는 목표 방향의 x부호를 미리 뒤집어서 로컬 회전을 계산해야 루트의 반전과 상쇄되어 최종 결과가 맞게 된다는 점도 함께 확인되었다.
+- **머리 추종**: 머리는 무기 회전의 일부 비율(`_headRotationRatio`, 기본 0.25)만 `Quaternion.Slerp`로 보간하며 보조적으로 따라가도록 구현하였다.
+- **미세 조정**: 실제 플레이테스트에서 "조준이 수평에 가까울수록 무기가 실제보다 덜 눕는 것 같다"는 피드백이 있어, `_horizontalBiasDegrees`(기본 15도, `[SerializeField]`) 값을 무기 회전에 추가하는 보정을 넣었다. 처음엔 조준 각도에 비례해서 넣었다가, 사용자 요청으로 "각도와 무관하게 항상 고정값 적용"으로 최종 변경하였다.
+- **의도적 미사용 필드**: `_bodySpriteRenderer`/`_headSpriteRenderer` 필드는 1차 구현(`flipX` 방식)의 잔재로 코드 로직상으로는 더 이상 사용되지 않지만, `CharacterSetupEditor.cs`의 기존 참조 연결 코드를 건드리지 않기 위해 필드 선언 자체는 의도적으로 그대로 남겨두었다.
+- **영향 범위 외**: `CharacterManager.cs`(HP/XP 로직, `Scripts/Core/`)는 이번 작업과 완전히 분리되어 전혀 수정하지 않았다.
+- **검증**: 위 시행착오(1차 WeaponPivot+flipX → 좌우 반전 버그 발견 → 루트 스케일 반전 방식으로 재설계하며 WeaponPivot도 함께 제거 → Atan2 각도 계산 방식으로 재구현했으나 회전 방향이 다시 반대로 나오는 문제 반복 → Quaternion.FromToRotation 기반으로 전면 교체 → 수평 보정치 고정값 적용까지 미세조정)를 모두 거친 뒤, 사용자가 로컬 Unity에서 실제 플레이 테스트로 최종 정상 동작을 확인하였다. 상세 내용은 `Assets/_Project/Docs/_Task/2026-07-05/17-27_character-sprite-prefab/research.md`, `plan.md`(초기 계획, 최종 구현과 다름) 참고.
