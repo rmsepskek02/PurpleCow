@@ -1045,3 +1045,29 @@
 - `Assets/Scenes/SampleScene.unity`는 수정하지 않음(신규 필드는 사용자 로컬에서 씬을 열 때 자동 직렬화됨)
 - 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/시각 결과(점선 간격/회전 방향/속도 체감)는 검증 불가 — C# 문법과 좌표 기하학적 논리만 재확인함, 최종 시각 검증은 사용자 로컬 플레이 테스트 필요
 - git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: TrajectoryPreview 고리(_hitRing) 점선 방식을 텍스처 타일링 → colorGradient로 교체 (QA 피드백 수정)
+
+**배경:** 2026-07-05 11-20 trajectory-ring-dash-rotate task의 텍스처 타일링 기반 구현(`CreateRingDashTexture()` + `mainTextureScale.x = RING_DASH_COUNT / 둘레길이`)을 사용자가 로컬 Unity에서 실제 테스트한 결과 의도한 10개가 아니라 호가 2개만 보이는 것으로 확인됨. 텍스처 타일링 계산과 `LineRenderer.textureMode = Tile`의 실제 렌더링 결과가 어긋난 것으로 추정. 정확한 개수를 보장하는 `LineRenderer.colorGradient` 방식으로 교체.
+
+**수정 파일 (`Assets/_Project/Scripts/Ball/TrajectoryPreview.cs` 1개만):**
+- `RING_DASH_COUNT` 상수 제거
+- `CreateRingDashTexture()` 메서드 완전 제거(죽은 코드 방지)
+- `Awake()`에서 `_hitRing` 생성 시 `CreateRingDashTexture()` + `ringTextureScale` 계산 로직 제거 → `CreateSolidTexture()`로 되돌림(레드닷과 동일), 생성 직후 `_hitRing.colorGradient = BuildRingDashGradient(_ringColor);` 할당
+- `CreateLineRenderer()` 시그니처에서 `Vector2? textureScaleOverride = null` 파라미터 제거(호출부 3곳 모두 더 이상 필요 없어져 원래 시그니처로 복귀), `material.mainTextureScale`은 항상 `(1f / DASH_WORLD_SIZE, 1f)` 고정값 사용(이 부분은 기존 로직 그대로 유지, 이번 변경과 무관)
+- `BuildRingDashGradient(Color ringColor)` static 메서드 신설 — `GradientColorKey` 2개(t=0/t=1, RGB 둘 다 ringColor), `GradientAlphaKey` 8개(피크 t=0/0.25/0.5/0.75는 alpha 1, 골 t=0.125/0.375/0.625/0.875는 alpha 0, t 오름차순 배치)로 `gradient.SetKeys()` 호출 후 반환. 정확히 8개 키(Gradient alphaKeys 최대치)로 4등분+4중간점이 딱 맞아떨어져 텍스처 타일링 계산 없이 항상 정확히 4개 호 보장
+- `CreateSolidTexture()` 위 주석을 "레드닷/고리 공용, 고리의 점선 형태는 colorGradient로 표현"으로 갱신
+
+**회전 로직과의 호환성 확인:**
+- `DrawCircle()`의 `rotationOffsetDeg` 파라미터와 `Time.time * _ringRotationSpeed` 오프셋 로직은 변경하지 않음(요청사항대로) — `DrawCircle()`은 정점의 "월드 좌표 위치"를 회전시키는 반면, `colorGradient`는 LineRenderer 정점 "인덱스(순서, t=0~1)"를 기준으로 밝기를 매기므로 서로 독립적인 축. 정점이 회전해도 인덱스별 밝기 값은 인덱스에 고정된 채로 함께 회전하므로, 4개의 밝은 호가 고리 전체와 함께 계속 회전하는 것으로 동작할 것으로 판단(코드 변경 불필요, 그대로 유지)
+
+**주요 결정사항:**
+- `_ringColor`는 `[SerializeField]`라 런타임에 Inspector에서 바뀔 수 있지만, 기존 `startColor`/`endColor` 방식도 `Awake()` 시점 고정이었으므로 `BuildRingDashGradient()`도 동일한 수준(Awake 1회 계산)으로 유지 — 런타임 실시간 색상 반영은 범위 밖
+- `_hitDot`(레드닷)은 이번 변경 대상에서 완전히 제외 — 계속 `CreateSolidTexture()` 사용, colorGradient 미적용
+- `GameplayMechanics.md`/`UIRules.md`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음(요청사항 명시)
+- 이 원격 환경엔 Unity가 없어 실제 시각 결과(4개 호가 정확히 보이는지) 검증 불가 — C# 문법(`Gradient`/`GradientColorKey`/`GradientAlphaKey`는 `UnityEngine` 네임스페이스 포함, 별도 using 불필요)과 로직만 재확인함, 최종 시각 검증은 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음

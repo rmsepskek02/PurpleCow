@@ -8,7 +8,6 @@ public class TrajectoryPreview : MonoBehaviour
     private const float MAX_RAY_DISTANCE   = 50f;
     private const int   CIRCLE_SEGMENTS    = 24;
     private const float DASH_WORLD_SIZE    = 0.15f;
-    private const int   RING_DASH_COUNT    = 10; // 고리 둘레에 배치할 점선(호) 개수
 
     [SerializeField] private float _lineWidth  = 0.05f;
     [SerializeField] private Color _lineColor  = new Color32(225, 225, 220, 255);
@@ -28,17 +27,17 @@ public class TrajectoryPreview : MonoBehaviour
     {
         _trajectoryLine = CreateLineRenderer("TrajectoryLine", _lineWidth, _lineColor, CreateDashTexture());
         _hitDot         = CreateLineRenderer("HitDot",  _dotRadius * 1.6f, _hitColor,  CreateSolidTexture());
-
-        // 고리 둘레(2π × _ringRadius)를 RING_DASH_COUNT개로 정확히 나눠 이음새 없이
-        // 반복되도록 textureScale.x를 "세그먼트 개수 / 둘레 길이"로 별도 계산한다.
-        // (궤적선은 가변 길이라 월드 단위 고정 스케일을 쓰지만, 고리는 둘레가 고정이라
-        //  둘레 기준 정수 배 스케일이 필요하다.)
-        float ringCircumference = 2f * Mathf.PI * _ringRadius;
-        var ringTextureScale = new Vector2(RING_DASH_COUNT / ringCircumference, 1f);
-        _hitRing = CreateLineRenderer("HitRing", _lineWidth, _ringColor, CreateRingDashTexture(), ringTextureScale);
+        _hitRing        = CreateLineRenderer("HitRing", _lineWidth, _ringColor, CreateSolidTexture());
 
         _hitDot.loop  = true;
         _hitRing.loop = true;
+
+        // 텍스처 타일링 계산은 LineRenderer의 실제 렌더링 결과와 어긋날 수 있어(원격 환경
+        // 미검증 이슈 발생) colorGradient 기반으로 교체한다. 원 둘레를 4등분해 각 등분의
+        // 중앙을 알파 1(피크), 등분 경계를 알파 0(골)로 삼으면 alphaKeys 8개(Gradient 최대치)로
+        // 정확히 4개의 밝은 호가 보장된다. _ringColor는 Inspector에서 런타임에 바뀔 수 있지만
+        // 기존 startColor/endColor 방식과 동일하게 Awake 시점에 한 번만 고정한다.
+        _hitRing.colorGradient = BuildRingDashGradient(_ringColor);
 
         SetVisible(true);
     }
@@ -150,11 +149,7 @@ public class TrajectoryPreview : MonoBehaviour
         _hitRing.enabled = visible;
     }
 
-    // textureScaleOverride를 지정하지 않으면 기존과 동일하게 월드 단위 고정 스케일
-    // (1 / DASH_WORLD_SIZE)을 사용한다(_trajectoryLine/_hitDot 호출부는 변경 없음).
-    // _hitRing처럼 둘레 길이가 고정된 닫힌 도형은 둘레 기준으로 계산한 스케일을
-    // 별도로 넘겨 점선이 이음새 없이 정확히 반복되도록 한다.
-    private LineRenderer CreateLineRenderer(string childName, float width, Color color, Texture2D texture, Vector2? textureScaleOverride = null)
+    private LineRenderer CreateLineRenderer(string childName, float width, Color color, Texture2D texture)
     {
         var go = new GameObject(childName);
         go.transform.SetParent(transform, false);
@@ -172,10 +167,35 @@ public class TrajectoryPreview : MonoBehaviour
 
         var material = new Material(Shader.Find("Sprites/Default"));
         material.mainTexture = texture;
-        material.mainTextureScale = textureScaleOverride ?? new Vector2(1f / DASH_WORLD_SIZE, 1f);
+        material.mainTextureScale = new Vector2(1f / DASH_WORLD_SIZE, 1f);
         lr.material = material;
 
         return lr;
+    }
+
+    // 고리(_hitRing)에 정확히 4개의 밝은 호가 보이도록 하는 Gradient를 생성한다.
+    // 원 둘레를 4등분해 각 등분의 정중앙을 피크(alpha 1), 등분 경계를 골(alpha 0)로 삼으면
+    // Gradient가 허용하는 alphaKeys 최대 개수(8개)로 정확히 맞아떨어져 텍스처 타일링
+    // 계산 없이도 항상 정확한 개수를 보장한다. colorKeys는 RGB만 의미가 있으므로
+    // 시작/끝 2개를 모두 ringColor로 고정한다.
+    private static Gradient BuildRingDashGradient(Color ringColor)
+    {
+        var gradient = new Gradient();
+        var colorKeys = new GradientColorKey[]
+        {
+            new GradientColorKey(ringColor, 0f),
+            new GradientColorKey(ringColor, 1f),
+        };
+        var alphaKeys = new GradientAlphaKey[8];
+        for (int i = 0; i < 4; i++)
+        {
+            float peakT   = i * 0.25f;
+            float valleyT = peakT + 0.125f;
+            alphaKeys[i * 2]     = new GradientAlphaKey(1f, peakT);
+            alphaKeys[i * 2 + 1] = new GradientAlphaKey(0f, valleyT);
+        }
+        gradient.SetKeys(colorKeys, alphaKeys);
+        return gradient;
     }
 
     // 점선 표현용 텍스처: 앞쪽 절반 불투명, 뒤쪽 절반 투명.
@@ -193,26 +213,8 @@ public class TrajectoryPreview : MonoBehaviour
         return tex;
     }
 
-    // 고리(_hitRing) 전용 점선 텍스처: 궤적선(CreateDashTexture, 50:50 비율)보다
-    // 보이는 구간 비율을 낮춰(2/5 = 40%) 짧은 호와 넓은 간격이 뚜렷이 구분되는
-    // "끊어진 고리" 형태로 보이도록 한다. Awake()에서 mainTextureScale.x를
-    // "RING_DASH_COUNT / 둘레 길이"로 계산해 이 패턴이 원 둘레에 정확히
-    // RING_DASH_COUNT번(10개) 반복되도록 맞춘다.
-    private static Texture2D CreateRingDashTexture()
-    {
-        var tex = new Texture2D(5, 1, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Point;
-        tex.wrapMode   = TextureWrapMode.Repeat;
-        tex.SetPixels(new[]
-        {
-            Color.white, Color.white,
-            new Color(1f, 1f, 1f, 0f), new Color(1f, 1f, 1f, 0f), new Color(1f, 1f, 1f, 0f)
-        });
-        tex.Apply();
-        return tex;
-    }
-
-    // 레드닷(_hitDot) 전용 단색 텍스처. 고리(_hitRing)는 CreateRingDashTexture()로 분리됨.
+    // 레드닷(_hitDot)/고리(_hitRing) 공용 단색 텍스처. 고리의 점선 형태(4개 호)는
+    // 텍스처가 아니라 colorGradient(BuildRingDashGradient)로 표현한다.
     private static Texture2D CreateSolidTexture()
     {
         var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
