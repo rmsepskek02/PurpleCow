@@ -1006,3 +1006,22 @@
 ### 주요 결정사항
 - 구체적 구현 방법(점선 세그먼트 개수, 회전 속도/방향, Inspector 노출 여부)은 research.md에서 확정하지 않고 열린 질문 3건으로 명시해 plan.md 단계로 미룸
 - 코드는 읽기만 하고 수정하지 않음, git 커밋/푸시 없음, Bash 미사용, Read/Edit/Write/Glob/Grep만 사용
+
+---
+
+## 2026-07-05 (볼-볼 충돌 버그 plan.md)
+
+### 작업 내용
+- 볼-볼 물리 충돌 버그 task plan.md 신규 생성 (research.md는 이미 사용자 확인 완료 상태, 오케스트레이터-사용자 논의로 확정된 해결 방식 (a)를 그대로 STEP 구조로 반영)
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/plan.md`
+- 작성 전 `BallSetupEditor.cs`, `BallLauncher.cs`, `ProjectSettings/TagManager.asset`을 직접 재확인해 레이어 배열 빈 슬롯 위치(인덱스 8)와 기존 태그 등록 패턴(`AddRequiredTags()`)을 재검증
+
+### 결과
+- plan.md 작성 완료: 구현 목표(전용 "Ball" Physics2D 레이어 신설 + `Ball.prefab` 레이어 재배치 + `BallLauncher.Awake()`에 `Physics2D.IgnoreLayerCollision` 1회 호출), 단계별 작업 계획 4단계(레이어 등록 에디터 코드, 프리팹 레이어 할당, 런타임 1회 호출, 문서 갱신 불필요 판단), 예상 변경/생성 파일 목록(`BallSetupEditor.cs`, `Ball.prefab`, `BallLauncher.cs`, `TagManager.asset`), 주의사항 6건 작성
+- "Ball" 태그 미등록 버그는 이번 범위에서 고치지 않고 그대로 둠(사용자 확정), `TrajectoryPreview.cs`의 `IsBlockingTag()`가 순수 태그 기준(`CompareTag`)이라 레이어 변경과 무관함을 주의사항에 명시(오케스트레이터가 이미 확인 완료한 사실을 근거로 인용)
+- 신규 문서 생성이 아니라 기존 task 폴더에 plan.md만 추가하는 것이라 AGENTS.md 인덱스 변경 불필요(개별 task 폴더는 별도 관리하지 않는 기존 정책)
+
+### 주요 결정사항
+- 해결 방식은 (a) 전용 Ball 레이어 + `IgnoreLayerCollision` 전역 1회 호출로 확정(사용자 결정 그대로 반영), Wall/Ground/Monster는 Default 레이어에 유지
+- 레이어 등록(`TagManager.asset`)과 프리팹 `m_Layer` 할당 순서 보장 필요성(`LayerMask.NameToLayer` 값 조회가 저장 이후여야 함)을 주의사항에 명시
+- 코드/프리팹은 건드리지 않고 plan.md만 작성, git 커밋/푸시 없음, Bash 미사용, Read/Write만 사용
