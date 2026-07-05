@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1491ba7762754ad4af72403c31186103, type: 3}
+  m_Name: PlayerActiveSkillData_Clone
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerActiveSkillData
+  _skillType: 1
+  _displayName: Illusion
+  _icon: {fileID: -2822384490363785072, guid: 3a7da9c2565d76c49b80f0d8960b1ef8, type: 3}
+  _cooldown: 30
+  _duration: 6
+  _speedMultiplier: 1.5
+  _cloneReturnCount: 2

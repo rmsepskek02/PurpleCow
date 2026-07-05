@@ -394,6 +394,7 @@ GameObject:
   - component: {fileID: 206517394}
   - component: {fileID: 206517393}
   - component: {fileID: 206517392}
+  - component: {fileID: 206517395}
   m_Layer: 0
   m_Name: berserk
   m_TagString: Untagged
@@ -502,6 +503,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 206517390}
   m_CullTransparentMesh: 1
+--- !u!114 &206517395
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 206517390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22ad3bf1aeaa43d3a230690b1376c09c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerActiveSkillButton
+  _skillIndex: 0
+  _button: {fileID: 206517392}
+  _icon: {fileID: 0}
+  _cooldownOverlay: {fileID: 0}
+  _cooldownText: {fileID: 0}
+  _nameText: {fileID: 0}
 --- !u!1001 &213978110
 PrefabInstance:
   m_ObjectHideFlags: 0
