@@ -1013,3 +1013,35 @@
 - Unity 에디터 없는 원격 환경이라 씬을 열어 직접 검증 불가 — YAML 텍스트 편집만 수행, fileID 참조 관계(부모 m_Children ↔ 자식 m_GameObject/m_Father)를 grep으로 교차 확인 후 진행
 - LevelUpPanel/PausePanel/BallLevelUpPanel 및 다른 모든 GameObject/컴포넌트는 전혀 건드리지 않음
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+---
+
+## 2026-07-05
+
+### 작업: 궤적 프리뷰 _hitRing 점선화 + 시계방향 회전 효과
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/plan.md` (사용자 승인 완료)
+- `TrajectoryPreview.cs` 단독 수정, `_hitRing`(2차 충돌 지점 레드닷을 감싸는 고리)을 실선 → 점선으로 교체하고 조준 여부와 무관하게 항상 시계방향으로 회전하는 효과 추가
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Ball/TrajectoryPreview.cs`
+  - `[SerializeField] private float _ringRotationSpeed = 90f;` 필드 추가 (deg/sec, Inspector 노출) — 4초에 한 바퀴 도는 속도로, 너무 느려 밋밋하지도 너무 빨라 어지럽지도 않은 값으로 임의 결정(plan.md의 "60f 전후 참고" 문구보다 살짝 빠르게 설정해 애니메이션이 눈에 띄도록 함)
+  - `RING_DASH_COUNT = 10` 상수 추가 (고리 둘레에 배치할 점선 호 개수, plan.md가 제시한 8~12 범위의 중간값)
+  - `CreateRingDashTexture()` 신설 — 궤적선의 `CreateDashTexture()`(4px, 50:50 비율)와 별도로 5px 텍스처(2px 불투명/3px 투명 = 40% 비율)를 사용해 궤적선보다 간격이 넓은 "짧은 호 + 넓은 갭" 형태로 차별화. `CreateDashTexture()` 재사용이 아닌 신규 메서드를 선택한 이유: research.md/plan.md가 궤적선과 고리의 점선 비율이 다를 때 더 자연스럽다고 명시했고, 레퍼런스 이미지(`targetUI/KakaoTalk_20260701_190324151_02.jpg`)의 고리가 궤적선보다 끊김이 더 뚜렷했기 때문
+  - `CreateLineRenderer()` 시그니처에 `Vector2? textureScaleOverride = null` 선택적 파라미터 추가 — plan.md가 제시한 두 옵션(공용 헬퍼 파라미터 확장 vs `Awake()`에서 별도 재설정) 중 헬퍼 파라미터 확장을 선택(호출부 한 줄로 의도가 드러나고 `_trajectoryLine`/`_hitDot` 호출부는 그대로 유지되어 변경 범위가 더 작음). `Awake()`에서 `ringCircumference = 2π × _ringRadius`, `ringTextureScale = (RING_DASH_COUNT / ringCircumference, 1f)`로 계산해 전달 — 고리 둘레에 정확히 10개 점선이 이음새 없이 반복되도록 함(궤적선처럼 `DASH_WORLD_SIZE` 고정 스케일이 아닌, 고정 둘레 기준 정수 배 스케일 필요)
+  - `DrawCircle()` 시그니처에 `float rotationOffsetDeg = 0f` 파라미터 추가(plan.md 옵션 a 채택, 별도 메서드 분리보다 중복 코드가 적음). `angle = (i / CIRCLE_SEGMENTS) * 2π - rotationOffsetDeg(rad)`로 각도에서 오프셋을 빼는 방식 채택 — Unity 2D 좌표계(Y+ 위쪽)에서 `(cos(angle), sin(angle))`은 angle 증가 시 반시계 방향으로 이동하므로(예: angle=0의 (r,0) 지점에서 angle이 조금 커지면 y가 양수가 되어 위쪽, 즉 반시계 방향), 시계방향으로 보이려면 시간에 따라 angle을 감소시켜야 함. 반대로 검증하면 angle을 시간에 따라 "빼면"(offsetRad가 시간에 비례해 증가) (r,0) 지점이 y가 음수 쪽(아래)으로 이동 → 시계 방향(3시 방향에서 6시 방향으로 이동)과 일치함을 확인
+  - `UpdateTrajectory()`의 2차 충돌 분기에서 `float ringRotationOffsetDeg = Time.time * _ringRotationSpeed;` 계산 후 `DrawCircle(_hitRing, hit2.point, _ringRadius, ringRotationOffsetDeg)` 호출로 변경. `DrawCircle(_hitDot, hit2.point, _dotRadius)` 호출부는 그대로(기본값 0 사용)라 레드닷은 회전 미적용 유지
+  - `Update()`가 이미 터치 여부와 무관하게 매 프레임 실행되는 기존 구조(2026-07-03 수정)를 그대로 활용 — 회전 관련 로직에 터치 상태 체크를 별도로 추가하지 않음
+  - `CreateSolidTexture()` 위 주석을 "레드닷/원형 궤적선용" → "레드닷(_hitDot) 전용, 고리는 CreateRingDashTexture()로 분리됨"으로 정정(주석 정확성 유지 목적, 로직 변경 아님)
+
+**주요 결정사항:**
+- 텍스처 생성 방식: 신규 메서드(`CreateRingDashTexture()`) 신설 — `CreateDashTexture()` 재사용 대신 채택(이유는 위 수정 파일 항목 참고)
+- `DrawCircle()` 확장 vs 분리: 시그니처 확장(옵션 a) 채택 — `_hitDot` 호출부는 그대로 유지되어 하위 호환, 코드 중복 없음
+- `_ringRotationSpeed` 기본값: 90f(deg/sec, 약 4초/바퀴)
+- 시계방향 부호 처리: `angle - Mathf.Deg2Rad * Time.time * _ringRotationSpeed` (research.md 예시와 동일한 부호)
+- 점선 세그먼트 개수: `RING_DASH_COUNT = 10`, 비율은 40%(2px/5px) — 궤적선(50%)보다 간격이 넓어 시각적으로 구분됨
+- `GameplayMechanics.md`/`UIRules.md` 문서 갱신은 이번 작업 범위 밖(별도 docs 에이전트 담당)이라 손대지 않음
+- `Assets/Scenes/SampleScene.unity`는 수정하지 않음(신규 필드는 사용자 로컬에서 씬을 열 때 자동 직렬화됨)
+- 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/시각 결과(점선 간격/회전 방향/속도 체감)는 검증 불가 — C# 문법과 좌표 기하학적 논리만 재확인함, 최종 시각 검증은 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음

@@ -1,3 +1,20 @@
+## 2026-07-05
+
+### 작업 내용
+- `_Task/2026-07-05/11-20_trajectory-ring-dash-rotate/plan.md` STEP 3~4에 따라 GameplayMechanics.md / UIRules.md 갱신 (dev 에이전트가 이미 구현 완료한 `TrajectoryPreview.cs`의 실제 코드 내용을 오케스트레이터가 git diff로 검증해 전달, 이를 문서에 반영만 함 — 코드 미수정)
+- 경로: `Assets/_Project/Docs/GameplayMechanics.md`, `Assets/_Project/Docs/UIRules.md`
+
+### 결과
+- GameplayMechanics.md 섹션 1: 2차 충돌 지점 고리 설명 문장에 "실선이 아니라 끊어진 점선 형태이며, 조준(터치) 여부와 무관하게 항상 시계방향으로 계속 회전한다" 추가
+- UIRules.md 섹션 11: (1) 2차 충돌 지점 서술에 점선/회전 특징 추가, (2) 구현 방식 항목을 레드닷(`CreateSolidTexture()`, 회전 없음)과 고리(`CreateRingDashTexture()`, `RING_DASH_COUNT=10`, 둘레 기준 스케일)로 분리 서술 + 회전이 `DrawCircle()`의 `rotationOffsetDeg` 파라미터(`angle = 기존각도 - offsetRad`, `Time.time * _ringRotationSpeed`)로 구현되며 터치 여부와 무관하게 항상 진행됨을 명시, (3) Inspector 조절 값 표에 `_ringRotationSpeed`(deg/sec, 기본값 90) 행 추가
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 코드/씬 파일은 건드리지 않고 문서 서술만 실제 구현(오케스트레이터 제공 git diff 검증 내용)에 정확히 맞춰 갱신
+- GameplayMechanics.md의 "구현 현황" 하위 섹션(task 이력 기록)은 이번 지시 범위(섹션 1의 특정 문장 정정)를 벗어나므로 건드리지 않음 (외과적 변경 원칙)
+
+---
+
 ## 2026-07-04
 
 ### 작업 내용

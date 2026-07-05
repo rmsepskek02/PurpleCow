@@ -5,9 +5,10 @@ using UnityEngine;
 // GameplayMechanics.md 섹션 1 스펙을 그대로 따른다(2단계 점선 + 2차 지점 레드닷/링, 3차 충돌 이후 미표시).
 public class TrajectoryPreview : MonoBehaviour
 {
-    private const float MAX_RAY_DISTANCE = 50f;
-    private const int   CIRCLE_SEGMENTS  = 24;
-    private const float DASH_WORLD_SIZE  = 0.15f;
+    private const float MAX_RAY_DISTANCE   = 50f;
+    private const int   CIRCLE_SEGMENTS    = 24;
+    private const float DASH_WORLD_SIZE    = 0.15f;
+    private const int   RING_DASH_COUNT    = 10; // 고리 둘레에 배치할 점선(호) 개수
 
     [SerializeField] private float _lineWidth  = 0.05f;
     [SerializeField] private Color _lineColor  = new Color32(225, 225, 220, 255);
@@ -15,6 +16,7 @@ public class TrajectoryPreview : MonoBehaviour
     [SerializeField] private Color _ringColor  = new Color32(225, 225, 220, 255);
     [SerializeField] private float _dotRadius  = 0.05f;
     [SerializeField] private float _ringRadius = 0.3f;
+    [SerializeField] private float _ringRotationSpeed = 90f; // 고리 시계방향 회전 속도(deg/sec)
 
     private static readonly string[] _blockingTags = { "Wall", "Ground", "Monster" };
 
@@ -26,7 +28,15 @@ public class TrajectoryPreview : MonoBehaviour
     {
         _trajectoryLine = CreateLineRenderer("TrajectoryLine", _lineWidth, _lineColor, CreateDashTexture());
         _hitDot         = CreateLineRenderer("HitDot",  _dotRadius * 1.6f, _hitColor,  CreateSolidTexture());
-        _hitRing        = CreateLineRenderer("HitRing", _lineWidth,        _ringColor, CreateSolidTexture());
+
+        // 고리 둘레(2π × _ringRadius)를 RING_DASH_COUNT개로 정확히 나눠 이음새 없이
+        // 반복되도록 textureScale.x를 "세그먼트 개수 / 둘레 길이"로 별도 계산한다.
+        // (궤적선은 가변 길이라 월드 단위 고정 스케일을 쓰지만, 고리는 둘레가 고정이라
+        //  둘레 기준 정수 배 스케일이 필요하다.)
+        float ringCircumference = 2f * Mathf.PI * _ringRadius;
+        var ringTextureScale = new Vector2(RING_DASH_COUNT / ringCircumference, 1f);
+        _hitRing = CreateLineRenderer("HitRing", _lineWidth, _ringColor, CreateRingDashTexture(), ringTextureScale);
+
         _hitDot.loop  = true;
         _hitRing.loop = true;
 
@@ -70,7 +80,10 @@ public class TrajectoryPreview : MonoBehaviour
         {
             _trajectoryLine.SetPosition(2, hit2.point);
             DrawCircle(_hitDot,  hit2.point, _dotRadius);
-            DrawCircle(_hitRing, hit2.point, _ringRadius);
+            // 터치 여부와 무관하게 항상 진행되는 Update()/UpdateTrajectory() 흐름을 그대로 타므로
+            // 조준 중이 아닐 때도 고리는 계속 회전한다. Time.time 기반으로 각도 오프셋을 누적한다.
+            float ringRotationOffsetDeg = Time.time * _ringRotationSpeed;
+            DrawCircle(_hitRing, hit2.point, _ringRadius, ringRotationOffsetDeg);
             SetHitMarkersVisible(true);
         }
         else
@@ -110,12 +123,16 @@ public class TrajectoryPreview : MonoBehaviour
         return false;
     }
 
-    private static void DrawCircle(LineRenderer lr, Vector2 center, float radius)
+    // rotationOffsetDeg가 0이면 기존과 동일하게 동작한다(_hitDot은 항상 기본값 0으로 호출).
+    // Unity 2D 좌표계(Y+ 위쪽)에서 cos/sin 기준 angle이 증가할수록 반시계 방향으로 움직이므로,
+    // 시계 방향으로 보이려면 시간에 따라 커지는 오프셋을 angle에서 "빼야" 한다.
+    private static void DrawCircle(LineRenderer lr, Vector2 center, float radius, float rotationOffsetDeg = 0f)
     {
         lr.positionCount = CIRCLE_SEGMENTS;
+        float offsetRad = rotationOffsetDeg * Mathf.Deg2Rad;
         for (int i = 0; i < CIRCLE_SEGMENTS; i++)
         {
-            float angle = (i / (float)CIRCLE_SEGMENTS) * Mathf.PI * 2f;
+            float angle = (i / (float)CIRCLE_SEGMENTS) * Mathf.PI * 2f - offsetRad;
             Vector3 point = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
             lr.SetPosition(i, point);
         }
@@ -133,7 +150,11 @@ public class TrajectoryPreview : MonoBehaviour
         _hitRing.enabled = visible;
     }
 
-    private LineRenderer CreateLineRenderer(string childName, float width, Color color, Texture2D texture)
+    // textureScaleOverride를 지정하지 않으면 기존과 동일하게 월드 단위 고정 스케일
+    // (1 / DASH_WORLD_SIZE)을 사용한다(_trajectoryLine/_hitDot 호출부는 변경 없음).
+    // _hitRing처럼 둘레 길이가 고정된 닫힌 도형은 둘레 기준으로 계산한 스케일을
+    // 별도로 넘겨 점선이 이음새 없이 정확히 반복되도록 한다.
+    private LineRenderer CreateLineRenderer(string childName, float width, Color color, Texture2D texture, Vector2? textureScaleOverride = null)
     {
         var go = new GameObject(childName);
         go.transform.SetParent(transform, false);
@@ -151,7 +172,7 @@ public class TrajectoryPreview : MonoBehaviour
 
         var material = new Material(Shader.Find("Sprites/Default"));
         material.mainTexture = texture;
-        material.mainTextureScale = new Vector2(1f / DASH_WORLD_SIZE, 1f);
+        material.mainTextureScale = textureScaleOverride ?? new Vector2(1f / DASH_WORLD_SIZE, 1f);
         lr.material = material;
 
         return lr;
@@ -172,7 +193,26 @@ public class TrajectoryPreview : MonoBehaviour
         return tex;
     }
 
-    // 레드닷/원형 궤적선용 단색 텍스처.
+    // 고리(_hitRing) 전용 점선 텍스처: 궤적선(CreateDashTexture, 50:50 비율)보다
+    // 보이는 구간 비율을 낮춰(2/5 = 40%) 짧은 호와 넓은 간격이 뚜렷이 구분되는
+    // "끊어진 고리" 형태로 보이도록 한다. Awake()에서 mainTextureScale.x를
+    // "RING_DASH_COUNT / 둘레 길이"로 계산해 이 패턴이 원 둘레에 정확히
+    // RING_DASH_COUNT번(10개) 반복되도록 맞춘다.
+    private static Texture2D CreateRingDashTexture()
+    {
+        var tex = new Texture2D(5, 1, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode   = TextureWrapMode.Repeat;
+        tex.SetPixels(new[]
+        {
+            Color.white, Color.white,
+            new Color(1f, 1f, 1f, 0f), new Color(1f, 1f, 1f, 0f), new Color(1f, 1f, 1f, 0f)
+        });
+        tex.Apply();
+        return tex;
+    }
+
+    // 레드닷(_hitDot) 전용 단색 텍스처. 고리(_hitRing)는 CreateRingDashTexture()로 분리됨.
     private static Texture2D CreateSolidTexture()
     {
         var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
