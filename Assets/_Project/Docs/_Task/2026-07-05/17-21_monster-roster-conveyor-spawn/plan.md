@@ -452,3 +452,163 @@ private void SpawnRosterAcrossFullGrid()
 - 4개 풀 생성 시 각 프리팹 필드(`_fluffyPrefab`/`_spiderPrefab`/`_stoneBugPrefab`/`_forestDeerPrefab`)가 Inspector에서 실제 올바른 프리팹(Fluffy/Spider/StoneBug/ForestDeer)으로 연결되어야 하며, 이는 Unity 에디터에서 사용자가 직접 확인/연결해야 한다(이 원격 환경엔 Unity 에디터가 없음).
 - `SpawnRosterAcrossFullGrid()`는 웨이브 인덱스 0에서만 호출되므로 매 프레임 반복 실행되는 로직이 아니며, 성능 우려는 없다.
 - 틱당 3~7 제한(C)과 상단 1행 트리거 변경(B)으로 인해, 로스터가 큰 웨이브에서 로스터 전체가 소진되기까지 걸리는 시간이 기존보다 길어질 수 있다(의도된 동작이며 버그가 아님).
+
+---
+
+## 추가 확정 사항 반영 2 (2026-07-05 플레이테스트 피드백: E/F/G)
+
+A/B/C/D는 이미 구현·커밋 완료되었다. 이후 추가 플레이테스트에서 버그 2가지(E, F)와 설계 변경 1가지(G, 사용자 명시적 요청)가 확정되어 `MonsterRules.md`에 반영되었다. 이 섹션은 그 확정 사항을 `WaveManager.cs` 구현 단위로 구체화한다. 아래 설계는 이미 논의를 마치고 확정된 내용이므로 그대로 반영하며, 임의로 다른 대안을 제안하지 않는다.
+
+### E. 2칸 몬스터 배치 좌표 버그 수정
+
+**원인**: 현재 `PlaceMonster(MonsterData data, int col, int row)`는 `monster.transform.position = GridToWorldPosition(col, row)`를 그대로 사용해, 가로 2칸(`TwoByOne`, StoneBug)/세로 2칸(`OneByTwo`, ForestDeer) 몬스터도 항상 앵커로 쓰인 한 칸의 중심에 배치된다. 그 결과 스프라이트가 인접 칸에 걸쳐 보이거나(맨 좌측 열 `col=0`이면 그리드 밖으로 튀어나옴) 실제 점유 범위와 시각적 위치가 어긋난다.
+
+**수정 내용**:
+
+1. `PlaceMonster` 시그니처를 `PlaceMonster(MonsterData data, int col, int row)`에서 `PlaceMonster(MonsterData data, Vector3 worldPosition)`으로 변경한다.
+
+```csharp
+private void PlaceMonster(MonsterData data, Vector3 worldPosition)
+{
+    MonsterBase monster = _poolByData[data].Get();
+    if (data != null)
+        monster.ApplyData(data);
+
+    monster.transform.position = worldPosition;
+    _activeMonsters.Add(monster);
+
+    OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
+}
+```
+
+2. `TryDispenseRoster()`의 배치 호출부(`PlaceMonster(data, col, topRow);`)를 아래처럼 `BlockSize`에 따라 위치를 계산해 전달하도록 변경한다.
+
+```csharp
+Vector3 worldPos = data.BlockSize switch
+{
+    BlockSize.TwoByOne => (GridToWorldPosition(col, topRow) + GridToWorldPosition(col + 1, topRow)) / 2f,
+    BlockSize.OneByTwo => (GridToWorldPosition(col, topRow) + GridToWorldPosition(col, belowRow)) / 2f,
+    _ => GridToWorldPosition(col, topRow),
+};
+PlaceMonster(data, worldPos);
+```
+
+3. `SpawnRosterAcrossFullGrid()`의 배치 호출부(`PlaceMonster(data, chosenCol, chosenRow);`)도 아래처럼 변경한다. **주의**: 이 메서드에서는 `OneByTwo`가 `row`/`row+1` 두 행을 차지하므로, 평균 대상 행이 `TryDispenseRoster()`(`topRow`/`belowRow`)와 다르다.
+
+```csharp
+Vector3 worldPos = data.BlockSize switch
+{
+    BlockSize.TwoByOne => (GridToWorldPosition(chosenCol, chosenRow) + GridToWorldPosition(chosenCol + 1, chosenRow)) / 2f,
+    BlockSize.OneByTwo => (GridToWorldPosition(chosenCol, chosenRow) + GridToWorldPosition(chosenCol, chosenRow + 1)) / 2f,
+    _ => GridToWorldPosition(chosenCol, chosenRow),
+};
+PlaceMonster(data, worldPos);
+```
+
+4. `IsCellFree(int col, int row)`의 판정 여유 반경을 `_gridCellSize / 2f`에서 `_gridCellSize * 0.55f`로 늘린다(2칸 몬스터가 정확히 두 칸의 중간 지점에 위치했을 때 각 칸 중심에서의 거리가 정확히 반 칸이 되어 "비어있음"으로 오판되는 경계 케이스를 방지하기 위함).
+
+```csharp
+private bool IsCellFree(int col, int row)
+{
+    Vector3 cellWorldPos = GridToWorldPosition(col, row);
+    float checkRadius = _gridCellSize * 0.55f;
+
+    foreach (MonsterBase monster in _activeMonsters)
+    {
+        Vector3 pos = monster.transform.position;
+        if (Mathf.Abs(pos.x - cellWorldPos.x) < checkRadius && Mathf.Abs(pos.y - cellWorldPos.y) < checkRadius)
+            return false;
+    }
+    return true;
+}
+```
+
+### F. 좌측 편중 스폰 버그 수정 — 열 스캔 순서 랜덤화
+
+**원인**: `TryDispenseRoster()`가 매 틱마다 열(`col`)을 항상 `0`번부터 고정된 순서로 스캔하고, 이번 틱 배치 제한(`maxThisTick`, 3~7마리)에 도달하면 그 자리에서 즉시 스캔을 종료한다. 왼쪽부터 빈 칸을 채우다 제한에 걸려 멈추기를 반복하면서, 오른쪽 열(대략 5~8번)은 스캔 대상에 거의 도달하지 못해 스폰이 좌측에 심하게 편중된다.
+
+**수정 내용**: `TryDispenseRoster()`의 열 스캔부(`for (int col = 0; col < _gridColumns; col++) { ... }`, `topRowFree` 계산 이후의 배치 루프)를 고정 순서 대신 매 틱 셔플된 순서로 스캔하도록 변경한다. `topRowFree` 배열 자체는 열 인덱스 기준 그대로 유지하고(값 캐싱은 기존과 동일하게 `col = 0`부터 순서대로 계산), 배치 루프만 셔플된 순서로 순회한다.
+
+```csharp
+List<int> colOrder = new List<int>(_gridColumns);
+for (int c = 0; c < _gridColumns; c++)
+    colOrder.Add(c);
+for (int i = colOrder.Count - 1; i > 0; i--)
+{
+    int j = UnityEngine.Random.Range(0, i + 1);
+    (colOrder[i], colOrder[j]) = (colOrder[j], colOrder[i]);
+}
+
+foreach (int col in colOrder)
+{
+    if (_waveRoster.Count == 0 || placedThisTick >= maxThisTick)
+        return;
+
+    if (!topRowFree[col])
+        continue;
+
+    // 이하 기존 로직 동일 (twoByOneFits은 col+1 < _gridColumns && topRowFree[col+1] 그대로 사용 —
+    // 셔플된 순서로 순회해도 각 col의 인접 열 검사(col+1) 자체는 열 인덱스 기준이라 영향 없음)
+    ...
+}
+```
+
+기존 `for (int col = 0; col < _gridColumns; col++)`를 `foreach (int col in colOrder)`로 바꾸는 것 외 루프 내부 로직(`oneByOneFits`/`twoByOneFits` 판정, 후보 수집, 무작위 선택, 배치, 캐시 갱신)은 변경하지 않는다.
+
+### G. 웨이브 오버랩 스폰 + 10/11웨이브 예외
+
+**배경**: 기존 웨이브 클리어 조건("활성 몬스터 0 AND 로스터 소진")이 다음 웨이브 로스터 생성 자체를 막고 있어, 로스터를 다 배출해도 필드에 몬스터가 하나라도 남아있으면 다음 웨이브 스폰이 전혀 시작되지 않는 문제가 확인되었다(사용자 명시적 요청으로 오버랩 방식 도입 확정, `MonsterRules.md` 2장/6장 참고).
+
+**수정 내용**:
+
+1. `SpawnWave(int index)`의 마지막 분기(`if (index == 0) SpawnRosterAcrossFullGrid(); else TryDispenseRoster();`)를 `index == 10`(11웨이브)도 전체 그리드 즉시배치 대상에 포함하도록 확장한다.
+
+```csharp
+// index 0 = 1웨이브(게임 전체 최초), index 10 = 11웨이브(10웨이브 예외 이후 재시작) — 둘 다 그리드 전체 즉시배치
+if (index == 0 || index == 10)
+    SpawnRosterAcrossFullGrid();
+else
+    TryDispenseRoster();
+```
+
+2. 신규 메서드 `CheckRosterDepleted()`를 추가하고, `TryDispenseRoster()`의 배치 루프 종료 직후와 `SpawnRosterAcrossFullGrid()`의 `while (_waveRoster.Count > 0) { ... }` 루프 종료 직후에 각각 호출한다.
+
+```csharp
+private void CheckRosterDepleted()
+{
+    if (_waveRoster.Count != 0)
+        return;
+
+    bool isLastWave = _currentWaveIndex + 1 >= _waveTable.TotalWaves;
+    bool isOverlapExceptionWave = _currentWaveIndex == 9; // 10웨이브(index 9)는 전멸 전까지 다음 웨이브로 넘어가지 않는 예외
+
+    if (!isLastWave && !isOverlapExceptionWave)
+    {
+        AdvanceToNextWave();
+    }
+    // 마지막 웨이브 또는 10웨이브(예외)라면 여기서는 아무것도 하지 않고,
+    // CheckWaveCleared()가 활성 몬스터까지 모두 사라졌을 때 다음 단계로 진행하도록 둔다.
+}
+```
+
+3. `CheckWaveCleared()`는 **수정하지 않는다.** 기존 로직("활성 몬스터 0 AND 로스터 소진" 두 조건 모두 만족 시 마지막 웨이브면 `OnAllWavesCleared`, 아니면 `OnWaveCleared` + `AdvanceToNextWave()`)이 그대로 유지되며, `CheckRosterDepleted()`가 비-예외 웨이브를 미리 처리해주기 때문에 이 메서드는 실질적으로 "마지막 웨이브(20웨이브, index 19)"와 "10웨이브(index 9) → 11웨이브(index 10) 전환" 두 경우에만 작동하게 된다(자연스럽게, 코드 변경 없이).
+4. `AdvanceToNextWave()`도 **수정하지 않는다**(기존 그대로: `_currentWaveIndex++` 후 `SpawnWave(_currentWaveIndex)` 또는 `OnAllWavesCleared`).
+
+## 예상 변경 파일 목록 (이번 추가분 반영)
+
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` (수정, 위 1~9번 계획 + A/B/C/D 추가분에 이어 동일 파일에 추가 변경)
+  - `PlaceMonster(MonsterData, int, int)` → `PlaceMonster(MonsterData, Vector3)`로 시그니처 변경(E)
+  - `TryDispenseRoster()` 배치 호출부 수정 — `BlockSize`별 월드 좌표 계산 후 `PlaceMonster(data, worldPos)` 호출(E)
+  - `SpawnRosterAcrossFullGrid()` 배치 호출부 수정 — `BlockSize`별 월드 좌표 계산 후 `PlaceMonster(data, worldPos)` 호출(E, `row`/`row+1` 평균 기준이 `TryDispenseRoster()`와 다름)
+  - `IsCellFree(int, int)` 수정 — 판정 여유 반경을 `_gridCellSize / 2f`에서 `_gridCellSize * 0.55f`로 확대(E)
+  - `TryDispenseRoster()` 열 스캔 루프 수정 — 고정 순서(`for`) 대신 매 틱 셔플된 `colOrder`(`foreach`)로 스캔(F)
+  - `SpawnWave(int index)` 마지막 분기 수정 — `index == 0 || index == 10`으로 확장(G)
+  - `CheckRosterDepleted()` 신규 메서드 추가 — `TryDispenseRoster()`/`SpawnRosterAcrossFullGrid()` 종료 직후 호출, 10웨이브(index 9)/마지막 웨이브 예외를 제외하고 즉시 `AdvanceToNextWave()` 호출(G)
+  - `CheckWaveCleared()`, `AdvanceToNextWave()`는 수정하지 않음(G)
+
+## 주의사항 (이번 추가분)
+
+- E 수정 시 `TryDispenseRoster()`와 `SpawnRosterAcrossFullGrid()` 양쪽 모두에서 `PlaceMonster` 호출부를 빠짐없이 고쳐야 하며, 두 메서드의 `OneByTwo` 평균 대상 행이 다르다는 점에 유의한다(`TryDispenseRoster()`는 `topRow`/`belowRow`, `SpawnRosterAcrossFullGrid()`는 `row`/`row+1` — 위 본문 참고).
+- G 반영 후 초반 웨이브들(로스터 수량이 적음)은 오버랩이 연쇄적으로 일어나 웨이브 인덱스가 실제 체감 진행 속도보다 빠르게 올라갈 수 있다(의도된 트레이드오프이며 버그가 아님, 이미 사용자 확인됨).
+- 10웨이브(index 9)/11웨이브(index 10)는 매직 넘버로 하드코딩되므로, 코드에 그 의미(10웨이브 예외/11웨이브 전체배치)를 주석으로 명확히 남길 것(`SpawnWave()`의 `index == 10` 분기, `CheckRosterDepleted()`의 `_currentWaveIndex == 9` 분기 각각).
+- 이 변경들(E/F/G)은 Unity 에디터에서 실제 플레이 테스트로 검증이 필요하다(이 원격 환경엔 Unity 에디터가 없으므로, 에디터에서 직접 실행/확인하는 작업은 사용자 로컬 환경에서 진행해야 한다).

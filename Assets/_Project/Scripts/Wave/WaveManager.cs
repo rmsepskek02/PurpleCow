@@ -124,8 +124,8 @@ public class WaveManager : Singleton<WaveManager>
         OnWaveStarted?.Invoke(index + 1);
         OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
 
-        // 8. 웨이브 인덱스 0(게임 전체 최초 웨이브)은 그리드 전체에 즉시 배치, 그 외에는 컨베이어 디스펜스
-        if (index == 0)
+        // 8. index 0 = 1웨이브(게임 전체 최초), index 10 = 11웨이브(10웨이브 예외 이후 재시작) — 둘 다 그리드 전체 즉시배치
+        if (index == 0 || index == 10)
             SpawnRosterAcrossFullGrid();
         else
             TryDispenseRoster();
@@ -147,10 +147,20 @@ public class WaveManager : Singleton<WaveManager>
         for (int col = 0; col < _gridColumns; col++)
             topRowFree[col] = IsCellFree(col, topRow);
 
-        for (int col = 0; col < _gridColumns; col++)
+        // F. 좌측 편중 스폰 버그 수정 — 매 틱 열 스캔 순서를 Fisher-Yates로 셔플
+        List<int> colOrder = new List<int>(_gridColumns);
+        for (int c = 0; c < _gridColumns; c++)
+            colOrder.Add(c);
+        for (int i = colOrder.Count - 1; i > 0; i--)
+        {
+            int j = UnityEngine.Random.Range(0, i + 1);
+            (colOrder[i], colOrder[j]) = (colOrder[j], colOrder[i]);
+        }
+
+        foreach (int col in colOrder)
         {
             if (_waveRoster.Count == 0 || placedThisTick >= maxThisTick)
-                return;
+                break;
 
             if (!topRowFree[col])
                 continue;
@@ -180,7 +190,14 @@ public class WaveManager : Singleton<WaveManager>
             int rosterIndex = fittingIndices[UnityEngine.Random.Range(0, fittingIndices.Count)];
             MonsterData data = _waveRoster[rosterIndex];
 
-            PlaceMonster(data, col, topRow);
+            // E. BlockSize에 따라 실제 점유 범위의 중앙 월드 좌표를 계산해 배치
+            Vector3 worldPos = data.BlockSize switch
+            {
+                BlockSize.TwoByOne => (GridToWorldPosition(col, topRow) + GridToWorldPosition(col + 1, topRow)) / 2f,
+                BlockSize.OneByTwo => (GridToWorldPosition(col, topRow) + GridToWorldPosition(col, belowRow)) / 2f,
+                _ => GridToWorldPosition(col, topRow),
+            };
+            PlaceMonster(data, worldPos);
             _waveRoster.RemoveAt(rosterIndex);
             placedThisTick++;
 
@@ -198,6 +215,8 @@ public class WaveManager : Singleton<WaveManager>
                     break;
             }
         }
+
+        CheckRosterDepleted();
     }
 
     private void SpawnRosterAcrossFullGrid()
@@ -240,7 +259,15 @@ public class WaveManager : Singleton<WaveManager>
             var (rosterIndex, chosenCol, chosenRow) = candidates[UnityEngine.Random.Range(0, candidates.Count)];
             MonsterData data = _waveRoster[rosterIndex];
 
-            PlaceMonster(data, chosenCol, chosenRow);
+            // E. BlockSize에 따라 실제 점유 범위의 중앙 월드 좌표를 계산해 배치
+            // (이 메서드는 OneByTwo가 row/row+1 두 행을 차지하므로 TryDispenseRoster()의 topRow/belowRow와 평균 대상 행이 다름)
+            Vector3 worldPos = data.BlockSize switch
+            {
+                BlockSize.TwoByOne => (GridToWorldPosition(chosenCol, chosenRow) + GridToWorldPosition(chosenCol + 1, chosenRow)) / 2f,
+                BlockSize.OneByTwo => (GridToWorldPosition(chosenCol, chosenRow) + GridToWorldPosition(chosenCol, chosenRow + 1)) / 2f,
+                _ => GridToWorldPosition(chosenCol, chosenRow),
+            };
+            PlaceMonster(data, worldPos);
             _waveRoster.RemoveAt(rosterIndex);
 
             switch (data.BlockSize)
@@ -258,17 +285,19 @@ public class WaveManager : Singleton<WaveManager>
                     break;
             }
         }
+
+        CheckRosterDepleted();
     }
 
     private bool IsCellFree(int col, int row)
     {
         Vector3 cellWorldPos = GridToWorldPosition(col, row);
-        float halfCell = _gridCellSize / 2f;
+        float checkRadius = _gridCellSize * 0.55f;
 
         foreach (MonsterBase monster in _activeMonsters)
         {
             Vector3 pos = monster.transform.position;
-            if (Mathf.Abs(pos.x - cellWorldPos.x) < halfCell && Mathf.Abs(pos.y - cellWorldPos.y) < halfCell)
+            if (Mathf.Abs(pos.x - cellWorldPos.x) < checkRadius && Mathf.Abs(pos.y - cellWorldPos.y) < checkRadius)
                 return false;
         }
         return true;
@@ -283,16 +312,30 @@ public class WaveManager : Singleton<WaveManager>
         );
     }
 
-    private void PlaceMonster(MonsterData data, int col, int row)
+    private void PlaceMonster(MonsterData data, Vector3 worldPosition)
     {
         MonsterBase monster = _poolByData[data].Get();
         if (data != null)
             monster.ApplyData(data);
 
-        monster.transform.position = GridToWorldPosition(col, row);
+        monster.transform.position = worldPosition;
         _activeMonsters.Add(monster);
 
         OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
+    }
+
+    private void CheckRosterDepleted()
+    {
+        if (_waveRoster.Count != 0)
+            return;
+
+        bool isLastWave = _currentWaveIndex + 1 >= _waveTable.TotalWaves;
+        bool isOverlapExceptionWave = _currentWaveIndex == 9; // 10웨이브(index 9)는 전멸 전까지 다음 웨이브로 넘어가지 않는 예외
+
+        if (!isLastWave && !isOverlapExceptionWave)
+        {
+            AdvanceToNextWave();
+        }
     }
 
     private void CheckGameOver()
