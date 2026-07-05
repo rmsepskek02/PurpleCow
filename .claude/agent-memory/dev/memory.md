@@ -1306,3 +1306,27 @@
 **주요 결정사항:**
 - 사용자가 로컬 Unity에서 프리팹 계층을 `Character > WeaponPivot > Weapon` → `Character > Weapon`으로 직접 재구성하고 `_weaponPivot` 슬롯에 새 `Weapon` 오브젝트를 재연결할 예정 — 코드 쪽은 필드명만 유지하면 되므로 스크립트 자체는 계층 변경과 무관하게 동작
 - `_bodySpriteRenderer`/`_headSpriteRenderer` 필드를 삭제하지 않고 미사용 상태로 남긴 이유는 `CharacterSetupEditor.cs`의 기존 참조 연결 코드 파손 방지 (그 파일은 건드리지 않기로 확정)
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView.UpdateAim() Atan2 방식 → Quaternion.FromToRotation 방식으로 교체
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs`의 `UpdateAim(Vector2 direction)` 메서드 본문만 교체 (필드 선언, `Update()`, 클래스 주석 등 나머지는 그대로 유지)
+- 다른 파일은 건드리지 않음 (`CharacterSetupEditor.cs` 포함, 사용자 명시 지시)
+
+**변경 내용:**
+- 기존: `Mathf.Atan2(direction.y, direction.x)`로 각도를 직접 계산 후 `mirrored`일 때 부호를 수동으로 뒤집는 방식 — Unity Z축 회전 방향(시계/반시계) 규약을 잘못 추측해서 반대로 도는 버그가 반복됨
+- 신규: 각도를 직접 계산하지 않고 `Quaternion.FromToRotation(Vector3.up, localTargetDir)`로 "Vector3.up을 목표 방향으로 정렬시키는 회전"을 Unity가 직접 계산하도록 위임해 회전 방향 추측 자체를 제거
+- `mirrored`(오른쪽 조준으로 루트 반전) 상태일 때는 목표 방향의 `x`부호를 미리 뒤집은 `localTargetDir`을 계산해 로컬 회전에 사용 — 루트 반전 시 자식 회전도 화면상 같이 미러링되어 보이는 것을 상쇄
+- 머리 회전은 `Quaternion.Slerp(Quaternion.identity, weaponRotation, _headRotationRatio)`로 무기 회전의 일부 비율만 보조적으로 보간 (기존 `Quaternion.Euler(0,0, weaponAngle * ratio)` 방식 대체)
+
+**Git:**
+- git status로 `CharacterAimView.cs` 1개 파일만 변경됨을 확인
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- `transform.localScale` 좌우 반전 로직(`mirrored = direction.x > 0f`)은 그대로 유지 — 이번 수정은 회전 계산 방식만 교체, 반전 판정 자체는 손대지 않음
+- `_weaponPivot`/`_headTransform` 필드 및 시그니처는 변경하지 않아 `CharacterSetupEditor.cs`를 포함한 다른 파일과의 참조 호환성 그대로 유지

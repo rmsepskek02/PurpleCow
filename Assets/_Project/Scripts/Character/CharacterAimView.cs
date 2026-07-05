@@ -25,10 +25,13 @@ public class CharacterAimView : MonoBehaviour
         bool mirrored = direction.x > 0f; // 캐릭터 기본 아트가 왼쪽 기준이므로, 오른쪽 조준일 때만 반전
         transform.localScale = new Vector3(mirrored ? -1f : 1f, 1f, 1f);
 
-        float weaponAngle = 90f - Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        if (mirrored) weaponAngle = -weaponAngle; // 루트 반전 시 회전 방향도 같이 뒤집히므로 보정
-        _weaponPivot.localRotation = Quaternion.Euler(0f, 0f, weaponAngle);
+        // 루트가 반전되면 자식 회전도 화면에 같이 미러링되어 보이므로, 반전 상태일 때는
+        // 목표 방향의 x부호를 미리 뒤집어서 로컬 회전을 계산해야 최종 결과가 실제 조준 방향과 일치한다.
+        Vector2 localTargetDir = mirrored ? new Vector2(-direction.x, direction.y) : direction;
+        Quaternion weaponRotation = Quaternion.FromToRotation(Vector3.up, localTargetDir);
+        _weaponPivot.localRotation = weaponRotation;
 
-        _headTransform.localRotation = Quaternion.Euler(0f, 0f, weaponAngle * _headRotationRatio);
+        // 머리는 무기 회전의 일부 비율만 보조적으로 따라가도록 보간한다.
+        _headTransform.localRotation = Quaternion.Slerp(Quaternion.identity, weaponRotation, _headRotationRatio);
     }
 }
