@@ -1266,3 +1266,29 @@
 - Body/Head/WeaponPivot/Weapon 생성 로직, `CharacterAimController` 연결 로직 등 `CreateCharacterPrefab()` 내부는 전혀 건드리지 않음(요청 범위 외)
 - 이 원격 환경엔 Unity 에디터가 없어 메뉴 실행 자체를 검증하지 못함 — `using UnityEditor.SceneManagement;` 추가 여부와 C# 문법만 재확인함. 최종 검증은 사용자 로컬에서 `PurpleCow/Setup/Character Setup` 메뉴를 재실행해 프리팹 생성 스킵 여부와 씬 배치가 모두 정상 동작하는지 확인 필요
 - git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimController 회전 로직 단순화 (반전 보정 계수 제거)
+
+**작업 내용:**
+- 사용자 승인 완료 후 바로 진행. task 문서(plan.md) 없이 사용자 지시 원문을 그대로 구현
+- 기존 파일 1개 수정 (신규 파일 없음)
+- 좌우 반전(`localScale.x`) 상태일 때 회전 방향이 반대로 보이는 문제를 보정하던 `_mirroredRotationSign`(±1 부호 계수) 방식을 폐기하고, "방향은 `direction.x` 부호로만 결정, 회전량은 `Mathf.Abs(direction.x)`와 `direction.y`로 계산한 항상 0 이상인 각도만 사용"하는 방식으로 교체 — 반전 상태와 무관하게 항상 같은 회전 공식을 적용하므로 보정 계수 자체가 불필요해짐
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs`
+  - 클래스 상단 주석을 새 로직(방향은 x부호, 회전량은 절댓값 기반 0 이상 각도)에 맞게 갱신
+  - `_mirroredRotationSign` `[SerializeField]` 필드 및 관련 주석 전체 삭제
+  - `_currentWeaponAngle`/`_currentHeadAngle` private 필드 삭제 — 보간 로직이 이미 없어 저장할 필요가 없으므로 지역 변수(`weaponAngle`/`headAngle`)로 대체
+  - `Update()` 재작성: `targetAngle = Atan2(direction.x, direction.y)` 부호 있는 각도 계산 제거 → `scale.x = direction.x >= 0f ? +abs : -abs`로 좌우만 직접 결정, `angle = Atan2(Mathf.Abs(direction.x), direction.y)`로 항상 0 이상인 회전량 계산, 무기는 `Clamp(angle, 0f, _weaponClampAngle)`(기존 `-90~90` → `0~90`으로 범위 변경), 머리는 `Clamp(angle, 0f, _headClampAngle)`(기존 `-10~10` → `0~10`), 두 곳 모두 `mirrorSign` 곱셈 없이 `Quaternion.Euler(0f, 0f, -weaponAngle/-headAngle)`을 그대로 적용
+  - `_weaponClampAngle`(90f)/`_headClampAngle`(10f) 필드 자체는 그대로 유지(값도 변경 없음), 클램프 범위만 대칭 구간에서 0 이상 구간으로 바뀜
+
+**주요 결정사항:**
+- `_mirroredRotationSign`을 참조하는 다른 코드가 있는지 확인한 결과, `CharacterAimController.cs` 내부(이번에 삭제)와 `Assets/_Project/Prefabs/Character/Character.prefab`의 직렬화된 필드 값(`_mirroredRotationSign: -1`, YAML 라인 360)뿐이었음. 프리팹 YAML은 스크립트 필드 제거 시 Unity가 자동으로 무시하는 고아 직렬화 데이터라 수동으로 편집하지 않음(사용자가 로컬 Unity에서 프리팹을 열고 저장하면 자동 정리됨) — 프리팹 파일 자체는 건드리지 않음(요청사항: 다른 파일 건드리지 말라)
+- 같은 프리팹에서 스크립트에 존재하지 않는 `_rotationSpeed: 360` 직렬화 값도 발견했으나 이번 요청과 무관한 기존 잔여 데이터라 손대지 않음
+- `CharacterSetupEditor.cs` 등 다른 스크립트는 확인만 하고 수정하지 않음(요청 범위 외, 참조 없음 확인됨)
+- 이 원격 환경엔 Unity 에디터가 없어 실제 좌우 조준 시 무기/머리 회전이 시각적으로 올바른지 검증하지 못함 — C# 문법과 수식(오케스트레이터가 이미 재검산 완료)만 재확인함. 최종 검증은 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
