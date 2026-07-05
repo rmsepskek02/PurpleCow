@@ -40,16 +40,31 @@ public static class CharacterSetupEditor
             return;
         }
 
+        // Character(루트) — 조준 각도 부호에 따라 좌우 반전(localScale.x)을 담당.
         GameObject root = new GameObject("Character");
 
-        // Body: 머리+몸통 고정 파츠의 부모. Head/Weapon 좌표는 Body 로컬 기준이다.
-        GameObject body = CreateSpritePart("Body", root.transform, BodySpritePath, Vector2.zero, 0);
-        CreateSpritePart("Head", body.transform, HeadSpritePath, new Vector2(0.34f, 0.58f), 1);
-        GameObject weapon = CreateSpritePart("Weapon", body.transform, WeaponSpritePath, new Vector2(-0.29f, 0.65f), 2);
+        // Body: 고정 파츠(회전 없음). Head/WeaponPivot 좌표는 Character 루트(=Body 위치) 기준이다.
+        CreateSpritePart("Body", root.transform, BodySpritePath, Vector2.zero, 0);
+
+        // Head: Character의 직접 자식(Body 자식 아님). 조준 각도를 ±10도로 좁게 클램프해 제자리 tilt만 한다.
+        GameObject head = CreateSpritePart("Head", root.transform, HeadSpritePath, new Vector2(0.34f, 0.58f), 1);
+
+        // WeaponPivot: 회전축 역할을 하는 빈 오브젝트. 원본 게임 레퍼런스를 재분석한 결과
+        // 무기의 손잡이 쪽은 캐릭터 어깨 근처에 거의 고정되고 갈고리 끝만 호를 그리므로,
+        // 회전축을 무기 스프라이트 자신이 아니라 이 빈 오브젝트로 분리했다.
+        GameObject weaponPivot = new GameObject("WeaponPivot");
+        weaponPivot.transform.SetParent(root.transform, false);
+        weaponPivot.transform.localPosition = new Vector3(-0.29f, 0.65f, 0f);
+
+        // Weapon: WeaponPivot의 자식. Character_main_weapon.png의 커스텀 spritePivot(0.18, 0.29,
+        // 손잡이 부근)이 이미 "축 → 콘텐츠" 오프셋을 담당하므로 Weapon 자신의 로컬 오프셋은 0으로 둔다.
+        // Scene 뷰에서 회전시켜보며 갈고리 끝이 자연스러운 호를 그리는지 시각 검증이 필요하다.
+        GameObject weapon = CreateSpritePart("Weapon", weaponPivot.transform, WeaponSpritePath, Vector2.zero, 2);
 
         CharacterAimController aimController = root.AddComponent<CharacterAimController>();
         SerializedObject so = new SerializedObject(aimController);
-        so.FindProperty("_weaponTransform").objectReferenceValue = weapon.transform;
+        so.FindProperty("_weaponPivot").objectReferenceValue = weaponPivot.transform;
+        so.FindProperty("_head").objectReferenceValue = head.transform;
         so.ApplyModifiedPropertiesWithoutUndo();
 
         PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);

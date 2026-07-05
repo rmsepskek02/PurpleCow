@@ -1018,3 +1018,37 @@
 - 블록 스프라이트 로드는 `AssetDatabase.LoadAssetAtPath<Sprite>` 대신 `AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().FirstOrDefault()` 사용 — Multiple 모드 스프라이트(서브에셋 이름이 파일명과 다름, 예: `Block_1x1_0`)를 안전하게 로드하기 위함.
 - 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/프리팹 GUI 편집/asset 재직렬화 검증 불가 — 문법/네이밍/직렬화 필드명(SerializedObject.FindProperty 대상 문자열) 일치 여부만 신중히 재확인함.
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
+
+---
+
+## 2026-07-05
+
+### 작업: 캐릭터 프리팹 구성 + 무기 조준 회전 애니메이션 — 개정 설계 재구현 (WeaponPivot 축 이전, 18도 오프셋 삭제, 좌우 반전, 머리 회전 추가)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/04-03_character-weapon-aim/plan.md` (개정판, 2~5단계 설계 변경분)
+- research.md 경로: 동일 폴더 `research.md`("추가 조사 — 레퍼런스 스크린샷 재크롭 분석" 섹션 근거)
+- 1차 구현(18도 오프셋, Weapon 자신 pivot 회전, Weapon이 Body 자식)이 이미 완료·커밋되어 있었으나, 오케스트레이터의 레퍼런스 재분석 결과 핵심 설계 4가지가 뒤집혀 전면 재작성. `Character.prefab` 실물 에셋은 이번에도 아직 생성되지 않은 상태(원격 환경에 Unity 없음, 1차 구현도 스크립트 단계까지만 진행됨) — 기존 프리팹 파일과의 충돌/마이그레이션 이슈는 없음.
+- 기존 파일 2개 전면 재작성. weapon meta(`Character_main_weapon.png.meta`)는 이미 이전 커밋에서 rect 64×116 반영이 끝나 있어 이번엔 변경 없음(`git status`로 무변경 확인).
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Character/CharacterAimController.cs` — 전면 재작성
+  - 18도 `_rotationOffset` 보정 로직 완전 삭제. `Mathf.Atan2(direction.x, direction.y)`로 구한 각도를 그대로 사용.
+  - `_weaponTransform` 필드를 `_weaponPivot`/`_head` 두 개 `[SerializeField] private Transform` 필드로 교체. 회전 대상이 `Weapon` 자신에서 `WeaponPivot`(빈 부모)으로 이전.
+  - 좌우 반전: `targetAngle >= 0f`이면 `transform.localScale.x = +1`(오른쪽 조준), 음수면 `-1`(왼쪽 조준)로 매 프레임 전환. 이 스크립트는 `Character` 루트에 부착되므로 `transform` 자신을 직접 반전(별도 `_character` 참조 필드 불필요).
+  - 좌우 반전 시 회전 부호 보정: `[SerializeField] private float _mirroredRotationSign = -1f;`를 도입해 `isMirrored` 상태일 때만 `WeaponPivot`/`Head`에 적용하는 각도에 이 계수를 곱함. 기본값 `-1f`는 "부모가 scale.x=-1로 반전되면 자식 로컬 회전의 world 결과가 반전 전과 반대 부호가 되어야 시각적으로 대칭이 맞는다"는 수식 유도값이나, Unity 없이는 100% 확신 불가 — Inspector에서 즉시 `+1f`로 뒤집어 확인할 수 있도록 상수 하드코딩 대신 필드로 노출.
+  - `WeaponPivot`은 `±90도`(`_weaponClampAngle`), `Head`는 `±10도`(`_headClampAngle`)로 각각 독립적으로 `Mathf.Clamp` 후 `Mathf.MoveTowardsAngle`로 보간(`_rotationSpeed` 필드 재사용). `Head`는 별도 pivot 오브젝트 없이 자기 자신의 `localRotation`으로 제자리 tilt.
+- `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs` — 전면 재작성
+  - 계층 구조를 `Character(루트) → Body/Head/WeaponPivot`(모두 Character의 직접 자식, Head/Weapon이 Body 자식이던 1차 구조 폐기) `→ WeaponPivot → Weapon`으로 변경.
+  - `Head` local `(0.34, 0.58)`, `WeaponPivot` local `(-0.29, 0.65)`는 plan.md 추정치 그대로 사용.
+  - `Weapon`은 `WeaponPivot`의 자식으로 로컬 오프셋 `Vector2.zero`(원점) 배치 — `Character_main_weapon.png.meta`의 커스텀 spritePivot(`0.18, 0.29`, 손잡이 부근)이 이미 "축→콘텐츠 오프셋"을 스프라이트 자체에 내장하고 있다고 보고, 별도 수동 오프셋 수치를 새로 만들지 않는 설계를 택함(plan.md가 "그대로 유지해도 무방"이라 언급한 부분 반영). sortingOrder는 1차와 동일하게 Body=0/Head=1/Weapon=2 유지.
+  - `CharacterAimController`의 SerializedObject 프로퍼티 연결 대상을 `_weaponTransform` → `_weaponPivot`/`_head` 두 개로 교체.
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`의 `Step11_PlaceCharacter()`는 이번 개정과 무관해 손대지 않음(지시사항 그대로 준수, 필드명 의존 없음을 코드 확인함).
+
+**주요 결정사항:**
+- `Weapon`의 `WeaponPivot` 대비 로컬 오프셋을 `(0,0)`으로 둔 것은 이번 재구현에서 새로 내린 판단(plan.md가 정확한 오프셋 수치를 확정하지 않고 "Scene 뷰 시각 검증" 필요라고만 명시했기 때문). 스프라이트의 기존 커스텀 pivot을 그대로 재활용하는 방식을 택했으나, 실제로 Unity에서 회전시켜봤을 때 손잡이 위치가 어색하면 `Weapon.localPosition`에 별도 오프셋을 추가하는 조정이 필요할 수 있음.
+- `_mirroredRotationSign` 기본값 `-1f`는 좌우 미러링된 부모 아래에서 자식 로컬 회전이 시각적으로 반대로 보인다는 좌표 변환 수식을 직접 유도해 정한 값이나(회전 방향 정의: Unity 2D에서 양수 Z 회전=반시계 방향이라는 통상적 관례 전제), 이 전제 자체를 이 환경에서 실행 검증할 수 없으므로 정직하게 **"왼쪽 조준 시 무기가 자연스럽게 도는지 Unity 시각 검증 필수, 어색하면 Inspector에서 +1f로 뒤집어 볼 것"**로 보고에 남김.
+- 좌우 반전 자세(왼쪽 조준) 자체는 원본 게임 레퍼런스 스크린샷 10장 중 단 한 장도 없어 검증 불가 — 사용자 구두 설명에 근거한 대칭 적용이며, 이 역시 시각 검증 필요 사항으로 남김.
+- Head가 Body가 아닌 Character의 직접 자식이 된 것은 1차 구현과의 명확한 차이점 — plan.md 4단계 계층도 및 사용자 지시 원문이 동일하게 명시.
+- 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/씬 반영 검증 불가. `BallLauncher.Instance.LaunchDirection` 프로퍼티 시그니처, `SerializedObject.FindProperty` 대상 필드명(`_weaponPivot`/`_head`) 문자열 일치만 신중히 재확인함.
+- git 커밋/푸시는 수행하지 않음(오케스트레이터가 검토 후 처리 예정).
