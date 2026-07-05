@@ -14,9 +14,6 @@ public class CharacterAimController : MonoBehaviour
     // 머리 회전 클램프. 무기보다 훨씬 좁게(±10도) 제자리 tilt만 한다.
     [SerializeField] private float _headClampAngle = 10f;
 
-    // 회전 속도(도/초). Mathf.MoveTowardsAngle의 보간 속도로 사용.
-    [SerializeField] private float _rotationSpeed = 360f;
-
     // 좌우 반전(localScale.x < 0) 상태일 때 WeaponPivot/Head에 적용하는 회전 부호 보정 계수.
     // 부모(Character 루트)가 좌우 반전되면 자식의 로컬 회전이 시각적으로 반대 방향으로 보이므로
     // 보정이 필요하다. 기본값(-1)은 수학적으로 유도한 값이나 Unity 시각 검증 전에는 100% 확신할 수
@@ -47,13 +44,13 @@ public class CharacterAimController : MonoBehaviour
 
         // 무기: ±90도 클램프, WeaponPivot에 적용.
         float weaponTarget = Mathf.Clamp(targetAngle, -_weaponClampAngle, _weaponClampAngle);
-        _currentWeaponAngle = Mathf.MoveTowardsAngle(_currentWeaponAngle, weaponTarget, _rotationSpeed * Time.deltaTime);
+        _currentWeaponAngle = weaponTarget;
         if (_weaponPivot != null)
             _weaponPivot.localRotation = Quaternion.Euler(0f, 0f, -_currentWeaponAngle * mirrorSign);
 
         // 머리: 같은 목표 각도를 ±10도로 다시 좁게 클램프해 제자리 tilt만 적용.
         float headTarget = Mathf.Clamp(targetAngle, -_headClampAngle, _headClampAngle);
-        _currentHeadAngle = Mathf.MoveTowardsAngle(_currentHeadAngle, headTarget, _rotationSpeed * Time.deltaTime);
+        _currentHeadAngle = headTarget;
         if (_head != null)
             _head.localRotation = Quaternion.Euler(0f, 0f, -_currentHeadAngle * mirrorSign);
     }
