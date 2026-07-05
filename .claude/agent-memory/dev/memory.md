@@ -1101,3 +1101,35 @@
 - `GameplayMechanics.md`/`UIRules.md`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음(요청사항 명시, 오케스트레이터가 실제 diff 확인 후 문서는 별도 갱신 예정)
 - 이 원격 환경엔 Unity가 없어 실제 렌더링 결과(정확히 4개로 보이는지, loop=false 전환이 실제로 문제를 해결하는지)는 이번에도 검증 불가 — C# 문법과 기하학적 로직(정점 개수, 닫힘 위치, 텍스처 스케일 공식)만 재차 검토함. 사용자가 이 재시도의 실패 위험을 감수하고 진행하기로 한 상태이므로 최종 시각 검증은 반드시 사용자 로컬 플레이 테스트 필요
 - git 커밋/푸시는 수행하지 않음
+
+---
+
+## 2026-07-05
+
+### 작업: 볼-볼 물리 충돌 버그 수정 (전용 "Ball" Physics2D 레이어 신설 + IgnoreLayerCollision)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/16-40_ball-ball-collision-fix/plan.md`
+- 기존 파일 2개 수정 (신규 파일 없음)
+- 원인: Ball/Wall/Ground/Monster 전부 Default 레이어(0)이고 `Physics2DSettings.asset`의 레이어 충돌 매트릭스가 Default-Default 충돌을 허용해, `Ball.OnCollisionEnter2D`의 태그 분기와 무관하게 물리 엔진이 볼-볼 충돌 반응(밀어내기)을 먼저 적용해버리는 구조였음
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Editor/BallSetupEditor.cs`
+  - `AddBallLayer()` 메서드 추가 — `LayerMask.NameToLayer("Ball") != -1`이면 스킵(멱등성), 아니면 `SerializedObject`로 `ProjectSettings/TagManager.asset`을 열어 `"layers"` 배열의 인덱스 8~31(커스텀 슬롯) 중 비어있는 첫 슬롯에 `"Ball"`을 채움. `AddRequiredTags()`의 기존 태그 등록 패턴과 동일한 `SerializedObject`/`FindProperty` 문법 사용
+  - `AssignBallPrefabLayer()` 메서드 추가 — `LayerMask.NameToLayer("Ball")`로 조회한 레이어 인덱스를 `PrefabUtility.LoadPrefabContents("Assets/_Project/Prefabs/Ball/Ball.prefab")`로 연 GameObject의 `.layer`에 대입 후 `PrefabUtility.SaveAsPrefabAsset()` + `PrefabUtility.UnloadPrefabContents()`로 저장. 이미 해당 레이어면 스킵
+  - `SetupBallSystem()`(`[MenuItem("PurpleCow/Setup/Ball System Setup")]`)에 실행 순서 보장: `AddRequiredTags()` → `AddBallLayer()` → `AssetDatabase.SaveAssets()`(레이어를 디스크에 먼저 반영) → `AssignBallPrefabLayer()`(이 시점에 `LayerMask.NameToLayer("Ball")`이 유효한 값을 반환) → `CreatePhysicsMaterial()` → `CreateBallDataAsset()` → 마지막 `AssetDatabase.SaveAssets()`+`Refresh()`
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs`
+  - `Awake()`(`_ballPool = new ObjectPool<Ball>(...)` 생성 직후)에 다음 2줄 추가:
+    ```csharp
+    int ballLayer = LayerMask.NameToLayer("Ball");
+    Physics2D.IgnoreLayerCollision(ballLayer, ballLayer, true);
+    ```
+  - 게임 시작 시 1회만 호출되며, `ObjectPool<Ball>`이 이후 동적으로 생성하는 볼도 프리팹의 `m_Layer`("Ball"로 설정됨)를 자동 상속하므로 별도 처리 불필요
+
+**주요 결정사항:**
+- Wall/Ground/Monster는 요청대로 Default 레이어에 그대로 둠(옮기지 않음) — Unity가 새 레이어 추가 시 다른 레이어와의 충돌 비트를 기본 활성 상태로 초기화하므로 Ball-Default 충돌(벽/바닥/몬스터와의 정상 충돌)은 영향받지 않음
+- "Ball" 태그가 `TagManager.asset`에 등록되어 있지 않은 별개 버그(`SceneSetupEditor.Step1_CreateBallPrefab()`의 `TrySetTag(go, "Ball")` 조용한 실패)는 범위 외로 두고 손대지 않음
+- `TrajectoryPreview.cs`(태그 기준 레이캐스트 필터링)는 물리 레이어와 무관하다고 이미 오케스트레이터가 확인 완료된 사항이라 별도 검증 없이 그대로 둠
+- `ObjectPool.cs`는 요청대로 수정하지 않음
+- 이 원격 환경에는 Unity 에디터가 없어 레이어 등록/프리팹 저장/실제 물리 동작을 직접 실행·검증하지 못함 — 문법과 로직(특히 `SerializedObject`로 `"layers"` 배열에 값을 채우는 부분과 실행 순서 보장)만 재확인함. 최종 검증은 사용자가 로컬 Unity에서 `PurpleCow/Setup/Ball System Setup` 메뉴를 재실행하고 플레이 테스트하는 것으로 진행 필요
+- git 커밋/푸시는 수행하지 않음
