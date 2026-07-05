@@ -1,3 +1,21 @@
+## 2026-07-05 (추가 정정)
+
+### 작업 내용
+- UIRules.md 섹션 11 "구현 방식" 항목 재정정: dev 에이전트가 `_hitRing`의 텍스처 타일링 방식(`CreateRingDashTexture()`, `RING_DASH_COUNT`, `mainTextureScale` 계산)을 완전 폐기하고 `LineRenderer.colorGradient` 기반 방식(`BuildRingDashGradient()`)으로 교체한 실제 구현(오케스트레이터가 git diff로 검증)에 맞춰 문서 서술 갱신
+- 경로: `Assets/_Project/Docs/UIRules.md` (코드 미수정, GameplayMechanics.md는 확인만 하고 변경 없음)
+
+### 결과
+- 섹션 11 "구현 방식" 고리(ring) 관련 문단: `_hitRing`도 레드닷과 동일하게 `CreateSolidTexture()`(단색 텍스처)를 사용하고, 점선 효과는 `_hitRing.colorGradient`(`BuildRingDashGradient()`)의 alphaKeys 8개(4등분 중앙 t=0/0.25/0.5/0.75 알파 1, 경계 t=0.125/0.375/0.625/0.875 알파 0)로 만들어 정확히 4개의 밝은 호가 나타남을 서술, 폐기된 이전 텍스처 타일링 방식(10개 의도했으나 실제 2개로 렌더링되어 폐기)도 참고용으로 한 문장 남김
+- 회전 로직 문단에 "`colorGradient`는 정점 인덱스 기준으로 알파를 매기므로 정점 각도가 회전해도 4개 호 형태가 유지된 채 함께 회전한다" 설명 추가 (회전 로직 자체는 `rotationOffsetDeg`/`Time.time * _ringRotationSpeed`로 기존과 동일, 변경 없음)
+- Inspector 조절 값 표 `_ringRotationSpeed` 행은 변경 없이 유지
+- 신규 문서 생성 없음 → AGENTS.md 인덱스 변경 불필요
+
+### 주요 결정사항
+- 코드는 이미 구현 완료 상태이므로 건드리지 않고 문서만 실제 구현에 정확히 맞춤
+- GameplayMechanics.md는 사용자 관점 서술("점선(끊어진 호) + 시계방향 회전")만 담고 구현 디테일(텍스처/Gradient)을 언급하지 않으므로 이번 정정 범위에서 제외
+
+---
+
 ## 2026-07-05
 
 ### 작업 내용
