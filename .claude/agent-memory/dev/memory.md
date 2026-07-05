@@ -1351,3 +1351,26 @@
 **주요 결정사항:**
 - 보정치는 Inspector에서 조절 가능하도록 `[SerializeField]` 필드로 노출 (하드코딩하지 않음)
 - `_weaponPivot`/`_headTransform` 필드 및 시그니처는 변경하지 않아 `CharacterSetupEditor.cs`를 포함한 다른 파일과의 참조 호환성 그대로 유지
+
+---
+
+## 2026-07-05
+
+### 작업: CharacterAimView `_horizontalBiasDegrees` 각도 비례 → 항상 고정값 적용으로 변경
+
+**작업 내용:**
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs` 이 파일 하나만 수정 (다른 파일 미변경)
+
+**변경 내용:**
+- `UpdateAim()` 내 `horizontalness = Mathf.Clamp01(angle / 90f)` 비율 적용 로직 제거
+- `weaponRotation = Quaternion.AngleAxis(angle + _horizontalBiasDegrees * horizontalness, axis)` → `weaponRotation = Quaternion.AngleAxis(angle + _horizontalBiasDegrees, axis)`로 변경, 조준 각도와 무관하게 항상 고정 보정치(`_horizontalBiasDegrees`, 기본 15도)만큼 추가 회전
+- `axis.sqrMagnitude < 0.0001f || angle < 0.0001f` 조건일 때 `axis = Vector3.forward`로 강제하는 가드 추가 — 조준이 정확히 `Vector3.up`이라 `angle=0`인 경우 Unity `ToAngleAxis`가 축을 `Vector3.right` 등 예측 불가한 기본값으로 반환할 수 있어, 2D 회전 평면(XY, Z축 기준)을 벗어난 회전을 방지
+- `_horizontalBiasDegrees` 필드 선언/기본값(15f)/주석/이름은 요청대로 변경하지 않음
+- `_headTransform.localRotation = Quaternion.Slerp(...)` 줄은 보정된 `weaponRotation`을 그대로 참조하므로 수정 불필요
+
+**Git:**
+- git status로 `CharacterAimView.cs` 1개 파일만 변경됨을 확인
+- 커밋/푸시는 수행하지 않음 (오케스트레이터가 처리 예정)
+
+**주요 결정사항:**
+- 두 조건(`axis.sqrMagnitude < 0.0001f`, `angle < 0.0001f`)을 OR로 모두 방어 — sqrMagnitude 체크만으로는 Unity의 `ToAngleAxis(angle=0)` 시 임의의 기본 축(예: Vector3.right) 반환 케이스를 못 걸러낼 수 있어 angle 체크를 추가 가드로 병행

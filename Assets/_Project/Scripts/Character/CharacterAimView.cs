@@ -31,10 +31,10 @@ public class CharacterAimView : MonoBehaviour
         Vector2 localTargetDir = mirrored ? new Vector2(-direction.x, direction.y) : direction;
         Quaternion weaponRotation = Quaternion.FromToRotation(Vector3.up, localTargetDir);
 
-        // 조준 방향이 수평에 가까울수록(Vector3.up에서 많이 벗어날수록) 지팡이가 조금 더 눕도록 추가 보정한다.
+        // 조준 각도와 무관하게 항상 고정된 보정치만큼 추가 회전시킨다.
         weaponRotation.ToAngleAxis(out float angle, out Vector3 axis);
-        float horizontalness = Mathf.Clamp01(angle / 90f);
-        weaponRotation = Quaternion.AngleAxis(angle + _horizontalBiasDegrees * horizontalness, axis);
+        if (axis.sqrMagnitude < 0.0001f || angle < 0.0001f) axis = Vector3.forward; // 조준이 정확히 위쪽이면(angle=0) 회전축이 정의되지 않으므로, 2D 회전 평면인 Z축으로 대체
+        weaponRotation = Quaternion.AngleAxis(angle + _horizontalBiasDegrees, axis);
 
         _weaponPivot.localRotation = weaponRotation;
 
