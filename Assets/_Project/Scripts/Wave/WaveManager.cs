@@ -29,6 +29,7 @@ public class WaveManager : Singleton<WaveManager>
     public static event Action<int, int>    OnMonsterCountChanged; // (남은 수, 전체 수)
 
     public int TotalWaves => _waveTable.TotalWaves;
+    public float BottomBoundaryY => _bottomBoundaryY;
 
     protected override void Awake()
     {

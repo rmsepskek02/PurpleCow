@@ -22,6 +22,7 @@ public class InputHandler : Singleton<InputHandler>
     private Vector2 ComputeAimDirection(Vector2 screenPos)
     {
         Vector2 worldPos = _mainCamera.ScreenToWorldPoint(screenPos);
+        worldPos.y = Mathf.Max(worldPos.y, WaveManager.Instance.BottomBoundaryY);
         Vector2 launchPointPos = BallLauncher.Instance.LaunchPoint.position;
         return (worldPos - launchPointPos).normalized;
     }

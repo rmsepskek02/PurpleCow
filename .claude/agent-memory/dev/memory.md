@@ -1132,4 +1132,27 @@
 - `TrajectoryPreview.cs`(태그 기준 레이캐스트 필터링)는 물리 레이어와 무관하다고 이미 오케스트레이터가 확인 완료된 사항이라 별도 검증 없이 그대로 둠
 - `ObjectPool.cs`는 요청대로 수정하지 않음
 - 이 원격 환경에는 Unity 에디터가 없어 레이어 등록/프리팹 저장/실제 물리 동작을 직접 실행·검증하지 못함 — 문법과 로직(특히 `SerializedObject`로 `"layers"` 배열에 값을 채우는 부분과 실행 순서 보장)만 재확인함. 최종 검증은 사용자가 로컬 Unity에서 `PurpleCow/Setup/Ball System Setup` 메뉴를 재실행하고 플레이 테스트하는 것으로 진행 필요
+
+---
+
+## 2026-07-05
+
+### 작업: 조준 방향 Y좌표 하한 제한 (WaveManager 기준선 재사용)
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-05/18-30_aim-direction-y-clamp/plan.md`
+- 기존 파일 2개 수정 + 문서 1개 수정 (신규 파일 없음)
+- research.md의 A/B/C 후보(`WallFitter.Ground` 참조 방식)는 폐기되고, 이미 몬스터 게임오버 판정에 쓰이던 `WaveManager._bottomBoundaryY`를 그대로 재사용하는 더 단순한 방향으로 확정됨
+
+**수정 파일:**
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — 기존 `public int TotalWaves => _waveTable.TotalWaves;` 바로 아래에 `public float BottomBoundaryY => _bottomBoundaryY;` 프로퍼티 1줄 추가 (`_bottomBoundaryY` 필드 자체는 그대로 둠)
+- `Assets/_Project/Scripts/Core/InputHandler.cs` — `ComputeAimDirection(Vector2 screenPos)` 내부, `worldPos` 계산 직후 `launchPointPos` 계산 이전에 `worldPos.y = Mathf.Max(worldPos.y, WaveManager.Instance.BottomBoundaryY);` 1줄 추가. 터치 위치를 월드 좌표로 변환한 뒤 Y좌표가 게임오버 판정 기준선보다 낮으면 그 기준선 높이로 끌어올린 좌표를 기준으로 발사 지점 대비 방향을 계산하도록 변경
+- `Assets/_Project/Docs/GameplayMechanics.md` — 섹션 1(볼 발사 및 궤도 시스템) 내 "드래그하면 궤적이 드래그 위치를 목표로 실시간으로 따라간다" 글머리 기호 바로 다음 줄에 "조준 목표 지점의 Y좌표는 게임오버 판정 기준선(`WaveManager._bottomBoundaryY`)보다 아래로 내려갈 수 없다. 터치 위치가 그 기준선보다 낮으면 기준선 높이로 보정된 뒤 조준 방향이 계산된다." 문구를 같은 목록 스타일로 1줄 추가
+
+**주요 결정사항:**
+- `WaveManager.Instance`는 씬에 항상 존재하는 싱글톤이라 null 체크를 추가하지 않음 — 기존 `BallLauncher.Instance` 사용 관례와 동일한 스타일 유지
+- `TrajectoryPreview.cs`는 수정하지 않음 — `BallLauncher.Instance.LaunchDirection`(이미 clamp된 방향)을 그대로 받아 쓰므로 자동으로 반영됨(plan.md 확인 사항)
+- `SceneSetupEditor.cs`/`Assets/Scenes/SampleScene.unity`는 건드리지 않음 — `WaveManager`가 이미 싱글톤이라 별도 참조 연결이 불필요
+- 이 원격 환경엔 Unity 에디터가 없어 실제 clamp 동작(터치 위치가 기준선 아래로 내려갈 때 조준 방향이 실제로 잘리는지)을 시각적으로 검증하지 못함 — C# 문법과 로직만 재확인함. 최종 검증은 사용자 로컬 플레이 테스트 필요
+- git 커밋/푸시는 수행하지 않음
 - git 커밋/푸시는 수행하지 않음
