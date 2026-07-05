@@ -985,3 +985,28 @@
 - 블록 스프라이트 로드는 `AssetDatabase.LoadAssetAtPath<Sprite>` 대신 `AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().FirstOrDefault()` 사용 — Multiple 모드 스프라이트(서브에셋 이름이 파일명과 다름, 예: `Block_1x1_0`)를 안전하게 로드하기 위함.
 - 이 원격 환경엔 Unity 에디터가 없어 실제 컴파일/프리팹 GUI 편집/asset 재직렬화 검증 불가 — 문법/네이밍/직렬화 필드명(SerializedObject.FindProperty 대상 문자열) 일치 여부만 신중히 재확인함.
 - git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)
+
+---
+
+## 2026-07-05
+
+### 작업: Gameplay HUD 진행도 개편 및 삼택지 스킬 선택 UI 개편
+
+**작업 내용:**
+- plan.md 경로: `Assets/_Project/Docs/_Task/2026-07-04/20-04_gameplay-hud-and-skill-selection-ui/plan.md` (사용자 승인 문서, A-1/A-1b/A-2/A-3/B-1/B-2/B-3 섹션 그대로 구현)
+- 6개 파일 전부 수정, 신규 파일 생성 없음. 씬 반영(TopBar/CharacterXP 재배치 등)은 로컬 Unity에서 `PurpleCow/Setup/UI Setup` 메뉴 재실행 필요.
+
+**수정 파일:**
+- `Assets/_Project/Scripts/UI/HUDPanel.cs` — `_waveText`/`_scoreText`/`_launchReadyIndicator`/`_launchReadyCanvasGroup` 필드와 관련 메서드(`HandleScoreChanged`/`UpdateScore`/`SetLaunchIndicatorVisible`/`HandleGameStateChanged`/`HandleWaveStarted`/`HandleMonsterCountChanged`) 전부 제거. `_stageName`(기본값 "1. 깊은 숲")/`_stageNameText`/`_stageProgressFillImage`(Image, Filled) 필드 신규 추가. `WaveManager.OnStageKillProgressChanged(int killedSoFar, int totalInStage)` 신규 이벤트만 구독하여 `_stageProgressFillImage.fillAmount`와 기존 `_progressText.text`(%) 함께 갱신하는 `HandleStageKillProgressChanged`로 교체. `Start()`는 `_stageNameText.text = _stageName;` 한 줄만 남김. `UIManager.OnScoreChanged`/`GameManager.OnGameStateChanged`/`WaveManager.OnWaveStarted` 구독 전부 제거(더 이상 쓰는 곳 없음을 확인 후 제거).
+- `Assets/_Project/Scripts/Wave/WaveManager.cs` — `SpawnWave()`의 스폰 수 계산(BaseSpawnCount+SpawnCountPerWave*index 후 그리드 용량 상한 min 적용) 로직을 `CalculatePlannedSpawnCount(int index)` private 메서드로 추출해 `SpawnWave()`에서 재사용, 신규 `CalculateTotalMonstersInStage()`(웨이브 0~TotalWaves-1 합산)를 `Awake()`에서 호출해 `_totalMonstersInStage` 계산. 신규 이벤트 `public static event Action<int,int> OnStageKillProgressChanged`을 `HandleMonsterDied()`의 `_totalKillCount++` 직후 발행. 기존 `OnMonsterCountChanged`/`OnKillCountReached`/`_currentWaveTotalCount` 등 웨이브 단위 로직은 전혀 건드리지 않음.
+- `Assets/_Project/Scripts/UI/UIManager.cs` — `_score`/`Score`/`OnScoreChanged`/`HandleMonsterDied`/`MonsterBase.OnMonsterDied` 구독·해제 전부 제거, `HandleGameStateChanged`의 `_score = 0;`도 제거. 제거 전 grep으로 `MonsterBase.OnMonsterDied`를 `WaveManager`/`CharacterManager`/`LastMatchPassive`가 각자 독립적으로 구독 중임을 확인 — UIManager의 구독 제거가 다른 시스템에 영향 없음을 검증함.
+- `Assets/_Project/Scripts/UI/SkillCardUI.cs` — `[SerializeField] private GameObject _newLabelObject;` 추가, `Setup(SkillData data, Action<SkillData> onSelected)` → `Setup(SkillData data, Action<SkillData> onSelected, bool isNew)`로 시그니처 확장, 내부에서 `_newLabelObject?.SetActive(isNew)` 호출.
+- `Assets/_Project/Scripts/UI/SkillSelectionPanel.cs` — `BuildSkillCardPool()` 반환 타입을 `List<SkillData>` → `List<(SkillData Data, bool IsNew)>`로 변경(미보유 상태에서 후보에 오른 경우만 `IsNew=true`, 업그레이드 후보는 `false`), `ShowRandomSkills()`의 `Setup()` 호출부를 `Setup(candidates[i].Data, OnSkillSelected, candidates[i].IsNew)`로 수정.
+- `Assets/_Project/Scripts/Editor/UISetupEditor.cs` — `Step2_SetupHUDCanvas()`에서 `CharacterXP` 생성 블록(하단 배치) 완전 제거. `Step9_SetupHUDPanelContent()`를 전면 재작성: `WaveText`/`ScoreText`/`LaunchReadyIndicator` 생성·참조연결 코드 제거, `TopBar`(HUDPanel 하위) 신규 생성 후 그 하위에 `StageNameText`/`StageProgressBackground`+`StageProgressFillImage`(Filled/Horizontal)/`ProgressText`/`BossIcon`(장식용 정적 Image) 생성 및 `HUDPanel`의 `_stageNameText`/`_stageProgressFillImage`/`_progressText`에 즉시 `SerializedObject` 참조 연결. `CharacterXP`는 `GameObject.Find`로 기존 오브젝트 존재 여부를 확인해 있으면 `TopBar` 하위로 `SetParent` 재배치(기존 `CharacterXpBar`의 `_slider`/`_levelText` 참조는 그대로 유지), 없으면 `TopBar` 하위에 신규 생성 후 참조 연결까지 함께 처리. `Step6_CreateSkillCardPrefab()`에 `NewLabel`(TextMeshProUGUI, "New!") 자식 오브젝트 생성 코드를 최초 생성 블록과 "기존 프리팹 보정 생성" 블록 양쪽에 추가하고, 생성 직후 `SkillCardUI._newLabelObject`에 `SerializedObject` 참조 연결.
+
+**주요 결정사항:**
+- `CalculatePlannedSpawnCount()` 추출 시 `SpawnWave()`의 원래 계산 순서(spawnCount 계산 → twoCellWeight 계산 → capacityLimit 적용)와 완전히 동일한 결과가 나오도록 스폰 수 계산+상한 적용 부분만 추출(twoCellWeight는 별도 유지) — 공식 불일치로 인한 TopBar % 오차 위험 방지.
+- `HUDPanel`에서 `WaveManager.OnWaveStarted` 구독을 완전히 제거함 — `HandleWaveStarted`가 원래 `_waveText` 갱신과 `SetLaunchIndicatorVisible(true)` 호출만 하던 메서드였는데 plan.md에 따라 두 기능 모두 제거 대상이라, 남는 로직이 없어 구독 자체를 삭제(암묵적 결정, plan.md에 명시적 문구는 없었으나 A-1 1~5번 항목의 논리적 귀결).
+- `UISetupEditor.cs`의 `CharacterXP` 재배치는 "생성 코드 위치만 수정"이 아니라 기존 오브젝트를 찾아 `SetParent`로 재배치하는 방식을 택함 — 재실행 시 이미 존재하는 씬의 `CharacterXpBar` 참조 연결을 보존한 채 부모만 바꾸기 위함.
+- **[미해결, 오케스트레이터/사용자 확인 필요]** `Assets/_Project/Scripts/UI/ResultPanel.cs` 46번째 줄이 `UIManager.Instance.Score`를 참조하고 있는데, 이번 작업으로 `UIManager.Score` 프로퍼티가 완전히 제거되어 **컴파일 오류가 발생함**. `ResultPanel.cs`는 plan.md의 6개 파일 목록에 포함되지 않아 이번 작업에서 수정하지 않았음(외과적 변경 원칙, 스코프 외 파일 임의 수정 금지). 로컬 Unity에서 컴파일 전 반드시 `ResultPanel.cs`의 최종 점수 표시 로직을 별도로 수정(예: `WaveManager`의 `_totalKillCount`를 노출하는 방식으로 대체하거나 해당 UI 요소 제거)해야 함.
+- git 커밋/푸시는 수행하지 않음 (오케스트레이터가 사용자 확인 후 처리 예정)

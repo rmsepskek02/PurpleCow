@@ -130,27 +130,8 @@ public static class UISetupEditor
         hpBarSo.FindProperty("_hpText").objectReferenceValue = hpTextObj.GetComponent<TextMeshProUGUI>();
         hpBarSo.ApplyModifiedPropertiesWithoutUndo();
 
-        // ── CharacterXP 바 (CharacterHP 위)
-        GameObject charXpObj = EnsureChildObject(hudRoot, "CharacterXP");
-        RectTransform charXpRect = EnsureRectTransform(charXpObj);
-        charXpRect.anchorMin = new Vector2(0f, 0f);
-        charXpRect.anchorMax = new Vector2(1f, 0f);
-        charXpRect.pivot     = new Vector2(0.5f, 0f);
-        charXpRect.anchoredPosition = new Vector2(0f, 80f);
-        charXpRect.sizeDelta        = new Vector2(0f, 30f);
-        if (charXpObj.GetComponent<Slider>() == null) charXpObj.AddComponent<Slider>();
-        // TMP_Text (레벨 표시)
-        GameObject levelTextObj = EnsureChildObject(charXpObj.transform, "LevelText");
-        EnsureRectTransform(levelTextObj);
-        if (levelTextObj.GetComponent<TextMeshProUGUI>() == null)
-            levelTextObj.AddComponent<TextMeshProUGUI>();
-        EnsureComponent<CharacterXpBar>(charXpObj);
-
-        CharacterXpBar xpBar = charXpObj.GetComponent<CharacterXpBar>();
-        SerializedObject xpBarSo = new SerializedObject(xpBar);
-        xpBarSo.FindProperty("_slider").objectReferenceValue = charXpObj.GetComponent<Slider>();
-        xpBarSo.FindProperty("_levelText").objectReferenceValue = levelTextObj.GetComponent<TextMeshProUGUI>();
-        xpBarSo.ApplyModifiedPropertiesWithoutUndo();
+        // CharacterXP(경험치 바)는 더 이상 여기(하단)에 생성하지 않는다.
+        // TopBar 하위(상단)로 재배치되며, Step9_SetupHUDPanelContent에서 생성/재배치를 담당한다.
 
         Debug.Log("[UISetupEditor] HUD Canvas 구성 완료.");
     }
@@ -282,6 +263,12 @@ public static class UISetupEditor
             damageObj.AddComponent<RectTransform>();
             damageObj.AddComponent<TextMeshProUGUI>();
 
+            GameObject newLabelObj = new GameObject("NewLabel");
+            newLabelObj.transform.SetParent(go.transform);
+            newLabelObj.AddComponent<RectTransform>();
+            TextMeshProUGUI newLabelTmp = newLabelObj.AddComponent<TextMeshProUGUI>();
+            newLabelTmp.text = "New!";
+
             GameObject btnObj = new GameObject("SelectButton");
             btnObj.transform.SetParent(go.transform);
             btnObj.AddComponent<RectTransform>();
@@ -312,6 +299,16 @@ public static class UISetupEditor
                 damageObj.AddComponent<TextMeshProUGUI>();
             }
 
+            // 기존 프리팹에 NewLabel 자식이 없는 경우 보정 생성
+            if (root.transform.Find("NewLabel") == null)
+            {
+                GameObject newLabelObj = new GameObject("NewLabel");
+                newLabelObj.transform.SetParent(root.transform);
+                newLabelObj.AddComponent<RectTransform>();
+                TextMeshProUGUI newLabelTmp = newLabelObj.AddComponent<TextMeshProUGUI>();
+                newLabelTmp.text = "New!";
+            }
+
             SerializedObject so = new SerializedObject(card);
 
             Image iconImg         = root.transform.Find("Icon")?.GetComponent<Image>();
@@ -321,6 +318,7 @@ public static class UISetupEditor
             TextMeshProUGUI damageTmp = root.transform.Find("DamageText")?.GetComponent<TextMeshProUGUI>();
             Button selectBtn      = root.transform.Find("SelectButton")?.GetComponent<Button>();
             CanvasGroup cg        = root.GetComponent<CanvasGroup>();
+            GameObject newLabelGo = root.transform.Find("NewLabel")?.gameObject;
 
             if (iconImg != null)   so.FindProperty("_iconImage").objectReferenceValue       = iconImg;
             if (nameTmp != null)   so.FindProperty("_nameText").objectReferenceValue         = nameTmp;
@@ -329,6 +327,7 @@ public static class UISetupEditor
             if (damageTmp != null) so.FindProperty("_damageText").objectReferenceValue       = damageTmp;
             if (selectBtn != null) so.FindProperty("_selectButton").objectReferenceValue     = selectBtn;
             if (cg != null)        so.FindProperty("_canvasGroup").objectReferenceValue      = cg;
+            if (newLabelGo != null) so.FindProperty("_newLabelObject").objectReferenceValue  = newLabelGo;
 
             so.ApplyModifiedPropertiesWithoutUndo();
         }
@@ -423,25 +422,98 @@ public static class UISetupEditor
         HUDPanel hudPanel = hudPanelObj.GetComponent<HUDPanel>();
         if (hudPanel == null) { Debug.LogWarning("[UISetupEditor] HUDPanel 컴포넌트 없음."); return; }
 
-        GameObject waveTextObj = EnsureChildObject(hudPanelObj.transform, "WaveText");
-        if (waveTextObj.GetComponent<TextMeshProUGUI>() == null) waveTextObj.AddComponent<TextMeshProUGUI>();
+        // ── TopBar (스테이지명 + 스테이지 전체 누적 처치율 진행바 + 보스 아이콘(장식) + 경험치 바)
+        GameObject topBarObj = EnsureChildObject(hudPanelObj.transform, "TopBar");
+        RectTransform topBarRect = EnsureRectTransform(topBarObj);
+        topBarRect.anchorMin        = new Vector2(0f, 1f);
+        topBarRect.anchorMax        = new Vector2(1f, 1f);
+        topBarRect.pivot            = new Vector2(0.5f, 1f);
+        topBarRect.anchoredPosition = new Vector2(0f, -40f);
+        topBarRect.sizeDelta        = new Vector2(0f, 110f);
 
-        GameObject scoreTextObj = EnsureChildObject(hudPanelObj.transform, "ScoreText");
-        if (scoreTextObj.GetComponent<TextMeshProUGUI>() == null) scoreTextObj.AddComponent<TextMeshProUGUI>();
+        // StageNameText ("1. 깊은 숲")
+        GameObject stageNameObj = EnsureChildObject(topBarObj.transform, "StageNameText");
+        RectTransform stageNameRect = EnsureRectTransform(stageNameObj);
+        stageNameRect.anchorMin        = new Vector2(0f, 1f);
+        stageNameRect.anchorMax        = new Vector2(0.7f, 1f);
+        stageNameRect.pivot            = new Vector2(0f, 1f);
+        stageNameRect.anchoredPosition = new Vector2(20f, 0f);
+        stageNameRect.sizeDelta        = new Vector2(0f, 40f);
+        if (stageNameObj.GetComponent<TextMeshProUGUI>() == null) stageNameObj.AddComponent<TextMeshProUGUI>();
 
-        GameObject progressTextObj = EnsureChildObject(hudPanelObj.transform, "ProgressText");
+        // StageProgressBackground + StageProgressFillImage (Filled/Horizontal, 스테이지 전체 누적 처치율 %)
+        GameObject progressBgObj = EnsureChildObject(topBarObj.transform, "StageProgressBackground");
+        RectTransform progressBgRect = EnsureRectTransform(progressBgObj);
+        progressBgRect.anchorMin        = new Vector2(0f, 1f);
+        progressBgRect.anchorMax        = new Vector2(1f, 1f);
+        progressBgRect.pivot            = new Vector2(0.5f, 1f);
+        progressBgRect.anchoredPosition = new Vector2(0f, -40f);
+        progressBgRect.sizeDelta        = new Vector2(-40f, 24f);
+        Image progressBgImg = progressBgObj.GetComponent<Image>();
+        if (progressBgImg == null) progressBgImg = progressBgObj.AddComponent<Image>();
+        progressBgImg.color = new Color(0f, 0f, 0f, 0.3f);
+
+        GameObject progressFillObj = EnsureChildObject(progressBgObj.transform, "StageProgressFillImage");
+        RectTransform progressFillRect = EnsureRectTransform(progressFillObj);
+        StretchFill(progressFillRect);
+        Image progressFillImg = progressFillObj.GetComponent<Image>();
+        if (progressFillImg == null) progressFillImg = progressFillObj.AddComponent<Image>();
+        progressFillImg.color       = Color.red;
+        progressFillImg.type        = Image.Type.Filled;
+        progressFillImg.fillMethod  = Image.FillMethod.Horizontal;
+        progressFillImg.fillOrigin  = (int)Image.OriginHorizontal.Left;
+        progressFillImg.fillAmount  = 0f;
+
+        // ProgressText (진행률 % 텍스트, 진행바 위에 오버레이)
+        GameObject progressTextObj = EnsureChildObject(progressBgObj.transform, "ProgressText");
+        RectTransform progressTextRect = EnsureRectTransform(progressTextObj);
+        StretchFill(progressTextRect);
         if (progressTextObj.GetComponent<TextMeshProUGUI>() == null) progressTextObj.AddComponent<TextMeshProUGUI>();
 
-        GameObject lriObj = EnsureChildObject(hudPanelObj.transform, "LaunchReadyIndicator");
-        CanvasGroup lriCg = lriObj.GetComponent<CanvasGroup>();
-        if (lriCg == null) lriCg = lriObj.AddComponent<CanvasGroup>();
+        // BossIcon (TopBar 우측 장식용 아이콘, 기능 없음 - PDF상 보스 미구현)
+        GameObject bossIconObj = EnsureChildObject(topBarObj.transform, "BossIcon");
+        RectTransform bossIconRect = EnsureRectTransform(bossIconObj);
+        bossIconRect.anchorMin        = new Vector2(1f, 1f);
+        bossIconRect.anchorMax        = new Vector2(1f, 1f);
+        bossIconRect.pivot            = new Vector2(1f, 1f);
+        bossIconRect.anchoredPosition = new Vector2(-10f, -4f);
+        bossIconRect.sizeDelta        = new Vector2(36f, 36f);
+        if (bossIconObj.GetComponent<Image>() == null) bossIconObj.AddComponent<Image>();
 
+        // CharacterXP(경험치 바): 기존 오브젝트가 씬 어딘가에 있으면 TopBar 하위로 재배치(참조 유지),
+        // 없으면 TopBar 하위에 신규 생성한다.
+        GameObject charXpObj = GameObject.Find("CharacterXP");
+        bool charXpIsNew = charXpObj == null;
+        if (charXpIsNew)
+            charXpObj = EnsureChildObject(topBarObj.transform, "CharacterXP");
+        else
+            charXpObj.transform.SetParent(topBarObj.transform, false);
+
+        RectTransform charXpRect = EnsureRectTransform(charXpObj);
+        charXpRect.anchorMin        = new Vector2(0f, 1f);
+        charXpRect.anchorMax        = new Vector2(1f, 1f);
+        charXpRect.pivot            = new Vector2(0.5f, 1f);
+        charXpRect.anchoredPosition = new Vector2(0f, -74f);
+        charXpRect.sizeDelta        = new Vector2(-40f, 24f);
+        if (charXpObj.GetComponent<Slider>() == null) charXpObj.AddComponent<Slider>();
+
+        GameObject levelTextObj = EnsureChildObject(charXpObj.transform, "LevelText");
+        EnsureRectTransform(levelTextObj);
+        if (levelTextObj.GetComponent<TextMeshProUGUI>() == null)
+            levelTextObj.AddComponent<TextMeshProUGUI>();
+        EnsureComponent<CharacterXpBar>(charXpObj);
+
+        CharacterXpBar xpBar = charXpObj.GetComponent<CharacterXpBar>();
+        SerializedObject xpBarSo = new SerializedObject(xpBar);
+        xpBarSo.FindProperty("_slider").objectReferenceValue = charXpObj.GetComponent<Slider>();
+        xpBarSo.FindProperty("_levelText").objectReferenceValue = levelTextObj.GetComponent<TextMeshProUGUI>();
+        xpBarSo.ApplyModifiedPropertiesWithoutUndo();
+
+        // HUDPanel 참조 연결 (자식 오브젝트 생성/재배치 직후 곧바로 연결)
         SerializedObject so = new SerializedObject(hudPanel);
-        so.FindProperty("_waveText").objectReferenceValue              = waveTextObj.GetComponent<TextMeshProUGUI>();
-        so.FindProperty("_scoreText").objectReferenceValue             = scoreTextObj.GetComponent<TextMeshProUGUI>();
-        so.FindProperty("_progressText").objectReferenceValue          = progressTextObj.GetComponent<TextMeshProUGUI>();
-        so.FindProperty("_launchReadyIndicator").objectReferenceValue  = lriObj;
-        so.FindProperty("_launchReadyCanvasGroup").objectReferenceValue = lriCg;
+        so.FindProperty("_stageNameText").objectReferenceValue          = stageNameObj.GetComponent<TextMeshProUGUI>();
+        so.FindProperty("_stageProgressFillImage").objectReferenceValue = progressFillImg;
+        so.FindProperty("_progressText").objectReferenceValue           = progressTextObj.GetComponent<TextMeshProUGUI>();
 
         CanvasGroup hudCg = hudPanelObj.GetComponent<CanvasGroup>();
         if (hudCg != null) so.FindProperty("_canvasGroup").objectReferenceValue = hudCg;
@@ -465,15 +537,11 @@ public static class UISetupEditor
         GameObject titleTextObj = EnsureChildObject(resultPanelObj.transform, "TitleText");
         if (titleTextObj.GetComponent<TextMeshProUGUI>() == null) titleTextObj.AddComponent<TextMeshProUGUI>();
 
-        GameObject scoreTextObj = EnsureChildObject(resultPanelObj.transform, "ScoreText");
-        if (scoreTextObj.GetComponent<TextMeshProUGUI>() == null) scoreTextObj.AddComponent<TextMeshProUGUI>();
-
         GameObject restartBtnObj = EnsureChildObject(resultPanelObj.transform, "RestartButton");
         if (restartBtnObj.GetComponent<Button>() == null) restartBtnObj.AddComponent<Button>();
 
         SerializedObject so = new SerializedObject(resultPanel);
         so.FindProperty("_resultTitleText").objectReferenceValue = titleTextObj.GetComponent<TextMeshProUGUI>();
-        so.FindProperty("_finalScoreText").objectReferenceValue  = scoreTextObj.GetComponent<TextMeshProUGUI>();
         so.FindProperty("_restartButton").objectReferenceValue   = restartBtnObj.GetComponent<Button>();
 
         CanvasGroup resultCg = resultPanelObj.GetComponent<CanvasGroup>();

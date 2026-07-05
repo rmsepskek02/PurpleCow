@@ -12,6 +12,7 @@ public class SkillCardUI : MonoBehaviour
     [SerializeField] private TMP_Text   _damageText;
     [SerializeField] private Button     _selectButton;
     [SerializeField] private CanvasGroup _canvasGroup;
+    [SerializeField] private GameObject _newLabelObject;
 
     private SkillData          _currentData;
     private Action<SkillData>  _onSelected;
@@ -26,7 +27,7 @@ public class SkillCardUI : MonoBehaviour
         _selectButton.onClick.RemoveListener(HandleSelectClicked);
     }
 
-    public void Setup(SkillData data, Action<SkillData> onSelected)
+    public void Setup(SkillData data, Action<SkillData> onSelected, bool isNew)
     {
         _currentData          = data;
         _onSelected           = onSelected;
@@ -42,6 +43,9 @@ public class SkillCardUI : MonoBehaviour
             if (isActive)
                 _damageText.text = data.CurrentLevelData.BallDamage.ToString("0");
         }
+
+        if (_newLabelObject != null)
+            _newLabelObject.SetActive(isNew);
     }
 
     private void HandleSelectClicked()

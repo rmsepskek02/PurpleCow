@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 public class UIManager : Singleton<UIManager>
@@ -6,11 +5,6 @@ public class UIManager : Singleton<UIManager>
     [SerializeField] private HUDPanel            _hudPanel;
     [SerializeField] private ResultPanel         _resultPanel;
     [SerializeField] private SkillSelectionPanel _skillSelectionPanel;
-
-    private int _score;
-    public int Score => _score;
-
-    public static event Action<int> OnScoreChanged;
 
     protected override void Awake()
     {
@@ -24,14 +18,12 @@ public class UIManager : Singleton<UIManager>
     {
         GameManager.OnGameStateChanged  += HandleGameStateChanged;
         WaveManager.OnAllWavesCleared   += HandleAllWavesCleared;
-        MonsterBase.OnMonsterDied       += HandleMonsterDied;
     }
 
     private void OnDisable()
     {
         GameManager.OnGameStateChanged  -= HandleGameStateChanged;
         WaveManager.OnAllWavesCleared   -= HandleAllWavesCleared;
-        MonsterBase.OnMonsterDied       -= HandleMonsterDied;
     }
 
     private void HandleGameStateChanged(GameManager.GameState state)
@@ -42,7 +34,6 @@ public class UIManager : Singleton<UIManager>
                 ShowHUD(false);
                 ShowResult(false);
                 ShowSkillSelection(false);
-                _score = 0;
                 break;
             case GameManager.GameState.Playing:
                 ShowHUD(true);
@@ -60,12 +51,6 @@ public class UIManager : Singleton<UIManager>
     private void HandleAllWavesCleared()
     {
         GameManager.Instance.EndGame(true);
-    }
-
-    private void HandleMonsterDied(MonsterBase monster)
-    {
-        _score++;
-        OnScoreChanged?.Invoke(_score);
     }
 
     public void OnSkillSelectionComplete()

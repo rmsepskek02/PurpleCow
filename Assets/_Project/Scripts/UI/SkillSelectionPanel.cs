@@ -78,7 +78,7 @@ public class SkillSelectionPanel : MonoBehaviour
             if (i < candidates.Count)
             {
                 _skillCards[i].SetVisible(true);
-                _skillCards[i].Setup(candidates[i], OnSkillSelected);
+                _skillCards[i].Setup(candidates[i].Data, OnSkillSelected, candidates[i].IsNew);
             }
             else
             {
@@ -87,9 +87,9 @@ public class SkillSelectionPanel : MonoBehaviour
         }
     }
 
-    private List<SkillData> BuildSkillCardPool()
+    private List<(SkillData Data, bool IsNew)> BuildSkillCardPool()
     {
-        var pool = new List<SkillData>();
+        var pool = new List<(SkillData Data, bool IsNew)>();
         var sm = SkillManager.Instance;
 
         var activeSkillIds  = sm.ActiveSkillIds;
@@ -101,17 +101,17 @@ public class SkillSelectionPanel : MonoBehaviour
             {
                 bool owned = activeSkillIds.Contains(data.SkillId);
                 if (owned)
-                { if (data.CurrentLevel < data.MaxLevel - 1) pool.Add(data); }
+                { if (data.CurrentLevel < data.MaxLevel - 1) pool.Add((data, false)); }
                 else
-                { if (sm.CanEquipActive) pool.Add(data); }
+                { if (sm.CanEquipActive) pool.Add((data, true)); }
             }
             else
             {
                 bool owned = passiveSkillIds.Contains(data.SkillId);
                 if (owned)
-                { if (data.CurrentLevel < data.MaxLevel - 1) pool.Add(data); }
+                { if (data.CurrentLevel < data.MaxLevel - 1) pool.Add((data, false)); }
                 else
-                { if (sm.CanEquipPassive) pool.Add(data); }
+                { if (sm.CanEquipPassive) pool.Add((data, true)); }
             }
         }
         return pool;

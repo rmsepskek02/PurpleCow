@@ -6,7 +6,6 @@ using UnityEngine.UI;
 public class ResultPanel : MonoBehaviour
 {
     [SerializeField] private TMP_Text    _resultTitleText;
-    [SerializeField] private TMP_Text    _finalScoreText;
     [SerializeField] private Button      _restartButton;
 
     [SerializeField] private CanvasGroup _canvasGroup;
@@ -43,7 +42,6 @@ public class ResultPanel : MonoBehaviour
 
         bool isSuccess = GameManager.Instance.IsLastGameSuccess;
         _resultTitleText.text = isSuccess ? "SUCCESS" : "GAME OVER";
-        _finalScoreText.text  = $"최종 점수: {UIManager.Instance.Score}";
     }
 
     private void HandleRestartClicked()

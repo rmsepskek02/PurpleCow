@@ -20,6 +20,7 @@ public class WaveManager : Singleton<WaveManager>
     private int _currentWaveIndex;
     private int _totalKillCount;
     private int _currentWaveTotalCount;
+    private int _totalMonstersInStage;
 
     public static event Action<int>         OnWaveStarted;
     public static event Action              OnWaveCleared;
@@ -27,6 +28,7 @@ public class WaveManager : Singleton<WaveManager>
     public static event Action              OnKillCountReached;
     public static event Action<MonsterBase> OnMonsterReachedBottom;
     public static event Action<int, int>    OnMonsterCountChanged; // (남은 수, 전체 수)
+    public static event Action<int, int>    OnStageKillProgressChanged; // (누적 처치 수, 스테이지 전체 몬스터 총수)
 
     public int TotalWaves => _waveTable.TotalWaves;
 
@@ -34,6 +36,7 @@ public class WaveManager : Singleton<WaveManager>
     {
         base.Awake();
         _monsterPool = new ObjectPool<MonsterBase>(_monsterPrefab, _poolParent, _initialPoolSize);
+        _totalMonstersInStage = CalculateTotalMonstersInStage();
     }
 
     private void Start()
@@ -56,20 +59,35 @@ public class WaveManager : Singleton<WaveManager>
         CheckGameOver();
     }
 
+    // 웨이브 인덱스 기준 계획된 스폰 수 계산 (그리드 용량 상한 적용). SpawnWave()와
+    // CalculateTotalMonstersInStage()가 공유하는 공용 스폰 공식(포뮬러 중복 방지).
+    private int CalculatePlannedSpawnCount(int index)
+    {
+        int spawnCount = Mathf.RoundToInt(_waveTable.BaseSpawnCount + _waveTable.SpawnCountPerWave * index);
+
+        int capacityLimit = (_gridColumns * _gridRows) / 2;
+        return Mathf.Min(spawnCount, capacityLimit);
+    }
+
+    // 웨이브 0 ~ (TotalWaves - 1)까지 계획된 스폰 수를 모두 합산해 스테이지 전체 몬스터 총수를 구한다.
+    private int CalculateTotalMonstersInStage()
+    {
+        int total = 0;
+        for (int i = 0; i < _waveTable.TotalWaves; i++)
+            total += CalculatePlannedSpawnCount(i);
+        return total;
+    }
+
     private void SpawnWave(int index)
     {
         if (index < 0 || index >= _waveTable.TotalWaves)
             return;
 
-        // 1. 웨이브 진행도 기반 스폰 수 계산
-        int spawnCount = Mathf.RoundToInt(_waveTable.BaseSpawnCount + _waveTable.SpawnCountPerWave * index);
+        // 1~3. 웨이브 진행도 기반 스폰 수 계산 (그리드 용량 상한 포함, CalculatePlannedSpawnCount로 추출)
+        int spawnCount = CalculatePlannedSpawnCount(index);
 
         // 2. 웨이브 진행도 기반 2칸 몬스터 등장 가중치 계산
         float twoCellWeight = Mathf.Clamp01(_waveTable.BaseTwoCellWeight + _waveTable.TwoCellWeightPerWave * index);
-
-        // 3. 그리드 용량 이내로 스폰 수 상한 제한 (2칸 몬스터가 전부 나와도 45칸을 넘지 않도록)
-        int capacityLimit = (_gridColumns * _gridRows) / 2;
-        spawnCount = Mathf.Min(spawnCount, capacityLimit);
 
         // 4. 웨이브 시작마다 점유 배열 새로 초기화
         bool[,] occupied = new bool[_gridColumns, _gridRows];
@@ -189,6 +207,7 @@ public class WaveManager : Singleton<WaveManager>
         _monsterPool.Return(monster);
 
         _totalKillCount++;
+        OnStageKillProgressChanged?.Invoke(_totalKillCount, _totalMonstersInStage);
         CheckSkillUnlock();
         OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
 

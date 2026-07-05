@@ -1,22 +1,20 @@
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class HUDPanel : MonoBehaviour
 {
-    [SerializeField] private TMP_Text    _waveText;
-    [SerializeField] private TMP_Text    _scoreText;
-    [SerializeField] private TMP_Text    _progressText;
-    [SerializeField] private GameObject  _launchReadyIndicator;
-    [SerializeField] private CanvasGroup _launchReadyCanvasGroup;
+    [SerializeField] private string   _stageName = "1. 깊은 숲";
+    [SerializeField] private TMP_Text _stageNameText;
+    [SerializeField] private Image    _stageProgressFillImage;
+    [SerializeField] private TMP_Text _progressText;
 
     [SerializeField] private CanvasGroup _canvasGroup;
     [SerializeField] private float _slideDist    = 50f;
     [SerializeField] private float _animDuration = 0.3f;
     [SerializeField] private Ease  _ease         = Ease.OutCubic;
     private Vector3 _originalPos;
-
-    private int _totalWaves;
 
     private void Awake()
     {
@@ -25,60 +23,26 @@ public class HUDPanel : MonoBehaviour
 
     private void OnEnable()
     {
-        WaveManager.OnWaveStarted         += HandleWaveStarted;
-        WaveManager.OnMonsterCountChanged  += HandleMonsterCountChanged;
-        GameManager.OnGameStateChanged     += HandleGameStateChanged;
-        UIManager.OnScoreChanged          += HandleScoreChanged;
+        WaveManager.OnStageKillProgressChanged += HandleStageKillProgressChanged;
     }
 
     private void OnDisable()
     {
-        WaveManager.OnWaveStarted         -= HandleWaveStarted;
-        WaveManager.OnMonsterCountChanged  -= HandleMonsterCountChanged;
-        GameManager.OnGameStateChanged     -= HandleGameStateChanged;
-        UIManager.OnScoreChanged          -= HandleScoreChanged;
+        WaveManager.OnStageKillProgressChanged -= HandleStageKillProgressChanged;
     }
 
     private void Start()
     {
-        _totalWaves = WaveManager.Instance.TotalWaves;
-        UpdateScore(0);
-        SetLaunchIndicatorVisible(GameManager.Instance.CurrentState == GameManager.GameState.Playing);
+        _stageNameText.text = _stageName;
     }
 
-    private void HandleWaveStarted(int waveNumber)
+    private void HandleStageKillProgressChanged(int killedSoFar, int totalInStage)
     {
-        _waveText.text = $"WAVE {waveNumber} / {_totalWaves}";
-        SetLaunchIndicatorVisible(true);
-    }
+        float ratio   = totalInStage > 0 ? (float)killedSoFar / totalInStage : 0f;
+        int   percent = Mathf.RoundToInt(ratio * 100f);
 
-    private void HandleGameStateChanged(GameManager.GameState state)
-    {
-        SetLaunchIndicatorVisible(state == GameManager.GameState.Playing);
-    }
-
-    private void HandleMonsterCountChanged(int remaining, int total)
-    {
-        int percent = total > 0 ? Mathf.RoundToInt((float)(total - remaining) / total * 100f) : 0;
+        _stageProgressFillImage.fillAmount = ratio;
         _progressText.text = $"{percent}%";
-    }
-
-    private void HandleScoreChanged(int score)
-    {
-        UpdateScore(score);
-    }
-
-    private void UpdateScore(int score)
-    {
-        _scoreText.text = $"처치: {score}";
-    }
-
-    private void SetLaunchIndicatorVisible(bool visible)
-    {
-        if (_launchReadyCanvasGroup != null)
-            _launchReadyCanvasGroup.alpha = visible ? 1f : 0f;
-        else
-            _launchReadyIndicator.SetActive(visible);
     }
 
     public void Show()
