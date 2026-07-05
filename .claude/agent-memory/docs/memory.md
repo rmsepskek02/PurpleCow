@@ -1,3 +1,28 @@
+## 2026-07-05 (캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 plan)
+
+### 작업 내용
+- research.md에서 열어둔 4가지 결정사항(배치 위치/무기 회전 피벗/계산 위치/신규 스크립트 경로)에 대해 오케스트레이터가 사용자와 논의해 확정한 방향을 반영, plan.md 신규 작성
+- 경로: `Assets/_Project/Docs/_Task/2026-07-05/17-27_character-sprite-prefab/plan.md`
+- 참고를 위해 `SceneSetupEditor.cs`, `TrajectoryPreview.cs`, `UIRules.md`, `CharacterManager.cs`, `BallLauncher.cs`, 4개 캐릭터 스프라이트 `.meta` 전체를 직접 재확인
+
+### 결과
+- `Character.prefab` 계층 설계: `Character`(root, `CharacterAimView` 부착) → `Body`/`Head`(SpriteRenderer) + `WeaponPivot`(empty) → `Weapon`(SpriteRenderer). `LaunchPoint`(BallLauncher 자식) 밑에 인스턴스 배치해 `WallFitter`의 기존 반응형 리프레임을 그대로 상속
+- 무기 회전 피벗 문제는 스프라이트 임포트 설정(.meta) 미수정, `WeaponPivot` 빈 부모로 해결(`TrajectoryPreview`의 자식 구성 패턴과 일관)
+- `Character_Main_body/head/weapon.png` 3파츠 `.meta`를 전부 재확인한 결과 각각 독립 PNG 캔버스이고 rect가 전부 `x=0,y=0`이라 파츠 간 공유 좌표계 정보가 없음을 재확인 → 초기 배치 수치(WeaponPivot 오프셋, 머리 회전 비율 등)는 픽셀 크기 근거의 추정치일 뿐이며 로컬 Unity에서 `Character_Main.png` 합성본과 육안 대조하며 미세조정이 사실상 필수임을 주의사항에 명시
+- 신규 뷰 스크립트 `Assets/_Project/Scripts/Character/CharacterAimView.cs`(신규 폴더) 설계: `TrajectoryPreview`와 동일하게 `Update()`에서 `BallLauncher.Instance.LaunchDirection` 폴링 → `SpriteRenderer.flipX`로 좌우 반전(localScale 반전은 사용 안 함) → `WeaponPivot` 위치 x부호 보정 + 방향 미러링 후 회전각 계산 → 머리에 `_headRotationRatio`(Inspector 조절) 비율만 보조 회전 반영. `CharacterManager.cs`(HP/XP 전용, `Scripts/Core/`)에는 로직 미혼입
+- 신규 에디터 스크립트 `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs` 설계: 메뉴 `PurpleCow/Setup/Character System Setup`, 기존 `SceneSetupEditor.cs` 등 기존 에디터 스크립트는 전혀 미수정(사용자가 별도로 강하게 지시한 제약). 프리팹 조립 + `LaunchPoint` 자식 인스턴스화 담당
+- 예상 변경/생성 파일 목록에 `Character.prefab`/`SampleScene.unity` 반영은 로컬 Unity 메뉴 실행이 필요함(원격 환경 Unity 없음, `BallSetupEditor`/`MonsterOverhaulSetupEditor`와 동일한 기존 관례)을 명시
+
+### 주요 결정사항
+- 배치 위치: `LaunchPoint` 자식으로 확정(`LaunchPoint` 자체 역할/참조는 미변경)
+- 무기 회전: `WeaponPivot` 빈 부모 GameObject 방식으로 확정(스프라이트 임포트 설정 미변경)
+- 계산 위치: `CharacterManager.cs`가 아닌 신규 `CharacterAimView.cs`(뷰 전용)로 확정
+- 신규 스크립트 경로: `Scripts/Character/CharacterAimView.cs`(신규 도메인 폴더), `CharacterManager.cs`는 `Scripts/Core/`에서 이동하지 않음
+- 에디터 스크립트는 기존 파일 수정 금지, `CharacterSetupEditor.cs` 신규 파일로만 작성(사용자 명시 지시)
+- 이번 요청 범위는 plan.md 작성까지이며, 실제 `.cs`/`.prefab`/`.unity` 구현은 사용자의 명시적 승인 후 진행
+
+---
+
 ## 2026-07-05 (캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 research)
 
 ### 작업 내용
