@@ -1515,3 +1515,29 @@
 - 셰이더 파일(`SpriteFlashOverlay.shader`)은 그대로 재사용, 수정 없음
 - 완료 후 파일 전체를 다시 읽어 지시받은 코드와 정확히 일치하는지 확인 완료
 - git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)
+
+---
+
+## 2026-07-06
+
+### 작업: 캐릭터 볼 발사 반동 추가 (plan.md 확정 반영 + 실제 구현)
+
+**작업 내용:**
+- task 문서 경로: `Assets/_Project/Docs/_Task/2026-07-06/19-09_character-launch-recoil/plan.md`, `research.md`
+- 사용자가 이전 plan.md의 미확정 질문 3개(분신볼/서브볼 포함 여부, 반동 강도/지속시간, 반동 방향)를 모두 확정 답변 → plan.md/research.md 갱신 후 바로 구현까지 진행(사용자가 작업 순서에 문서 갱신+구현을 명시적으로 지시함)
+- 기존 plan.md는 로스터 노말/특수볼만 반동 대상으로 삼았으나, 사용자가 "모든 볼 발사에 반동을 줄 것"이라고 확정하여 분신볼(`CoLaunchRosterClones`)·서브볼(`LaunchSubBalls`)까지 범위 확대
+
+**문서 수정:**
+- `plan.md` — "사용자 확정 사항" 섹션 신규 추가(모든 볼 발사 포함/반동 방향/강도·지속시간), 1단계 이벤트 발행 위치를 4곳(`LaunchRosterEntry`/`RelaunchQueuedBall`/`CoLaunchRosterClones`/`LaunchSubBalls`)으로 확장, "주의사항"의 미확정 질문 3개를 확정된 내용으로 갱신, 문서 하단 승인 문구를 "구현 진행" 문구로 변경
+- `research.md` — "문제점 파악" 섹션 1번 항목에 분신볼/서브볼 포함이 확정됐다는 문구 추가(조사 내용 자체는 변경하지 않음)
+
+**수정 파일 (코드):**
+- `Assets/_Project/Scripts/Ball/BallLauncher.cs` — `public static event Action OnBallLaunched;` 신규 추가(`OnAllBallsReturned`와 동일한 static event 패턴). `LaunchRosterEntry()`/`RelaunchQueuedBall()`/`CoLaunchRosterClones()`(반복문 내부)/`LaunchSubBalls()`(반복문 내부) 4곳 모두에서 각 `Launch(...)` 호출 직후 `OnBallLaunched?.Invoke();` 추가 — 발사마다 1회씩 발행(서브볼/분신볼처럼 한 메서드에서 여러 발 쏘는 경우도 발사 횟수만큼 발행)
+- `Assets/_Project/Scripts/Character/CharacterAimView.cs` — `using DG.Tweening;` 추가. `OnEnable()`/`OnDisable()` 신규 추가해 `BallLauncher.OnBallLaunched` 구독/해제. `HandleBallLaunched()` 신규 추가 — `-(Vector3)BallLauncher.Instance.LaunchDirection`으로 월드 반동 방향(발사 반대쪽)을 구하고, `transform.parent.InverseTransformDirection(...)`으로 부모(LaunchPoint) 로컬 좌표계로 변환(부모 없으면 월드 방향 그대로 사용) 후 `DOTween.Kill(transform)`으로 이전 반동 트윈 정리 → `transform.DOPunchPosition(localRecoilDir.normalized * _recoilPunchStrength, _recoilDuration)` 재생. `[SerializeField] private float _recoilPunchStrength = 0.15f;`, `[SerializeField] private float _recoilDuration = 0.2f;` 신규 필드 추가
+
+**주요 결정사항:**
+- 반동은 `transform.localPosition`을 대상으로 하는 `DOPunchPosition` 사용(DOTween.XML 확인 결과 해당 API가 실제로 `localPosition`을 펀치하는 것으로 확인) — 별도 원위치 저장/복귀 로직 불필요
+- 좌우 반전(`transform.localScale.x`)은 자기 자신의 렌더링/자식에는 영향을 주지만 자기 자신의 `localPosition` 해석에는 영향을 주지 않으므로(부모 좌표계 기준), `UpdateAim()`의 mirrored 보정 로직을 반동 계산에는 별도로 적용하지 않음 — 대신 부모 Transform의 `InverseTransformDirection`으로 월드→로컬 변환만 수행
+- 연속 발사 시 트윈이 겹치지 않도록 `DOTween.Kill(transform)`을 재생 직전에 호출(`DamageTextFx.OnSpawn()`의 기존 관례와 동일한 방식)
+- 프로젝트에 asmdef가 없어 전 스크립트가 default assembly에 있음을 확인, DOTween 참조 관련 컴파일 문제 없음을 확인(다른 스크립트 8곳에서 이미 `using DG.Tweening;` 사용 중)
+- git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)
