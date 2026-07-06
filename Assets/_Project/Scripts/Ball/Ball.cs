@@ -148,6 +148,20 @@ public class Ball : MonoBehaviour, IPoolable
             ReturnToPool();
     }
 
+    // Wall_Left/Wall_Right는 좁고 긴 세로 벽, Wall_Top은 넓고 얇은 가로 벽이라는
+    // 씬 구성(SceneSetupEditor)을 근거로, Collider Bounds의 가로/세로 비율만으로
+    // 반사축을 판별한다(별도 좌/우/상단 태그 구분이 없어도 동작한다).
+    private void ReflectOffTriggerWall(Collider2D wallCollider)
+    {
+        Vector2 extents = wallCollider.bounds.extents;
+        Vector2 velocity = _rigidbody.linearVelocity;
+        if (extents.x < extents.y)
+            velocity.x = -velocity.x;
+        else
+            velocity.y = -velocity.y;
+        _rigidbody.linearVelocity = velocity;
+    }
+
     private void HandleGroundHit()
     {
         // 원본 로스터 볼과 분신은 캐릭터 위치로 귀환하고, 서브볼은 즉시 풀로 반환한다.
@@ -178,6 +192,9 @@ public class Ball : MonoBehaviour, IPoolable
         }
         else if (other.CompareTag("Wall"))
         {
+            // 트리거 콜라이더는 물리 반사가 자동으로 일어나지 않으므로,
+            // OnCollisionEnter2D와 달리 여기서는 직접 속도를 반사시켜야 한다.
+            ReflectOffTriggerWall(other);
             HandleWallHit();
         }
         else if (other.CompareTag("Ground"))
