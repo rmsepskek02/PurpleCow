@@ -46,3 +46,23 @@
 ## 결론
 
 `MonsterBase.cs`에는 현재 스프라이트 색상 관련 로직이 전혀 없고, 얼음/슬로우는 지속시간 필드로 조회 가능한 반면 화상은 코루틴 내부에만 상태가 존재해 외부에서 조회할 수 없다는 차이가 확인되었다. 프리팹 구조상 본체 `SpriteRenderer`가 `MonsterBase`와 같은 루트 GameObject에 있어 `GetComponent<SpriteRenderer>()`만으로 발판(`BlockVisual`)을 자연스럽게 제외할 수 있다는 점도 확인했다. 화상 지속시간 추적용 신규 필드 추가, 얼음/화상 중 "나중에 걸린 효과 우선" 판정을 위한 상태 기록, 히트 플래시와 지속 틴트가 겹치는 경우의 처리, 색상 적용 방식(즉시 대입 vs DOTween), 오브젝트 풀 재사용 시 리셋 범위 확장이라는 구현 대상이 정리되었으며, 정확한 색상 값과 플래시 지속시간은 아직 미확정 상태다. 이 정도면 구현 가능한 상태이며, 구체적인 신규 필드/메서드 설계와 색상 값 확정은 plan.md에서 다룰 것이다. 이 research.md 자체는 조사 문서이며, 아직 코드 구현은 진행하지 않았다.
+
+## 갱신 사항 (main 병합 후)
+
+이 문서 작성 이후 origin/main의 최신 변경사항이 병합되면서 `MonsterBase.cs`의 화상(DOT) 처리 구조가 바뀌었다. "현재 상태" 섹션에 서술된 "화상은 `StartCoroutine(CoDotTick(...))`을 호출할 뿐 지속시간을 필드로 저장하지 않아 외부에서 조회할 수 없다"는 내용은 더 이상 사실이 아니다.
+
+현재 코드는 코루틴 방식을 완전히 걷어내고, 다음과 같은 스택 리스트 방식으로 화상을 관리한다.
+
+```csharp
+private struct DotStack
+{
+    public float DamagePerSecond;
+    public float RemainingSeconds;
+}
+private readonly List<DotStack> _dotStacks = new List<DotStack>();
+private float _dotTickTimer;
+```
+
+`ApplyDot(damagePerSec, duration, maxStacks)`는 `_isDead || damagePerSec <= 0f || duration <= 0f || maxStacks <= 0` 가드를 통과하면 `_dotStacks`에 스택을 추가하고(최대 중첩 초과 시 가장 오래된 스택 제거), 별도 비공개 메서드 `UpdateDot(deltaTime)`가 `Update()`에서 매 프레임 호출되어 각 스택의 잔여시간을 감소시키고 1초마다 누적 데미지를 `TakeDamage()`로 적용하며 만료된 스택을 제거한다. `OnSpawn()`/`OnDespawn()`도 `_dotStacks.Clear(); _dotTickTimer = 0f;`로 리셋한다.
+
+이로 인해 `_dotStacks.Count > 0`이 곧바로 "지금 화상 중인지"를 정확히 알려주므로, 화상 지속시간 조회를 위해 신규 필드(예: `_burnSecondsRemaining`)를 추가할 필요가 없어졌다. "문제점 / 구현 대상 파악" 섹션의 "화상 상태를 조회 가능한 필드로 신규 추적해야 함" 항목은 이 갱신으로 인해 해소되었다. 이 변경에 맞춘 실제 구현 계획은 `plan.md`에 반영했다.
