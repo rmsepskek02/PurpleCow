@@ -9,7 +9,10 @@ public class LaserBallSkill : BallSkillBase
         foreach (var monster in row)
         {
             if (monster != target)
+            {
                 monster.TakeDamage(LevelData.Value1);
+                Ball.OnHitMonster?.Invoke(monster, LevelData.Value1, false);
+            }
         }
     }
 }
