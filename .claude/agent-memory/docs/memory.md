@@ -1,3 +1,24 @@
+## 2026-07-06 (게임 다듬기(Polish) 작업 백로그 TODO.md 신규 작성)
+
+### 작업 내용
+- 사용자와 오케스트레이터가 대화로 논의해 확정한 "게임 다듬기(Polish)" 작업 6개 항목을 `Assets/_Project/Docs/TODO.md` 신규 문서로 작성
+- 경로: `Assets/_Project/Docs/TODO.md` (신규 생성), `AGENTS.md`(인덱스 1줄 추가)
+- 작업 전 `ProjectStatus.md`/`GameplayMechanics.md`/`TaskRules.md`/`AGENTS.md`로 톤/스타일 확인, 오케스트레이터가 지시문에 기술한 6개 항목의 근거 코드(`DamageTextFx.cs`, `MonsterBase.cs`, `TrajectoryPreview.cs`, `CharacterAimView.cs`, `IceBallSkill.cs`, `WaveManager.cs`, `CharacterManager.cs`, `BallLauncher.cs`)를 전부 직접 Read로 재확인해 서술 정확성 검증 후 작성
+
+### 결과
+- `TODO.md` 서두에 "논의 완료, 구현 전 상태의 Polish 백로그"임을 요약하는 문단 추가
+- 항목별로 "현재 상태 / 확정된 목표 / 비고" 3단 구조로 정리한 6개 섹션 작성: 1) 치명타 데미지 텍스트 색상(노랑→붉은 계열), 2) 몬스터 사망 시 스케일 축소+페이드아웃 연출(DOTween), 3) 볼 궤적 프리뷰 점선 길이/스크롤 속도 기존 필드 튜닝, 4) 캐릭터 발사 반동(무기뿐 아니라 `CharacterAimView` 루트 전체 펀치성 반동, `BallLauncher`에 현재 발사 이벤트가 없다는 사실을 비고에 명시), 5) 아이스볼 같은 열(column) 후방 몬스터 동시 정지(밸런스 아닌 겹침 방지 목적, `WaveManager.GetMonstersInRow()`는 있으나 열 조회 기능은 없음을 확인해 명시), 6) 몬스터 바닥 도달 시 진동→돌진→소멸 연출(현재 `CheckGameOver()`/`CharacterManager.HandleMonsterReachedBottom()`이 즉시 처리하는 구조를 서술, 세부 값 미확정 명시)
+- 문서 끝에 "다음 단계" 섹션으로, 개별 항목 구현 착수 시 TaskRules.md에 따라 별도 research.md/plan.md 작성 후 사용자 승인이 필요함을 명시
+- `AGENTS.md` Docs 문서 표에 TODO.md 1행 추가(다른 행은 건드리지 않음)
+- 코드(.cs)는 전혀 수정하지 않고 읽기만 함
+
+### 주요 결정사항
+- 이 문서는 TaskRules.md의 research.md/plan.md 형식과는 별개의 "논의 완료·미구현 백로그" 문서로, 구현 계획 자체(단계별 작업 계획, 파일 목록 등)는 담지 않고 합의된 방향과 현재 코드 상태 참고만 담기로 확정(지시받은 대로)
+- 항목 4(캐릭터 반동)는 `BallLauncher`에 발사 시점 공개 이벤트가 없다는 사실을 코드로 직접 확인해 비고에 "구현 착수 시점에 추가 확인 필요"로 정확히 기록
+- 항목 5(아이스볼)는 `GetMonstersInRow()`가 실제로는 y좌표 유사 판정(행)이며 요청된 열(x좌표 유사) 조회 기능이 코드에 없음을 확인해, 신규 로직 필요성을 비고에 명시
+
+---
+
 ## 2026-07-05 (UIRules.md 섹션 9 몬스터 HP바 갱신 — 피격 시 표출 신규 확정 + 발견된 버그 2건 기록)
 
 ### 작업 내용

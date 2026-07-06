@@ -27,6 +27,7 @@
 | PlayerActiveSkillDesign.md | `Assets/_Project/Docs/PlayerActiveSkillDesign.md` | 플레이어 액티브 스킬 시스템 기획. 버서크/분신 효과, FIFO 재발사 규칙, UI 명세 정의 |
 | GameplayMechanics.md | `Assets/_Project/Docs/GameplayMechanics.md` | 게임 내 알고리즘/메커닉 스펙 문서. 볼 발사/궤도 시스템(조준, 프리뷰, 귀환, 재발사), 캐릭터 조준 연동 시각 표현(좌우 반전, 무기/머리 회전) 등 확정된 게임플레이 메커닉을 계속 추가 기록. 현재 구현과의 차이(TODO) 포함 |
 | MonsterRules.md | `Assets/_Project/Docs/MonsterRules.md` | 몬스터 시스템 통합 규칙 문서. 스폰/전진 메커닉, 몬스터 종류/스탯, HP/상태이상 처리, 웨이브 시스템 정의 |
+| TODO.md | `Assets/_Project/Docs/TODO.md` | 게임 다듬기(Polish) 작업 백로그. 논의를 마쳤으나 아직 구현하지 않은 항목들의 현재 상태/확정된 목표/비고 기록 |
 
 ---
 
