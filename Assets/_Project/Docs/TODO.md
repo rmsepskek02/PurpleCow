@@ -64,17 +64,17 @@
 
 ---
 
-## 7. 몬스터 피격/상태이상 스프라이트 색상 효과
+## 7. 몬스터 피격/상태이상 스프라이트 색상 효과 — 구현 완료 / 실기기 검증 완료
 
-- **현재 상태**: `Assets/_Project/Scripts/Monster/MonsterBase.cs`에는 `SpriteRenderer` 참조도, 피격 시 색상 변화 로직도 전혀 없음. 얼음 효과는 `_frozenSecondsRemaining`/`_slowSecondsRemaining` 필드로 지속시간을 추적하고 있지만(`ApplyFreeze()`/`ApplySlow()`), 화상 효과(`ApplyDot()`)는 `CoDotTick()` 코루틴 내부의 지역 변수로만 지속시간을 다루고 있어 "지금 화상 중인지"를 몬스터 상태로 조회할 방법이 현재 없음(얼음과 달리 지속시간을 필드로 추적하지 않음). 몬스터 프리팹(`Assets/_Project/Prefabs/Monster/Fluffy.prefab` 확인) 구조상 몬스터 본체 스프라이트(루트 오브젝트, 예: "Fluffy")와 몬스터가 밟고 있는 발판/돌판 스프라이트(자식 오브젝트 "BlockVisual")가 별도의 `SpriteRenderer`로 이미 분리되어 있음. `Assets/_Project/Scripts/Skill/Active/FireBallSkill.cs`(화상)와 `Assets/_Project/Scripts/Skill/Active/IceBallSkill.cs`(냉동/슬로우)가 각각 `MonsterBase.ApplyDot()`/`ApplyFreeze()`+`ApplySlow()`를 호출하는 구조.
-- **확정된 목표**:
-  1. 몬스터가 피격당할 때마다 본체 스프라이트가 흰색으로 아주 짧게 반짝인다(hit flash).
-  2. 아이스볼 효과(냉동/슬로우)가 지속되는 동안에는 본체 스프라이트가 하늘색 계열로 물든다.
-  3. 파이어볼 효과(화상 DOT)가 지속되는 동안에는 본체 스프라이트가 붉은주황색 계열로 물든다.
-  4. 얼음과 화상이 같은 몬스터에 동시에 걸리는 경우, 나중에 걸린 효과의 색을 적용한다(먼저 걸려 있던 효과의 색은 덮어쓴다).
-  5. 지속효과가 모두 끝나면 원래 색(기본 스프라이트 색)으로 돌아간다.
-  6. 몬스터가 밟고 있는 발판(돌판, `BlockVisual` 스프라이트)에는 이 색상 효과가 적용되지 않는다 — 몬스터 본체 스프라이트에만 적용한다.
-- **비고**: 화상 상태를 얼음처럼 지속시간 기준으로 조회 가능한 필드(예: `_burnSecondsRemaining`)로 새로 추적해야 할 것으로 보인다(현재는 코루틴 로컬 변수뿐이라 외부에서 "화상 중인지" 알 수 없음). 정확한 색상 값(하늘색/붉은주황 RGB)과 흰색 피격 플래시 지속시간(예: 0.1초 등)은 구현 착수 시점에 결정한다.
+- **구현 내용**: 몬스터가 피격당할 때마다 본체 스프라이트가 흰색으로 짧게 반짝이는 히트 플래시, 아이스볼 냉동/슬로우가 지속되는 동안 본체가 하늘색으로 물드는 틴트, 파이어볼 화상이 지속되는 동안 본체가 붉은주황색으로 물드는 틴트를 구현했다. 얼음과 화상이 같은 몬스터에 동시에 걸리면 나중에 걸린 효과의 색을 적용한다.
+- **오버브라이트 방식 폐기 경위**: 원래 계획(`plan.md`)은 피격 히트 플래시를 `SpriteRenderer.color`에 1보다 큰 값(오버브라이트, 곱하기 틴트)을 줘서 흰색으로 번쩍이게 하는 방식이었다. 그러나 실기기 테스트 결과 오버브라이트 값을 3배→8배로 올려도 전혀 시각적 차이가 없었고, 원인은 `SpriteRenderer.color`가 스프라이트 메쉬의 정점 색상으로 저장되며 0~1 범위로 클램핑되기 때문(1을 넘는 값은 전부 1로 잘림)으로 확정 진단됐다. 즉 곱하기 방식의 오버브라이트 플래시는 애초에 구조적으로 불가능했던 접근이었다.
+- **오버레이 셰이더로 교체**: 완전히 다른 방식으로 교체하기 위해 `Assets/_Project/Shaders/SpriteFlashOverlay.shader`(신규 URP 호환 커스텀 셰이더, 스프라이트 텍스처의 알파만 마스크로 써서 항상 균일한 색을 실루엣으로 그림)를 새로 작성하고, `MonsterBase.cs`에 몬스터 본체 위에 겹치는 자식 오버레이 `SpriteRenderer`(`_flashOverlayRenderer`)를 런타임에 생성해, 피격 시 이 오버레이의 알파만 0↔1로 전환하는 방식으로 구현했다. 몸체 색(`_spriteRenderer.color`)은 이제 얼음/화상 상태 틴트만 전담하고, 플래시는 이 오버레이가 완전히 분리된 레이어로 전담한다.
+- **범위 확장 및 방향 전환**: 작업 도중 사용자 요청으로 원래 계획에 없던 두 가지가 추가/변경됐다.
+  1. 발판(`BlockVisual`, 몬스터가 밟고 있는 돌판 스프라이트)에도 동일한 흰색 플래시가 뜨도록 확장했다. 원래 plan.md는 "발판은 색상 효과 대상에서 제외"였으나, 오버레이 방식은 상태 틴트와 무관한 별도 레이어라 발판에 적용해도 문제없다고 판단해 확장 적용했다.
+  2. 원래는 얼음/화상 상태 지속 중엔 노말 볼 피격 시 흰색 플래시를 생략하도록 구현했었으나(곱하기 방식일 때는 플래시가 틴트를 가려버리는 문제가 있었음), 오버레이로 분리된 이후엔 그 문제가 없어져서 상태이상 지속 중에도 항상 플래시가 뜨도록 최종 되돌렸다.
+- **Inspector 조정**: 색상 값 4개(`_hitFlashColor`, `_hitFlashDuration`, `_freezeTintColor`, `_burnTintColor`)는 전부 `[SerializeField]`로 노출해 Inspector에서 조정 가능하다. `_hitFlashDuration`은 현재 0.4초(테스트 과정에서 상향된 값, 필요시 나중에 더 짧게 조정 가능).
+- **실기기 검증**: 사용자가 실기기 빌드로 직접 테스트해 히트 플래시(몸체+발판), 얼음 틴트(하늘색), 화상 틴트(붉은주황) 모두 정상 작동함을 확인했다.
+- **비고**: 이번 작업 대화 중 아이스볼 "같은 열 후방 몬스터 정지"(5번 항목)에서 그리드 칸 간격(`_gridCellSize: 0.85`)과 몬스터 콜라이더 폭(`ColliderSizeMap`의 0.96)이 서로 달라 인접 열까지 열 판정이 번지는 버그가 발견됐다. 이번 7번 작업 범위 밖이라 아직 손대지 않았으며, 나중에 별도로 다뤄야 한다.
 
 ---
 
@@ -94,6 +94,14 @@
 
 ---
 
+## 10. 지속 대미지(DoT) 발생 시 대미지 텍스트 미표시
+
+- **현재 상태**: 파이어볼의 화상 효과는 `Assets/_Project/Scripts/Skill/Active/FireBallSkill.cs`의 `OnBallHit(MonsterBase target)`에서 `target.ApplyDot(LevelData.Value3, LevelData.Value1, (int)LevelData.Value2)`를 호출해 `Assets/_Project/Scripts/Monster/MonsterBase.cs`의 `ApplyDot()`에 DoT 스택(`DotStack{ DamagePerSecond, RemainingSeconds }`)을 등록하는 것으로 끝나며, 이 시점에는 실제 피해가 전혀 적용되지 않는다. 실제 틱 피해는 `MonsterBase.Update()`에서 매 프레임 호출되는 `UpdateDot(float deltaTime)`이 담당하는데, `_dotTickTimer`가 1초 이상 누적될 때마다 `while (_dotTickTimer >= 1f && !_isDead)` 루프 안에서 살아있는 스택들의 `DamagePerSecond` 합을 구해 `TakeDamage(tickDamage)`를 몬스터 자신에게 직접 호출한다. 이 경로는 `Assets/_Project/Scripts/Ball/Ball.cs`의 `CalculateDamage()`를 전혀 거치지 않으며, `OnHitMonster?.Invoke(target, damage, isCritical)` 이벤트도 발행하지 않는다. `Assets/_Project/Scripts/UI/DamageTextManager.cs`는 `OnEnable()`에서 `Ball.OnHitMonster += HandleHitMonster`로 이 이벤트만 구독해 `ShowDamage()`로 대미지 텍스트를 스폰하므로, DoT 틱 피해는 이벤트가 아예 발행되지 않아 대미지 텍스트로 이어질 방법이 코드상 없다. (참고: 기존 7번 항목 조사 당시 언급되었던 코루틴 기반 `CoDotTick()`은 현재 코드에는 존재하지 않으며, 이후 7번 항목(몬스터 피격/상태이상 스프라이트 색상 효과) 구현 과정에서 `Update()` 기반의 `UpdateDot()`으로 대체된 것으로 보인다.) 원인이 코드로 명확히 특정됨.
+- **확정된 목표**: 지속 대미지(DoT) 틱마다 대미지 텍스트가 표시되도록 수정한다.
+- **비고**: 구현 착수 시 `MonsterBase.UpdateDot()`의 틱 피해 적용 지점에서 `Ball.OnHitMonster` 이벤트를 재사용/재발행할지, 아니면 `DamageTextManager.Instance.ShowDamage(...)`를 직접 호출할지 방식을 결정해야 한다(8번 레이저볼 항목과 유사한 종류의 결정 필요). DoT 틱은 특정 `Ball` 인스턴스와 무관하게 몬스터 쪽에서 발생하므로, `Ball.OnHitMonster`의 시그니처(`Action<MonsterBase, float, bool>`)를 그대로 재사용할 경우 `isCritical` 값을 항상 `false`로 둘지도 함께 정해야 한다. 또한 DoT 피해 텍스트를 일반 피해와 시각적으로 구분할지(예: 색상/크기 차별화) 여부도 구현 착수 시 결정이 필요하다.
+
+---
+
 ## 다음 단계
 
-1·5·6번은 구현과 C# 빌드 검증을 완료했으며 Unity 플레이 검증을 기다리고 있습니다. 남은 미구현 항목은 2·3·4·7·8·9번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
+1·5·6번은 구현과 C# 빌드 검증을 완료했으며 Unity 플레이 검증을 기다리고 있습니다. 7번은 구현과 실기기 검증까지 모두 완료했습니다. 남은 미구현 항목은 2·3·4·8·9·10번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
