@@ -42,8 +42,8 @@ public class MonsterBase : MonoBehaviour, IPoolable
     private SpriteRenderer _spriteRenderer;
     private Color _baseColor;
 
-    [SerializeField] private Color _hitFlashColor = new Color(3f, 3f, 3f, 1f);
-    [SerializeField] private float _hitFlashDuration = 0.1f;
+    [SerializeField] private Color _hitFlashColor = new Color(8f, 8f, 8f, 1f);
+    [SerializeField] private float _hitFlashDuration = 0.4f;
     [SerializeField] private Color _freezeTintColor = new Color(0.53f, 0.81f, 0.98f);
     [SerializeField] private Color _burnTintColor = new Color(1f, 0.35f, 0.16f);
 
@@ -132,7 +132,9 @@ public class MonsterBase : MonoBehaviour, IPoolable
         if (_isDead || _isBottomAttacking)
             return;
 
-        _flashSecondsRemaining = _hitFlashDuration;
+        bool hasActiveStatusTint = _frozenSecondsRemaining > 0f || _slowSecondsRemaining > 0f || _dotStacks.Count > 0;
+        if (!hasActiveStatusTint)
+            _flashSecondsRemaining = _hitFlashDuration;
 
         _currentHp -= damage;
         OnHpChanged?.Invoke(Mathf.Max(_currentHp, 0f), _monsterData.Hp);
