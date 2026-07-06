@@ -6,7 +6,7 @@
 
 ## 현재 상태 (2026-07-06 기준)
 
-**단계**: 핵심 구현과 Android 실제 기기 20웨이브 검증 완료. 선택 Polish 1·6번(치명타 텍스트 색상, 바닥 도달 진동→돌진→소멸 연출)은 Android 실기기 검증까지 완료해 `TODO.md`에서 제거되었고, 5번(아이스볼 및 몬스터 이동 겹침 방지)은 추가 스폰 겹침 회귀 수정 및 빌드까지 완료한 채 Android 실기기 재검증 대기 중. 선택 Polish 7번은 구현 및 실기기 검증까지 완료. 고스트볼이 벽/바닥을 뚫고 나가던 미작동 버그(`TODO.md` 9번)도 원인 규명 및 두 차례 수정, 실기기 테스트 검증까지 완료해 `TODO.md`에서 제거되었다.
+**단계**: 핵심 구현과 Android 실제 기기 20웨이브 검증 완료. 선택 Polish 1·6번(치명타 텍스트 색상, 바닥 도달 진동→돌진→소멸 연출)은 Android 실기기 검증까지 완료해 `TODO.md`에서 제거되었고, 5번(아이스볼 및 몬스터 이동 겹침 방지)은 추가 스폰 겹침 회귀 수정 및 빌드까지 완료한 채 Android 실기기 재검증 대기 중. 선택 Polish 7번은 구현 및 실기기 검증까지 완료. 고스트볼이 벽/바닥을 뚫고 나가던 미작동 버그(`TODO.md` 9번)도 원인 규명 및 두 차례 수정, 실기기 테스트 검증까지 완료해 `TODO.md`에서 제거되었다. 레이저볼 가로 행/지속 대미지(DoT) 대미지 텍스트 미표시 버그(`TODO.md` 8·10번)도 원인 규명 및 수정, 실기기 테스트 검증까지 완료해 `TODO.md`에서 제거되었다.
 
 **완료된 작업**
 - [x] 프로젝트 생성 (Unity 6000.3.10f1, Universal 2D URP, Android)
@@ -32,13 +32,14 @@
 - [x] 캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 (`_Task/2026-07-05/17-27_character-sprite-prefab`): plan.md의 초기 설계(`WeaponPivot` 빈 부모 오브젝트 + `flipX` 기반 좌우 반전)는 로컬 실플레이 테스트에서 여러 버그가 발견되어 최종적으로 다른 구조로 귀결되었다. 신규 `Assets/_Project/Scripts/Character/CharacterAimView.cs`, `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs`(메뉴 `PurpleCow/Setup/Character System Setup`)를 작성했고, 사용자가 로컬 Unity에서 해당 메뉴 실행 + 직접 다회 수정을 거쳐 `Assets/_Project/Prefabs/Character/Character.prefab`을 완성했다. 최종 구조는 `Character`(루트, `CharacterAimView`) → `Body`/`Head`(SpriteRenderer) + `Weapon`(SpriteRenderer, Sprite Editor에서 스프라이트 자체 피벗을 손잡이 위치로 재설정, 이에 따라 별도 회전축이던 `WeaponPivot`은 제거하고 코드 필드명(`_weaponPivot`)만 유지한 채 실제로는 `Weapon`을 연결). `Character.prefab`은 `BallLauncher`의 `LaunchPoint` 자식으로 배치해 `WallFitter`의 화면비 리프레임을 자동 상속받는다. 좌우 반전은 캐릭터 기본 아트가 왼쪽을 보는 점에 착안해 조준 방향(`BallLauncher.Instance.LaunchDirection`) x가 양수일 때만 루트 `transform.localScale.x`를 -1로 반전하는 방식으로 확정(개별 스프라이트 `flipX` 방식은 반전 조건이 반대로 되는 버그로 폐기). 무기/머리 회전은 `Mathf.Atan2` 각도 계산 방식을 여러 차례 시도했으나 Unity Z축 회전 방향(CW/CCW) 규약을 매번 잘못 추측해 반복적으로 반대 방향을 가리키는 문제가 발생, 최종적으로 `Quaternion.FromToRotation(Vector3.up, 목표방향)`으로 교체해 근본 해결(루트가 반전된 상태에서는 목표 방향 x부호를 미리 뒤집어 계산해야 반전과 상쇄되어 결과가 맞음을 확인). 머리는 무기 회전의 일부 비율(`_headRotationRatio`, 기본 0.25)만 `Quaternion.Slerp`로 보조 추종한다. 실플레이 미세조정 피드백("조준이 수평에 가까울수록 무기가 덜 눕는 것 같다")을 반영해 `_horizontalBiasDegrees`(기본 15도, `[SerializeField]`)를 각도와 무관하게 항상 고정값으로 더하는 보정을 추가했다(처음엔 각도 비례로 시도했다가 사용자 요청으로 고정값으로 변경). `_bodySpriteRenderer`/`_headSpriteRenderer` 필드는 과거 `flipX` 방식의 잔재로 코드 로직상 더 이상 쓰이지 않지만, `CharacterSetupEditor.cs`의 기존 참조 연결 코드를 건드리지 않기 위해 의도적으로 남겨두었다. `CharacterManager.cs`(HP/XP 로직, `Scripts/Core/`)는 이번 작업과 분리되어 전혀 수정하지 않았다. **사용자가 로컬 Unity 실제 플레이 테스트로 최종 확인 완료.**
 - [x] 플레이어 액티브 스킬 2종 구현 및 검증 (`_Task/2026-07-05/21-30_player-active-skill-system`): 회수 볼 FIFO 순차 재발사, 스피드업(30초 쿨타임, 6초간 모든 볼 속도 1.5배), 분신(원본 로스터만 복제, 순차 발사, 두 번째 회수 시 발사 지점에서 소멸), 전용 ScriptableObject/매니저/HUD 버튼을 구현. `speedUp`/`illusion` 버튼과 EventSystem/InputSystem UI 입력을 연결하고, UI 터치는 조준 입력에서 제외. 런타임 및 에디터 C# 어셈블리 빌드 오류 0개와 사용자 Unity 플레이 테스트 정상 동작을 확인함
 - [x] 고스트볼 벽/바닥 미작동 버그 수정 (`_Task/2026-07-06/19-50_ghost-ball-wall-fix`): 고스트 모드에서 볼 Collider가 트리거로 전환되며 Wall/Ground 접촉이 `OnTriggerEnter2D`로만 발생하는데 이 콜백에 Wall/Ground 처리가 없어 벽을 뚫고 나가던 버그를 발견. 1차 수정(PR #23)으로 `HandleWallHit()`/`HandleGroundHit()`를 `OnTriggerEnter2D`에도 연결했으나, 트리거 콜라이더는 물리 엔진이 속도를 자동 반사시키지 않는다는 점이 남아 있어 2차 수정(PR #24)으로 `ReflectOffTriggerWall()`을 추가해 트리거 경로에서 직접 속도를 반사시키도록 보완. 몬스터 관통 피해는 그대로 유지. 사용자가 실제 테스트로 벽 반사·바닥 귀환·몬스터 관통 피해 모두 정상 동작함을 확인함
+- [x] 레이저볼/DoT 대미지 텍스트 미표시 버그 수정 (`_Task/2026-07-06/20-14_damage-text-event-fix`): 레이저볼 가로 행 부가 피해와 DoT 틱 피해가 `Ball.OnHitMonster` 이벤트를 발행하지 않아 대미지 텍스트가 뜨지 않던 문제를, `Ball.cs`에 신설한 `RaiseHitMonster()` 공개 정적 메서드로 두 호출부가 이벤트를 재발행하도록 수정(PR #25, 이벤트 캡슐화 위반 빌드 오류를 잡은 PR #26 후속 수정 포함). 사용자가 실제 테스트로 정상 동작을 확인함
 
 **진행 중**
 - [ ] 아이스볼 직접 빙결·근접 정지, 스폰 겹침 방지 Android 실기기 재검증
 
 **다음 작업 순서**
 1. 아이스볼 및 몬스터 이동 겹침 방지(5번) Android 실기기 재검증
-2. 남은 `TODO.md` 2·3·4·8·10번 검토
+2. 남은 `TODO.md` 2·3·4번 검토
 3. 제출 전 최종 Android 빌드 생성
 
 ## 주요 기술 결정
