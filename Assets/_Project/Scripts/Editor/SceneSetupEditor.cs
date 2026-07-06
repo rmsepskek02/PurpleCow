@@ -309,8 +309,9 @@ public static class SceneSetupEditor
         else
             Debug.LogWarning("[SceneSetupEditor] Character 없음. Character System Setup을 먼저 실행하세요.");
 
-        so.FindProperty("_bottomAttackShakeDuration").floatValue = 0.35f;
-        so.FindProperty("_bottomAttackShakeStrength").floatValue = 0.12f;
+        so.FindProperty("_bottomAttackShakeDuration").floatValue = 0.25f;
+        so.FindProperty("_bottomAttackShakeStrength").floatValue = 0.18f;
+        so.FindProperty("_bottomAttackShakeVibrato").intValue = 20;
         so.FindProperty("_bottomAttackDashDuration").floatValue = 0.25f;
 
         so.ApplyModifiedPropertiesWithoutUndo();

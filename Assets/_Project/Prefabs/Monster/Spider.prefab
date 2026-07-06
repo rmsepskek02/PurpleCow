@@ -362,6 +362,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterBase
   _monsterData: {fileID: 11400000, guid: de05cc0a9e2030a48a4e30606895dc9f, type: 2}
+  _hitFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  _hitFlashDuration: 0.1
+  _freezeTintColor: {r: 0.53, g: 0.81, b: 0.98, a: 1}
+  _burnTintColor: {r: 1, g: 0.35, b: 0.16, a: 1}
 --- !u!1 &4894879094652221597
 GameObject:
   m_ObjectHideFlags: 0

@@ -189,3 +189,105 @@
 - Collider가 비활성화된 바닥 공격 몬스터는 스폰 영역과 멀리 떨어진 상태이며 점유 검사 대상에서 제외한다.
 - 매 프레임 활성 몬스터 목록을 조회하지만 현재 최대 규모가 작으므로 별도 캐시나 공간 분할을 추가하지 않는다.
 - 이번 실패 원인인 “시간 지속 효과를 적중 순간 목록으로만 처리한 설계”와 “Collider 점유를 작은 중심점 반경으로 근사한 설계”를 `AIFailures.md`에 기록한다.
+
+---
+
+## 최종 교정 계획 — 일반 이동 간격 제한과 아이스볼 직접 대상화
+
+사용자 재검증 결과, 앞선 “아래쪽에 빙결 몬스터가 있으면 같은 열의 이동을 모두 차단”하는 후속 계획은 요구 동작과 다르므로 폐기한다. 이 절의 계획이 앞선 아이스볼 후방 전파·열 차단 계획보다 우선하며 최종 구현 기준이다.
+
+### 최종 구현 목표
+
+1. 아이스볼은 직접 맞은 몬스터만 빙결·감속하고 추가 피해를 준다.
+2. 후방 몬스터는 멀리 떨어져 있으면 계속 이동하고, 바로 앞 몬스터의 Collider 경계에 도달했을 때만 정지한다.
+3. 모든 몬스터 이동에 같은 간격 제한을 적용해 아이스볼과 무관한 1×1·1×2·2×1 조합의 겹침도 방지한다.
+4. Unity 물리 충돌은 새로 도입하지 않고 실제 Collider Bounds를 사용해 프레임별 Transform 이동량을 제한한다.
+5. 별도의 부들거림 연출은 추가하지 않는다.
+6. 돌진 전 진동을 더 빠르고 강하게 조정하고 진동 횟수를 Inspector에 노출한다.
+
+### 1단계 — 기존 열 전체 정지 로직 제거
+
+- `IceBallSkill.OnBallHit()`에서 `GetMonstersBehindInColumn()` 조회와 후방 전체 Freeze/Slow 적용을 제거한다.
+- 직접 피격 대상의 확률 판정, Freeze, Slow, 추가 피해는 유지한다.
+- `MonsterBase.Update()`의 `HasFrozenMonsterAhead()` 기반 전체 프레임 중단을 제거한다.
+- 더 이상 사용하지 않는 `WaveManager.GetMonstersBehindInColumn()`과 `HasFrozenMonsterAhead()`를 삭제한다.
+
+### 2단계 — 가장 가까운 앞 몬스터까지 이동량 제한
+
+- `MonsterBase.Update()`에서 Freeze와 Slow를 반영한 이번 프레임의 희망 하강 거리 `speed × deltaTime`을 계산한다.
+- `WaveManager`에 현재 몬스터가 안전하게 이동할 수 있는 실제 하강 거리를 반환하는 메서드를 추가한다.
+- 활성 몬스터 중 다음 조건을 만족하는 대상을 앞쪽 장애물 후보로 사용한다.
+  - 자기 자신이 아님
+  - 생존 상태
+  - 바닥 공격 중이 아니며 Collider Bounds 조회 가능
+  - 현재 몬스터보다 아래쪽
+  - 두 Collider의 x축 범위가 양수 폭으로 겹침
+- 현재 몬스터 Collider 아래 경계와 후보 Collider 위 경계 사이의 가장 작은 간격을 구한다.
+- 희망 이동 거리를 가장 작은 간격 이하로 제한한다.
+- 간격이 0이면 이동하지 않는다.
+- 이미 소량 겹친 상태라면 음수 간격만큼 위로 이동해 겹침을 해소한다.
+- 앞에 몬스터가 없으면 기존 속도로 그대로 하강한다.
+
+### 3단계 — 스폰 점유 검사 유지
+
+- 이미 구현된 실제 Collider Bounds 기반 `IsCellFree()`는 유지한다.
+- 스폰 셀과 활성 몬스터 Collider가 x·y 양쪽에서 실제로 겹칠 때 배치를 막는다.
+- 정확히 경계만 닿는 정상 인접 배치는 허용한다.
+- 이동 간격 제한과 스폰 점유 검사가 동일한 `TryGetColliderBounds()`를 사용하도록 유지한다.
+
+### 4단계 — 돌진 전 진동 강화와 Inspector 노출
+
+- 사용자 승인값을 새 기본값으로 사용한다.
+  - 진동 시간: `0.25초`
+  - 진동 강도: `0.18`
+  - 진동 횟수: `20`
+  - 돌진 시간: `0.25초`
+- `WaveManager`에 `[SerializeField, Min(1)] private int _bottomAttackShakeVibrato`를 추가한다.
+- `MonsterBase.BeginBottomAttack()`이 고정값 `12` 대신 전달받은 진동 횟수를 사용하도록 변경한다.
+- `SampleScene.unity`와 `SceneSetupEditor` 기본값도 동일하게 갱신한다.
+- 기존 Inspector 필드인 진동 시간·강도·돌진 시간은 유지한다.
+
+### 5단계 — 결정적 계산 검증
+
+Unity 물리 재현 테스트 기반이 별도로 없으므로 Bounds 수치 계산을 정적 검증 루프로 사용한다.
+
+- 앞 몬스터와 간격이 희망 이동 거리보다 크면 기존 거리만큼 이동
+- 간격이 희망 이동 거리보다 작으면 경계까지만 이동
+- 경계가 닿아 있으면 이동 거리 0
+- 이미 겹쳤으면 위쪽 보정 거리 반환
+- 가로 범위가 겹치지 않는 인접 열 몬스터는 이동에 영향 없음
+- 가로 2칸 몬스터는 실제 두 칸 폭 모두에서 앞 몬스터를 감지
+
+### 6단계 — 빌드·플레이 검증
+
+- 런타임 및 Editor C# 프로젝트 빌드 오류 0개를 확인한다.
+- 씬의 진동 네 필드와 캐릭터 참조를 검증한다.
+- Unity 플레이 모드에서 다음을 확인한다.
+  1. 아이스볼 직접 대상만 빙결·감속
+  2. 멀리 떨어진 같은 열 몬스터는 계속 전진
+  3. 앞 몬스터와 맞닿을 때만 정지
+  4. 빙결 종료 후 앞 몬스터가 움직이면 뒤 몬스터도 재이동
+  5. 아이스볼 없이도 가로 2칸 몬스터와 다른 몬스터가 겹치지 않음
+  6. 인접 열 이동은 서로 방해하지 않음
+  7. 돌진 전 진동이 기존보다 빠르고 강하게 표시됨
+  8. Inspector 네 값을 변경하면 다음 연출부터 반영
+
+### 최종 변경 파일
+
+- `Assets/_Project/Scripts/Skill/Active/IceBallSkill.cs`
+- `Assets/_Project/Scripts/Monster/MonsterBase.cs`
+- `Assets/_Project/Scripts/Wave/WaveManager.cs`
+- `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`
+- `Assets/Scenes/SampleScene.unity`
+- `Assets/_Project/Docs/TODO.md`
+- `Assets/_Project/Docs/ProjectStatus.md`
+- `Assets/_Project/Docs/ProjectHistory.md`
+- `Assets/_Project/Docs/AIFailures.md`
+
+### Git 기준
+
+- 구현 착수 전 `git fetch origin main`으로 원격 상태를 확인했다.
+- 현재 브랜치는 `main`이며 `HEAD`와 `origin/main`은 동일하다.
+- 작업 완료 시에도 원격 `main`을 다시 fetch해 최신 여부를 확인한다.
+- 사용자가 명시적으로 요청하지 않은 커밋·push는 수행하지 않는다.
+- 다른 작업의 미추적 `.meta` 및 Shader 파일은 수정하거나 삭제하지 않는다.

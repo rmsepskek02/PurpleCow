@@ -23,8 +23,9 @@ public class WaveManager : Singleton<WaveManager>
     [SerializeField] private int _killCountForSkill = 5;
     [SerializeField] private int _minSpawnPerTick = 3;
     [SerializeField] private int _maxSpawnPerTick = 7;
-    [SerializeField, Min(0f)] private float _bottomAttackShakeDuration = 0.35f;
-    [SerializeField, Min(0f)] private float _bottomAttackShakeStrength = 0.12f;
+    [SerializeField, Min(0f)] private float _bottomAttackShakeDuration = 0.25f;
+    [SerializeField, Min(0f)] private float _bottomAttackShakeStrength = 0.18f;
+    [SerializeField, Min(1)] private int _bottomAttackShakeVibrato = 20;
     [SerializeField, Min(0f)] private float _bottomAttackDashDuration = 0.25f;
 
     private Dictionary<MonsterData, ObjectPool<MonsterBase>> _poolByData;
@@ -375,6 +376,7 @@ public class WaveManager : Singleton<WaveManager>
                     _characterTarget,
                     _bottomAttackShakeDuration,
                     _bottomAttackShakeStrength,
+                    _bottomAttackShakeVibrato,
                     _bottomAttackDashDuration,
                     HandleBottomAttackImpact);
             }
@@ -469,69 +471,43 @@ public class WaveManager : Singleton<WaveManager>
         return result;
     }
 
-    public List<MonsterBase> GetMonstersBehindInColumn(MonsterBase reference)
+    public float GetSafeDownwardDistance(MonsterBase reference, float desiredDistance)
     {
-        var result = new List<MonsterBase>();
-        if (reference == null ||
-            !reference.TryGetHorizontalBounds(out float referenceMinX, out float referenceMaxX))
-        {
-            return result;
-        }
-
-        float referenceY = reference.transform.position.y;
-        foreach (MonsterBase monster in _activeMonsters)
-        {
-            if (monster == null ||
-                monster == reference ||
-                !monster.IsAlive ||
-                monster.IsBottomAttacking ||
-                monster.transform.position.y <= referenceY ||
-                !monster.TryGetHorizontalBounds(out float candidateMinX, out float candidateMaxX))
-            {
-                continue;
-            }
-
-            float overlapWidth =
-                Mathf.Min(referenceMaxX, candidateMaxX) -
-                Mathf.Max(referenceMinX, candidateMinX);
-            if (overlapWidth > HorizontalOverlapEpsilon)
-                result.Add(monster);
-        }
-
-        return result;
-    }
-
-    public bool HasFrozenMonsterAhead(MonsterBase reference)
-    {
+        desiredDistance = Mathf.Max(0f, desiredDistance);
         if (reference == null ||
             !reference.IsAlive ||
             reference.IsBottomAttacking ||
-            !reference.TryGetHorizontalBounds(out float referenceMinX, out float referenceMaxX))
+            !reference.TryGetColliderBounds(out Bounds referenceBounds))
         {
-            return false;
+            return desiredDistance;
         }
 
-        float referenceY = reference.transform.position.y;
+        float safeDistance = desiredDistance;
         foreach (MonsterBase monster in _activeMonsters)
         {
             if (monster == null ||
                 monster == reference ||
                 !monster.IsAlive ||
-                !monster.IsFrozen ||
                 monster.IsBottomAttacking ||
-                monster.transform.position.y >= referenceY ||
-                !monster.TryGetHorizontalBounds(out float candidateMinX, out float candidateMaxX))
+                !monster.TryGetColliderBounds(out Bounds candidateBounds) ||
+                candidateBounds.center.y >= referenceBounds.center.y)
             {
                 continue;
             }
 
-            float overlapWidth =
-                Mathf.Min(referenceMaxX, candidateMaxX) -
-                Mathf.Max(referenceMinX, candidateMinX);
-            if (overlapWidth > HorizontalOverlapEpsilon)
-                return true;
+            float overlapX =
+                Mathf.Min(referenceBounds.max.x, candidateBounds.max.x) -
+                Mathf.Max(referenceBounds.min.x, candidateBounds.min.x);
+            if (overlapX <= HorizontalOverlapEpsilon)
+                continue;
+
+            float verticalGap = referenceBounds.min.y - candidateBounds.max.y;
+            if (Mathf.Abs(verticalGap) <= BoundsOverlapEpsilon)
+                verticalGap = 0f;
+
+            safeDistance = Mathf.Min(safeDistance, verticalGap);
         }
 
-        return false;
+        return safeDistance;
     }
 }

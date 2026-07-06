@@ -287,9 +287,6 @@ public class MonsterBase : MonoBehaviour, IPoolable
             return;
         }
 
-        if (WaveManager.Instance != null && WaveManager.Instance.HasFrozenMonsterAhead(this))
-            return;
-
         float speed = _monsterData.MoveSpeed;
 
         if (_slowSecondsRemaining > 0f)
@@ -297,21 +294,11 @@ public class MonsterBase : MonoBehaviour, IPoolable
             speed *= (1f - _slowPercent);
         }
 
-        transform.position += Vector3.down * speed * deltaTime;
-    }
-
-    public bool TryGetHorizontalBounds(out float minX, out float maxX)
-    {
-        if (!TryGetColliderBounds(out Bounds bounds))
-        {
-            minX = 0f;
-            maxX = 0f;
-            return false;
-        }
-
-        minX = bounds.min.x;
-        maxX = bounds.max.x;
-        return true;
+        float desiredDistance = speed * deltaTime;
+        float safeDistance = WaveManager.Instance != null
+            ? WaveManager.Instance.GetSafeDownwardDistance(this, desiredDistance)
+            : desiredDistance;
+        transform.position += Vector3.down * safeDistance;
     }
 
     public bool TryGetColliderBounds(out Bounds bounds)
@@ -330,6 +317,7 @@ public class MonsterBase : MonoBehaviour, IPoolable
         Transform target,
         float shakeDuration,
         float shakeStrength,
+        int shakeVibrato,
         float dashDuration,
         Action<MonsterBase> onImpact)
     {
@@ -348,7 +336,7 @@ public class MonsterBase : MonoBehaviour, IPoolable
             transform.DOShakePosition(
                 shakeDuration,
                 shakeStrength,
-                vibrato: 12,
+                vibrato: shakeVibrato,
                 randomness: 60f,
                 snapping: false,
                 fadeOut: true));

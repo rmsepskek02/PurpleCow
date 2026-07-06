@@ -3975,8 +3975,9 @@ MonoBehaviour:
   _killCountForSkill: 5
   _minSpawnPerTick: 2
   _maxSpawnPerTick: 5
-  _bottomAttackShakeDuration: 0.35
+  _bottomAttackShakeDuration: 0.25
   _bottomAttackShakeStrength: 0.3
+  _bottomAttackShakeVibrato: 20
   _bottomAttackDashDuration: 0.25
 --- !u!4 &295246077
 Transform:

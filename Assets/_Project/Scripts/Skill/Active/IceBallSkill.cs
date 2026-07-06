@@ -9,17 +9,9 @@ public class IceBallSkill : BallSkillBase
         // Value1=확률, Value2=지속(초), Value3=슬로우율
         if (UnityEngine.Random.value < LevelData.Value1)
         {
-            var rearMonsters = WaveManager.Instance.GetMonstersBehindInColumn(target);
-
             target.ApplyFreeze(LevelData.Value2);
             target.ApplySlow(LevelData.Value2, LevelData.Value3);
             target.TakeDamage(_ball.LastDamage * LevelData.Value3);
-
-            foreach (MonsterBase monster in rearMonsters)
-            {
-                monster.ApplyFreeze(LevelData.Value2);
-                monster.ApplySlow(LevelData.Value2, LevelData.Value3);
-            }
         }
     }
 }
