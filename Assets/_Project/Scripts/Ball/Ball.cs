@@ -31,6 +31,14 @@ public class Ball : MonoBehaviour, IPoolable
     public static event Action<MonsterBase, float, bool> OnHitMonster;
     public static event Action<Ball> OnWallHit;
 
+    // C# 이벤트는 선언 클래스 내부에서만 Invoke 가능하므로, Ball을 거치지 않는
+    // 외부 피해 경로(레이저볼 부가 피해, DoT 틱 등)가 대미지 텍스트 이벤트를
+    // 발행할 수 있도록 공개 정적 메서드로 감싼다.
+    public static void RaiseHitMonster(MonsterBase monster, float damage, bool isCritical)
+    {
+        OnHitMonster?.Invoke(monster, damage, isCritical);
+    }
+
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody2D>();

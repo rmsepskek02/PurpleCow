@@ -262,7 +262,7 @@ public class MonsterBase : MonoBehaviour, IPoolable
             if (tickDamage > 0f)
             {
                 TakeDamage(tickDamage);
-                Ball.OnHitMonster?.Invoke(this, tickDamage, false);
+                Ball.RaiseHitMonster(this, tickDamage, false);
             }
         }
 
