@@ -260,7 +260,10 @@ public class MonsterBase : MonoBehaviour, IPoolable
             }
 
             if (tickDamage > 0f)
+            {
                 TakeDamage(tickDamage);
+                Ball.OnHitMonster?.Invoke(this, tickDamage, false);
+            }
         }
 
         _dotStacks.RemoveAll(stack => stack.RemainingSeconds < 0f);

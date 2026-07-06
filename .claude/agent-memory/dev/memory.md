@@ -1515,3 +1515,24 @@
 - 셰이더 파일(`SpriteFlashOverlay.shader`)은 그대로 재사용, 수정 없음
 - 완료 후 파일 전체를 다시 읽어 지시받은 코드와 정확히 일치하는지 확인 완료
 - git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)
+
+---
+
+## 2026-07-06 — 레이저볼 부가 피해 / DoT 틱 피해 대미지 텍스트 미표시 수정 (plan.md 승인 기반)
+
+**작업 내용:** `Assets/_Project/Docs/_Task/2026-07-06/20-14_damage-text-event-fix/plan.md`를 그대로 구현. 2개 파일 수정.
+
+1. `Assets/_Project/Scripts/Skill/Active/LaserBallSkill.cs` — `OnBallHit()`에서 `monster.TakeDamage(LevelData.Value1)` 호출 직후 `Ball.OnHitMonster?.Invoke(monster, LevelData.Value1, false)` 추가 (if 블록을 중괄호로 확장)
+2. `Assets/_Project/Scripts/Monster/MonsterBase.cs` — `UpdateDot()`의 `if (tickDamage > 0f) TakeDamage(tickDamage);` 단문을 중괄호 블록으로 바꾸고 `Ball.OnHitMonster?.Invoke(this, tickDamage, false)` 추가
+3. 두 곳 모두 `isCritical`은 항상 `false`로 고정
+4. `Ball.CalculateDamage()`(`Assets/_Project/Scripts/Ball/Ball.cs:236` `OnHitMonster?.Invoke(target, damage, isCritical);`)는 전혀 건드리지 않음 — 회귀 없음 확인
+5. `Ball.cs`, `DamageTextManager.cs`, `DamageTextFx.cs`는 수정하지 않음(plan 지시대로)
+
+**검증:**
+- `Ball.OnHitMonster`가 `public static event Action<MonsterBase, float, bool>`(`Ball.cs:31`)임을 확인, 시그니처 일치
+- 프로젝트 전체에 네임스페이스 선언이 없음을 확인(Ball.cs/LaserBallSkill.cs/MonsterBase.cs 모두 `using`만 있고 `namespace` 없음) → 추가 `using` 불필요, `Ball` 타입 바로 참조 가능
+- 수정 후 두 파일을 다시 읽어 중괄호 짝, 들여쓰기, 로직 확인 완료
+
+**주요 결정사항:**
+- plan.md에서 이미 확정된 대로 부가/DoT 대미지 텍스트는 일반 피해와 시각적 구분 없이 표시(별도 색상/스타일 파라미터 추가하지 않음)
+- git commit/push는 실행하지 않음(사용자가 나중에 별도 결정)
