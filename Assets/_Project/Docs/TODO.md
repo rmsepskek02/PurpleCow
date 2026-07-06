@@ -6,14 +6,6 @@
 
 ---
 
-## 1. 치명타 데미지 텍스트 색상 변경 — 구현 완료 / 실기기 재검증 대기
-
-- **구현 내용**: `DamageTextFx.cs` 기본값과 `DamageTextFx.prefab` 직렬화 값을 모두 `#FF4B3E`로 변경했다.
-- **정적 검증**: 런타임/Editor C# 빌드 오류 0개.
-- **남은 검증**: Android 실기기에서 일반 데미지는 흰색, 치명타는 붉은색으로 구분되는지 재확인한다.
-
----
-
 ## 2. 몬스터 사망 연출 추가
 
 - **현재 상태**: `Assets/_Project/Scripts/Monster/MonsterBase.cs`의 `Die()`는 `_isDead = true` 처리 후 `OnMonsterDied` 이벤트만 발행하며, 별도 시각 효과 없이 곧바로 풀에 반환됨(`WaveManager.HandleMonsterDied()`가 이벤트를 받아 `_poolByData[monster.Data].Return(monster)` 호출).
@@ -52,19 +44,6 @@
 
 ---
 
-## 6. 몬스터 바닥 도달 시 진동 → 박치기 돌진 → 소멸 연출 — 구현 완료 / 실기기 재검증 대기
-
-- **구현 내용**: 바닥 도달 시 짧고 빠르게 진동한 뒤 0.25초 동안 실제 캐릭터 Transform 중심으로 돌진한다.
-- **피해 시점**: 돌진 도착 시 `OnMonsterReachedBottom` 이벤트를 먼저 발행해 HP를 감소시키고, 그 후 활성 목록 제거와 풀 반환을 수행한다.
-- **상태 안전성**: 연출 중 일반 이동·피격·Collider 상호작용을 중단하며, 중복 연출을 막는다. 풀 반환 시 Tween과 상태를 초기화한다.
-- **웨이브 안전성**: 공격 완료 전까지 활성 목록에 유지해 조기 웨이브 클리어를 방지한다.
-- **씬 연결**: `WaveManager._characterTarget`을 `LaunchPoint/Character`에 연결했으며 Setup Editor도 동일 참조를 연결한다.
-- **Inspector 조정**: `WaveManager`에서 진동 시간, 진동 강도, 진동 횟수, 돌진 시간을 직접 조정할 수 있다. 코드/Setup 기본값은 `0.25 / 0.18 / 20 / 0.25`이며, 현재 씬은 사용자가 조정한 진동 강도 `0.3`을 보존한다.
-- **정적 검증**: 런타임/Editor C# 빌드 오류 0개.
-- **남은 검증**: Android 실기기에서 진동·돌진·충돌 피해 시점, 연출 중 피격 차단, 풀 재사용 및 웨이브 진행을 재확인한다.
-
----
-
 ## 8. 레이저볼 가로 행 대미지 텍스트 미표시
 
 - **현재 상태**: `Assets/_Project/Scripts/Skill/Active/LaserBallSkill.cs`의 `OnBallHit(MonsterBase target)`은 `WaveManager.Instance.GetMonstersInRow(target)`으로 같은 가로 행의 몬스터들을 모두 가져온 뒤, 직접 피격한 `target`을 제외한 나머지 몬스터에게 `monster.TakeDamage(LevelData.Value1)`을 직접 호출한다. 반면 대미지 텍스트는 `Assets/_Project/Scripts/UI/DamageTextManager.cs`가 `Ball.OnHitMonster` 정적 이벤트를 구독해서 `HandleHitMonster()` → `ShowDamage()`로 스폰하는 구조인데, 이 이벤트는 `Assets/_Project/Scripts/Ball/Ball.cs`의 `CalculateDamage()` 안에서 `target.TakeDamage(damage)` 직후 `OnHitMonster?.Invoke(target, damage, isCritical)`로 딱 한 번만 발행된다(`OnCollisionEnter2D`/`OnTriggerEnter2D`에서 직접 피격 대상에 대해서만 `CalculateDamage()`가 호출되고, 그 다음에 `foreach (var skill in _skills) skill.OnBallHit(monster)`가 실행됨). 즉 레이저볼의 `OnBallHit()`이 행의 나머지 몬스터에게 가하는 추가 피해는 `MonsterBase.TakeDamage()`만 호출할 뿐 `Ball.OnHitMonster` 이벤트를 전혀 발행하지 않으므로, `DamageTextManager`가 이를 감지하지 못해 직접 피격한 몬스터에게만 대미지 텍스트가 뜨고 같은 행의 나머지 몬스터에게는 텍스트가 뜨지 않는다. 코드로 원인이 명확히 특정됨.
@@ -91,4 +70,4 @@
 
 ## 다음 단계
 
-1·5·6번은 구현과 C# 빌드 검증을 완료했으며 Unity 플레이 검증을 기다리고 있습니다. 남은 미구현 항목은 2·3·4·8·9·10번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
+1·6번은 구현과 C# 빌드 검증, 실기기 검증까지 모두 완료되어 이 문서에서 제거되었으며 `ProjectHistory.md`에 이관되었습니다. 5번은 구현과 C# 빌드 검증을 완료했으며 실기기 재검증을 기다리고 있습니다. 남은 미구현 항목은 2·3·4·8·9·10번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
