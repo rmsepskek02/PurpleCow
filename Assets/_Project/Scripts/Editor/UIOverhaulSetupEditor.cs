@@ -69,16 +69,29 @@ public static class UIOverhaulSetupEditor
         }
 
         SerializedObject so = new(fitter);
+        SerializedProperty bottomY = so.FindProperty("_nativeBottomY");
         SerializedProperty launchPointY = so.FindProperty("_nativeLaunchPointY");
-        if (launchPointY == null)
+        if (bottomY == null || launchPointY == null)
         {
-            Debug.LogWarning("[UIOverhaul] WallFitter launch-point setting was not found.");
+            Debug.LogWarning("[UIOverhaul] WallFitter bottom/launch-point setting was not found.");
             return;
         }
 
-        launchPointY.floatValue = -6.5f;
+        Transform launchPoint = so.FindProperty("_launchPoint")?.objectReferenceValue as Transform;
+        bottomY.floatValue = -7.5f;
+        launchPointY.floatValue = -6.7f;
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(fitter);
+
+        Transform character = launchPoint != null ? launchPoint.Find("Character") : null;
+        if (character == null)
+        {
+            Debug.LogWarning("[UIOverhaul] Character below LaunchPoint was not found.");
+            return;
+        }
+
+        character.localPosition = new Vector3(0f, -0.4f, 0f);
+        EditorUtility.SetDirty(character);
     }
 
     private static void AssignPassiveSkillIcons()
@@ -152,6 +165,8 @@ public static class UIOverhaulSetupEditor
         Image badge = ImageUi("CharacterLevelBadge", root.transform, new(348, -211), new(82, 82), new(.16f, .13f, .12f, .98f));
         TMP_Text level = Text("CharacterLevel", badge.transform, "1", 48, Cream, Vector2.zero, new(82, 82), TextAlignmentOptions.Center);
         Button pauseButton = ButtonUi("PauseButton", root.transform, "Ⅱ", new(430, -80), new(88, 88), Ink);
+        Button successTestButton = ButtonUi("SuccessTestButton", root.transform, "S", new(-430, -80), new(88, 88), Ink);
+        Button failureTestButton = ButtonUi("FailureTestButton", root.transform, "F", new(-330, -80), new(88, 88), Ink);
 
         GameObject skills = UI("PlayerActiveSkillBar", root.transform, new(-65, 210), new(130, 286));
         RectTransform sr = skills.GetComponent<RectTransform>();
@@ -168,6 +183,7 @@ public static class UIOverhaulSetupEditor
         Ref(so, "_stageTitleText", title); Ref(so, "_stageProgressSlider", stage);
         Ref(so, "_stageProgressText", percent); Ref(so, "_xpSlider", xp);
         Ref(so, "_levelText", level); Ref(so, "_pauseButton", pauseButton);
+        Ref(so, "_successTestButton", successTestButton); Ref(so, "_failureTestButton", failureTestButton);
         Ref(so, "_pausePanel", pause); Ref(so, "_canvasGroup", cg);
         so.ApplyModifiedPropertiesWithoutUndo();
         return hud;
@@ -289,12 +305,12 @@ public static class UIOverhaulSetupEditor
         GameObject root = UI("ResultPopup", parent, Vector2.zero, Vector2.zero); Stretch(root.GetComponent<RectTransform>());
         root.AddComponent<Image>().color = new(0, 0, 0, .82f); CanvasGroup cg = root.AddComponent<CanvasGroup>();
         ResultPanel result = root.AddComponent<ResultPanel>();
-        ImageUi("Panel", root.transform, Vector2.zero, new(800, 900), new(.16f, .12f, .09f, .98f));
-        TMP_Text title = Text("TitleText", root.transform, "SUCCESS", 88, Gold, new(0, 280), new(700, 120), TextAlignmentOptions.Center);
-        Text("StageText", root.transform, "1. 깊은 숲", 42, Cream, new(0, 100), new(650, 60), TextAlignmentOptions.Center);
-        TMP_Text wave = Text("WaveText", root.transform, "도달 웨이브", 34, Color.white, new(0, 0), new(650, 55), TextAlignmentOptions.Center);
-        TMP_Text score = Text("ScoreText", root.transform, "처치 수", 34, Color.white, new(0, -90), new(650, 55), TextAlignmentOptions.Center);
-        Button restart = ButtonUi("RestartButton", root.transform, "다시 시작", new(0, -290), new(430, 130), Gold);
+        Image panel = ImageUi("Panel", root.transform, new(0, -360), new(800, 1100), new(.16f, .12f, .09f, .98f));
+        TMP_Text title = Text("TitleText", panel.transform, "SUCCESS", 88, Gold, new(0, -70), new(700, 120), TextAlignmentOptions.Center);
+        Text("StageText", panel.transform, "1. 깊은 숲", 42, Cream, new(0, -210), new(650, 60), TextAlignmentOptions.Center);
+        TMP_Text wave = Text("WaveText", panel.transform, "도달 웨이브", 34, Color.white, new(0, -330), new(650, 55), TextAlignmentOptions.Center);
+        TMP_Text score = Text("ScoreText", panel.transform, "처치 수", 34, Color.white, new(0, -420), new(650, 55), TextAlignmentOptions.Center);
+        Button restart = ButtonUi("RestartButton", panel.transform, "다시 시작", new(0, -690), new(430, 130), Gold);
         SerializedObject so = new(result);
         Ref(so, "_resultTitleText", title); Ref(so, "_finalScoreText", score); Ref(so, "_waveText", wave);
         Ref(so, "_restartButton", restart); Ref(so, "_canvasGroup", cg); so.ApplyModifiedPropertiesWithoutUndo();
@@ -310,8 +326,10 @@ public static class UIOverhaulSetupEditor
         GameObject canvasObj = new("CharacterHpCanvas", typeof(RectTransform), typeof(Canvas));
         canvasObj.transform.SetParent(root, false); canvasObj.transform.localPosition = new(0, -.72f, 0); canvasObj.transform.localScale = Vector3.one * .01f;
         Canvas canvas = canvasObj.GetComponent<Canvas>(); canvas.renderMode = RenderMode.WorldSpace; canvas.sortingOrder = 20;
-        Slider slider = Bar("CharacterHP", canvasObj.transform, Vector2.zero, new(86, 16), new(.1f, .9f, .35f), Ink);
-        TMP_Text hp = Text("HpText", slider.transform, "10/10", 13, Cream, Vector2.zero, new(82, 22), TextAlignmentOptions.Center);
+        Slider slider = Bar("CharacterHP", canvasObj.transform, Vector2.zero, new(104, 24), new(.1f, .9f, .35f), Ink);
+        TMP_Text hp = Text("HpText", slider.transform, "10/10", 14, Ink, Vector2.zero, new(98, 26), TextAlignmentOptions.Center);
+        hp.outlineColor = Cream;
+        hp.outlineWidth = .2f;
         CharacterHpBar bar = slider.gameObject.AddComponent<CharacterHpBar>(); SerializedObject so = new(bar);
         Ref(so, "_slider", slider); Ref(so, "_hpText", hp); Ref(so, "_orientationRoot", canvasObj.transform);
         so.ApplyModifiedPropertiesWithoutUndo();

@@ -3,6 +3,8 @@ using UnityEngine;
 [ExecuteAlways]
 public class WallFitter : MonoBehaviour
 {
+    private const float MinimumLaunchClearance = 0.35f;
+
     [SerializeField] private Camera _targetCamera;
     [SerializeField] private SpriteRenderer _backgroundSpriteRenderer;
     [SerializeField] private Transform _wallLeft;
@@ -13,8 +15,8 @@ public class WallFitter : MonoBehaviour
     [SerializeField] private float _nativeLeftX = -6.5f;
     [SerializeField] private float _nativeRightX = 6.3f;
     [SerializeField] private float _nativeTopY = 6.0f;
-    [SerializeField] private float _nativeBottomY = -6.5f;
-    [SerializeField] private float _nativeLaunchPointY = -6.5f;
+    [SerializeField] private float _nativeBottomY = -7.5f;
+    [SerializeField] private float _nativeLaunchPointY = -6.7f;
     [SerializeField] private float _zoomFactor = 0.5f;
     [SerializeField] private float _cellAspectCorrection = 1.647f;
     [SerializeField] private float _gridAreaWidth = 14.53f;
@@ -49,8 +51,12 @@ public class WallFitter : MonoBehaviour
         SetX(_wallLeft, _nativeLeftX * scaleX);
         SetX(_wallRight, _nativeRightX * scaleX);
         SetY(_wallTop, _nativeTopY * scaleY);
-        SetY(_ground, _nativeBottomY * scaleY);
-        SetY(_launchPoint, _nativeLaunchPointY * scaleY);
+        float groundY = _nativeBottomY * scaleY;
+        float launchPointY = _nativeLaunchPointY * scaleY;
+        launchPointY = Mathf.Max(launchPointY, groundY + MinimumLaunchClearance);
+
+        SetY(_ground, groundY);
+        SetY(_launchPoint, launchPointY);
     }
 
     private static void SetX(Transform t, float x)

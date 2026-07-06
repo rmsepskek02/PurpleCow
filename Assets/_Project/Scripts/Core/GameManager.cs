@@ -18,12 +18,14 @@ public class GameManager : Singleton<GameManager>
 
     public void StartGame()
     {
+        Time.timeScale = 1f;
         CurrentState = GameState.Playing;
         OnGameStateChanged?.Invoke(CurrentState);
     }
 
     public void EndGame(bool isSuccess)
     {
+        Time.timeScale = 0f;
         IsLastGameSuccess = isSuccess;
         CurrentState = GameState.Result;
         OnGameStateChanged?.Invoke(CurrentState);
@@ -31,6 +33,7 @@ public class GameManager : Singleton<GameManager>
 
     public void RestartGame()
     {
+        Time.timeScale = 1f;
         CurrentState = GameState.Ready;
         OnGameStateChanged?.Invoke(CurrentState);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);

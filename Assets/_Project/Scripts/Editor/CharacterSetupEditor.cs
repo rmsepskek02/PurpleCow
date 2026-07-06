@@ -124,15 +124,18 @@ public static class CharacterSetupEditor
             return;
         }
 
-        if (launchPointObj.transform.Find("Character") != null)
+        Transform existingCharacter = launchPointObj.transform.Find("Character");
+        if (existingCharacter != null)
         {
-            Debug.Log("[CharacterSetupEditor] LaunchPoint 자식에 Character가 이미 존재, 스킵.");
+            existingCharacter.localPosition = new Vector3(0f, -0.4f, 0f);
+            EditorUtility.SetDirty(existingCharacter);
+            Debug.Log("[CharacterSetupEditor] 기존 Character 위치를 LaunchPoint 아래로 보정 완료.");
             return;
         }
 
         GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         instance.transform.SetParent(launchPointObj.transform, false);
-        instance.transform.localPosition = Vector3.zero;
+        instance.transform.localPosition = new Vector3(0f, -0.4f, 0f);
 
         Debug.Log("[CharacterSetupEditor] Character를 LaunchPoint 자식으로 배치 완료.");
     }
