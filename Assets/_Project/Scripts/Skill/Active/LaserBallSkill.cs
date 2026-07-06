@@ -1,6 +1,6 @@
 public class LaserBallSkill : BallSkillBase
 {
-    public LaserBallSkill(SkillData skillData) : base(skillData) { }
+    public LaserBallSkill(SkillRuntimeState state) : base(state) { }
 
     public override void OnBallHit(MonsterBase target)
     {

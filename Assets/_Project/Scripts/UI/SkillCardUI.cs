@@ -30,8 +30,10 @@ public class SkillCardUI : MonoBehaviour
         _selectButton.onClick.RemoveListener(HandleSelectClicked);
     }
 
-    public void Setup(SkillData data, Action<SkillData> onSelected)
+    public void Setup(SkillData data, SkillRuntimeState state, Action<SkillData> onSelected)
     {
+        bool isNew = state == null;
+        int nextLevelIndex = isNew ? 0 : Mathf.Min(state.LevelIndex + 1, data.MaxLevel - 1);
         _currentData          = data;
         _onSelected           = onSelected;
         _iconImage.sprite     = data.Icon;
@@ -45,11 +47,9 @@ public class SkillCardUI : MonoBehaviour
                 ? new Color(0.38f, 0.16f, 0.16f)
                 : new Color(0.14f, 0.36f, 0.37f);
         if (_newText != null)
-            _newText.text = data.CurrentLevel == 0 ? "New!" : string.Empty;
+            _newText.text = isNew ? "New!" : string.Empty;
         if (_levelText != null)
-            _levelText.text = data.CurrentLevel >= data.MaxLevel - 1
-                ? "Max"
-                : $"Lv.{data.CurrentLevel + 1}";
+            _levelText.text = $"Lv.{nextLevelIndex + 1}";
 
         bool isActive = data.SkillType == SkillType.Active;
         if (_damageRoot != null)
@@ -59,7 +59,7 @@ public class SkillCardUI : MonoBehaviour
             if (_damageRoot == null)
                 _damageText.gameObject.SetActive(isActive);
             if (isActive)
-                _damageText.text = data.CurrentLevelData.BallDamage.ToString("0");
+                _damageText.text = data.GetLevelData(nextLevelIndex).BallDamage.ToString("0");
         }
     }
 

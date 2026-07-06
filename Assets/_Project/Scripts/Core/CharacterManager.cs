@@ -4,7 +4,9 @@ using UnityEngine;
 public class CharacterManager : Singleton<CharacterManager>
 {
     [SerializeField] private int   _maxHp = 10;
-    [SerializeField] private int[] _xpPerLevel = { 10, 20, 30 };
+    [SerializeField] private int   _maxLevel = 19;
+    [SerializeField] private int   _firstRequiredXp = 50;
+    [SerializeField] private int   _requiredXpIncreasePerLevel = 18;
 
     private int _currentHp;
     private int _currentXp;
@@ -14,8 +16,9 @@ public class CharacterManager : Singleton<CharacterManager>
     public int MaxHp => _maxHp;
     public int CurrentXp => _currentXp;
     public int CurrentLevel => _currentLevel;
-    public int RequiredXp =>
-        _currentLevel - 1 < _xpPerLevel.Length ? _xpPerLevel[_currentLevel - 1] : 0;
+    public int RequiredXp => _currentLevel < _maxLevel
+        ? _firstRequiredXp + (_currentLevel - 1) * _requiredXpIncreasePerLevel
+        : 0;
 
     public static event Action<int, int> OnHpChanged;
     public static event Action<int, int> OnXpChanged;

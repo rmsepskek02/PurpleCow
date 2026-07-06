@@ -1,14 +1,14 @@
 public class WarmTinHeartPassive : PassiveSkillBase
 {
-    public WarmTinHeartPassive(SkillData data) : base(data) { }
+    public WarmTinHeartPassive(SkillRuntimeState state) : base(state) { }
 
     public override void Apply()
     {
-        SkillManager.Instance.AddDamageMultiplier(LevelData.Value1);
+        SkillManager.Instance.AddNormalBallDamageMultiplier(LevelData.Value1);
     }
 
     public override void Remove()
     {
-        SkillManager.Instance.RemoveDamageMultiplier(LevelData.Value1);
+        SkillManager.Instance.RemoveNormalBallDamageMultiplier(LevelData.Value1);
     }
 }

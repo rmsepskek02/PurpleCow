@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class IceBallSkill : BallSkillBase
 {
-    public IceBallSkill(SkillData skillData) : base(skillData) { }
+    public IceBallSkill(SkillRuntimeState state) : base(state) { }
 
     public override void OnBallHit(MonsterBase target)
     {

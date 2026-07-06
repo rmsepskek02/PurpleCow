@@ -1,10 +1,15 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class MonsterBase : MonoBehaviour, IPoolable
 {
+    private struct DotStack
+    {
+        public float DamagePerSecond;
+        public float RemainingSeconds;
+    }
+
     private static readonly Dictionary<BlockSize, Vector2> ColliderSizeMap = new Dictionary<BlockSize, Vector2>
     {
         { BlockSize.OneByOne, new Vector2(0.96f, 0.96f) },
@@ -27,7 +32,8 @@ public class MonsterBase : MonoBehaviour, IPoolable
     private float _frozenSecondsRemaining;
     private float _slowSecondsRemaining;
     private float _slowPercent;
-    private float _bonusCritChance;
+    private readonly List<DotStack> _dotStacks = new List<DotStack>();
+    private float _dotTickTimer;
 
     public float CurrentHp    => _currentHp;
     public bool  IsAlive      => !_isDead;
@@ -44,7 +50,8 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _frozenSecondsRemaining = 0f;
         _slowSecondsRemaining   = 0f;
         _slowPercent            = 0f;
-        _bonusCritChance        = 0f;
+        _dotStacks.Clear();
+        _dotTickTimer           = 0f;
         ApplyBlockSize();
         OnHpChanged?.Invoke(_currentHp, _monsterData.Hp);
     }
@@ -80,6 +87,8 @@ public class MonsterBase : MonoBehaviour, IPoolable
     public void OnDespawn()
     {
         _isDead = true;
+        _dotStacks.Clear();
+        _dotTickTimer = 0f;
     }
 
     public void TakeDamage(float damage)
@@ -113,32 +122,51 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _slowPercent = percent;
     }
 
-    public void ApplyBonusCritChance(float bonus)
-    {
-        _bonusCritChance += bonus;
-    }
-
-    public float ConsumeBonusCritChance()
-    {
-        float val = _bonusCritChance;
-        _bonusCritChance = 0f;
-        return val;
-    }
-
     public void ApplyDot(float damagePerSec, float duration, int maxStacks)
     {
-        StartCoroutine(CoDotTick(damagePerSec, duration, maxStacks));
+        if (_isDead || damagePerSec <= 0f || duration <= 0f || maxStacks <= 0)
+            return;
+
+        if (_dotStacks.Count >= maxStacks)
+            _dotStacks.RemoveAt(0);
+
+        _dotStacks.Add(new DotStack
+        {
+            DamagePerSecond = damagePerSec,
+            RemainingSeconds = duration,
+        });
     }
 
-    private IEnumerator CoDotTick(float dps, float duration, int stacks)
+    private void UpdateDot(float deltaTime)
     {
-        float elapsed = 0f;
-        while (elapsed < duration)
+        if (_dotStacks.Count == 0)
+            return;
+
+        _dotTickTimer += deltaTime;
+        for (int i = 0; i < _dotStacks.Count; i++)
         {
-            yield return new WaitForSeconds(1f);
-            elapsed += 1f;
-            TakeDamage(dps * stacks);
+            DotStack stack = _dotStacks[i];
+            stack.RemainingSeconds -= deltaTime;
+            _dotStacks[i] = stack;
         }
+
+        while (_dotTickTimer >= 1f && !_isDead)
+        {
+            _dotTickTimer -= 1f;
+            float tickDamage = 0f;
+            for (int i = 0; i < _dotStacks.Count; i++)
+            {
+                if (_dotStacks[i].RemainingSeconds >= 0f)
+                    tickDamage += _dotStacks[i].DamagePerSecond;
+            }
+
+            if (tickDamage > 0f)
+                TakeDamage(tickDamage);
+        }
+
+        _dotStacks.RemoveAll(stack => stack.RemainingSeconds < 0f);
+        if (_dotStacks.Count == 0)
+            _dotTickTimer = 0f;
     }
 
     private void Update()
@@ -147,6 +175,10 @@ public class MonsterBase : MonoBehaviour, IPoolable
             return;
 
         float deltaTime = Time.deltaTime;
+        UpdateDot(deltaTime);
+
+        if (_slowSecondsRemaining > 0f)
+            _slowSecondsRemaining -= deltaTime;
 
         if (_frozenSecondsRemaining > 0f)
         {
@@ -159,7 +191,6 @@ public class MonsterBase : MonoBehaviour, IPoolable
         if (_slowSecondsRemaining > 0f)
         {
             speed *= (1f - _slowPercent);
-            _slowSecondsRemaining -= deltaTime;
         }
 
         transform.position += Vector3.down * speed * deltaTime;

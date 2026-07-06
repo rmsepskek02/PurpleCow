@@ -1,19 +1,14 @@
 public class EmeraldDaggerPassive : PassiveSkillBase
 {
-    public EmeraldDaggerPassive(SkillData data) : base(data) { }
+    public EmeraldDaggerPassive(SkillRuntimeState state) : base(state) { }
 
     public override void Apply()
     {
-        Ball.OnHitMonsterBack += HandleBackHit;
+        SkillManager.Instance.AddBackHitCriticalChance(LevelData.Value1);
     }
 
     public override void Remove()
     {
-        Ball.OnHitMonsterBack -= HandleBackHit;
-    }
-
-    private void HandleBackHit(MonsterBase target)
-    {
-        target.ApplyBonusCritChance(LevelData.Value1);
+        SkillManager.Instance.RemoveBackHitCriticalChance(LevelData.Value1);
     }
 }

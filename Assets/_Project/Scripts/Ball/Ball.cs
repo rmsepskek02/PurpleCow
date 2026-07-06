@@ -10,11 +10,16 @@ public class Ball : MonoBehaviour, IPoolable
 
     private Rigidbody2D          _rigidbody;
     private Collider2D           _collider;
+    private SpriteRenderer       _spriteRenderer;
+    private Sprite               _normalBallSprite;
     private bool                 _isActive;
     private bool                 _isReturning;
     private List<BallSkillBase>  _skills = new List<BallSkillBase>();
+    private SkillRuntimeState    _skillState;
+    private bool                 _isSpecialBall;
     private int                  _remainingBounces;
     private float                _subBallDamageOverride;
+    private float                _nextHitDamageMultiplier;
     private float                _speedMultiplier = 1f;
     private bool                 _isClone;
     private int                  _remainingCloneReturns;
@@ -24,14 +29,14 @@ public class Ball : MonoBehaviour, IPoolable
     public bool    IsClone         => _isClone;
 
     public static event Action<MonsterBase, float, bool> OnHitMonster;
-    public static event Action                    OnWallHit;
-    public static event Action<MonsterBase>       OnHitMonsterFront;
-    public static event Action<MonsterBase>       OnHitMonsterBack;
+    public static event Action<Ball> OnWallHit;
 
     private void Awake()
     {
         _rigidbody = GetComponent<Rigidbody2D>();
         _collider  = GetComponent<Collider2D>();
+        _spriteRenderer = GetComponent<SpriteRenderer>();
+        _normalBallSprite = _spriteRenderer.sprite;
     }
 
     public void OnSpawn()
@@ -40,10 +45,15 @@ public class Ball : MonoBehaviour, IPoolable
         _isReturning            = false;
         _remainingBounces      = _ballData.MaxBounces;
         _subBallDamageOverride = 0f;
+        _nextHitDamageMultiplier = 0f;
+        _skillState            = null;
+        _isSpecialBall         = false;
         _speedMultiplier       = 1f;
         _isClone               = false;
         _remainingCloneReturns = 0;
         _skills.Clear();
+        _collider.isTrigger = false;
+        _spriteRenderer.sprite = _normalBallSprite;
         _rigidbody.linearVelocity = Vector2.zero;
     }
 
@@ -100,22 +110,17 @@ public class Ball : MonoBehaviour, IPoolable
         {
             if (collision.gameObject.TryGetComponent<MonsterBase>(out MonsterBase monster))
             {
-                CalculateDamage(monster);
+                Vector2 vel = _rigidbody.linearVelocity.normalized;
+                CalculateDamage(monster, vel.y < 0f);
 
                 // 전면/후면 판정 — 볼 이동 방향이 아래(velocity.y < 0)면 전면 타격
-                Vector2 vel = _rigidbody.linearVelocity.normalized;
-                if (vel.y < 0f)
-                    OnHitMonsterFront?.Invoke(monster);
-                else
-                    OnHitMonsterBack?.Invoke(monster);
-
                 foreach (var skill in _skills)
                     skill.OnBallHit(monster);
             }
         }
         else if (collision.gameObject.CompareTag("Wall"))
         {
-            OnWallHit?.Invoke();
+            OnWallHit?.Invoke(this);
 
             // 이미 귀환 중인 볼은 반사 카운트를 건드리지 않고 LaunchPoint 방향으로 재조준만 한다.
             if (_isReturning)
@@ -155,18 +160,26 @@ public class Ball : MonoBehaviour, IPoolable
         {
             if (other.TryGetComponent<MonsterBase>(out MonsterBase monster))
             {
-                CalculateDamage(monster);
+                Vector2 vel = _rigidbody.linearVelocity.normalized;
+                CalculateDamage(monster, vel.y < 0f);
                 foreach (var skill in _skills)
                     skill.OnBallHit(monster);
             }
         }
     }
 
-    private void CalculateDamage(MonsterBase target)
+    private void CalculateDamage(MonsterBase target, bool isFrontHit)
     {
-        float baseDamage = _subBallDamageOverride > 0f ? _subBallDamageOverride : _ballData.Damage;
+        float baseDamage = _subBallDamageOverride > 0f
+            ? _subBallDamageOverride
+            : _skillState != null
+                ? _skillState.CurrentLevelData.BallDamage
+                : _ballData.Damage;
 
-        float critChance = _ballData.CriticalChance + target.ConsumeBonusCritChance();
+        float directionalCritBonus = isFrontHit
+            ? SkillManager.Instance.FrontHitCriticalChanceBonus
+            : SkillManager.Instance.BackHitCriticalChanceBonus;
+        float critChance = Mathf.Clamp01(_ballData.CriticalChance + directionalCritBonus);
         bool  isCritical = UnityEngine.Random.value < critChance;
 
         float critMultiplier = _ballData.CriticalMultiplier;
@@ -174,8 +187,14 @@ public class Ball : MonoBehaviour, IPoolable
             ? baseDamage * critMultiplier
             : baseDamage;
 
-        damage *= (1f + SkillManager.Instance.DamageMultiplierBonus);
-        damage += SkillManager.Instance.ConsumeNextShotDamageBonus();
+        if (!_isSpecialBall)
+            damage *= 1f + SkillManager.Instance.NormalBallDamageMultiplierBonus;
+
+        if (_nextHitDamageMultiplier > 0f)
+        {
+            damage *= 1f + _nextHitDamageMultiplier;
+            _nextHitDamageMultiplier = 0f;
+        }
 
         LastDamage = damage;
         target.TakeDamage(damage);
@@ -189,9 +208,26 @@ public class Ball : MonoBehaviour, IPoolable
         skill.OnActivate();
     }
 
-    public void SetSubBallDamage(float damage)
+    public void ConfigureSkillBall(SkillRuntimeState state)
     {
+        _skillState = state;
+        _isSpecialBall = state != null;
+        _spriteRenderer.sprite = state?.Data.BallSprite != null
+            ? state.Data.BallSprite
+            : _normalBallSprite;
+    }
+
+    public void ConfigureSubBall(float damage, Sprite sprite)
+    {
+        _skillState = null;
+        _isSpecialBall = true;
         _subBallDamageOverride = damage;
+        _spriteRenderer.sprite = sprite != null ? sprite : _normalBallSprite;
+    }
+
+    public void AddNextHitDamageMultiplier(float value)
+    {
+        _nextHitDamageMultiplier += Mathf.Max(0f, value);
     }
 
     public void SetSpeedMultiplier(float multiplier)

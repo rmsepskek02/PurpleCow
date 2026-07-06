@@ -1,6 +1,6 @@
 public class MagicMirrorPassive : PassiveSkillBase
 {
-    public MagicMirrorPassive(SkillData data) : base(data) { }
+    public MagicMirrorPassive(SkillRuntimeState state) : base(state) { }
 
     public override void Apply()
     {
@@ -12,8 +12,8 @@ public class MagicMirrorPassive : PassiveSkillBase
         Ball.OnWallHit -= HandleWallHit;
     }
 
-    private void HandleWallHit()
+    private void HandleWallHit(Ball ball)
     {
-        SkillManager.Instance.AddNextShotDamageBonus(LevelData.Value1);
+        ball.AddNextHitDamageMultiplier(LevelData.Value1);
     }
 }

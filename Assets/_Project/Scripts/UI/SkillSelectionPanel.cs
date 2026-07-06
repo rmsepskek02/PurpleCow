@@ -30,7 +30,6 @@ public class SkillSelectionPanel : MonoBehaviour
     private void OnEnable()
     {
         CharacterManager.OnLevelUp += OpenPanel;
-        GameManager.OnGameStateChanged  += HandleGameStateChanged;
         SkillManager.OnActiveSkillsChanged  += HandleActiveSkillsChanged;
         SkillManager.OnPassiveSkillsChanged += HandlePassiveSkillsChanged;
     }
@@ -38,7 +37,6 @@ public class SkillSelectionPanel : MonoBehaviour
     private void OnDisable()
     {
         CharacterManager.OnLevelUp -= OpenPanel;
-        GameManager.OnGameStateChanged  -= HandleGameStateChanged;
         SkillManager.OnActiveSkillsChanged  -= HandleActiveSkillsChanged;
         SkillManager.OnPassiveSkillsChanged -= HandlePassiveSkillsChanged;
     }
@@ -48,15 +46,6 @@ public class SkillSelectionPanel : MonoBehaviour
 
     private void HandlePassiveSkillsChanged(List<PassiveSkillBase> skills)
         => _passiveSlotGroup.UpdatePassiveSlots(skills);
-
-    private void HandleGameStateChanged(GameManager.GameState state)
-    {
-        if (state != GameManager.GameState.Ready)
-            return;
-
-        foreach (var data in _allSkillDatas)
-            data.ResetLevel();
-    }
 
     private void OpenPanel(int newLevel)
     {
@@ -85,7 +74,11 @@ public class SkillSelectionPanel : MonoBehaviour
             if (i < candidates.Count)
             {
                 _skillCards[i].SetVisible(true);
-                _skillCards[i].Setup(candidates[i], OnSkillSelected);
+                SkillData data = candidates[i];
+                SkillRuntimeState state = data.SkillType == SkillType.Active
+                    ? SkillManager.Instance.GetActiveSkillState(data.SkillId)
+                    : SkillManager.Instance.GetPassiveSkillState(data.SkillId);
+                _skillCards[i].Setup(data, state, OnSkillSelected);
             }
             else
             {
@@ -99,24 +92,23 @@ public class SkillSelectionPanel : MonoBehaviour
         var pool = new List<SkillData>();
         var sm = SkillManager.Instance;
 
-        var activeSkillIds  = sm.ActiveSkillIds;
-        var passiveSkillIds = sm.PassiveSkillIds;
-
         foreach (var data in _allSkillDatas)
         {
             if (data.SkillType == SkillType.Active)
             {
-                bool owned = activeSkillIds.Contains(data.SkillId);
+                SkillRuntimeState state = sm.GetActiveSkillState(data.SkillId);
+                bool owned = state != null;
                 if (owned)
-                { if (data.CurrentLevel < data.MaxLevel - 1) pool.Add(data); }
+                { if (!state.IsMaxLevel) pool.Add(data); }
                 else
                 { if (sm.CanEquipActive) pool.Add(data); }
             }
             else
             {
-                bool owned = passiveSkillIds.Contains(data.SkillId);
+                SkillRuntimeState state = sm.GetPassiveSkillState(data.SkillId);
+                bool owned = state != null;
                 if (owned)
-                { if (data.CurrentLevel < data.MaxLevel - 1) pool.Add(data); }
+                { if (!state.IsMaxLevel) pool.Add(data); }
                 else
                 { if (sm.CanEquipPassive) pool.Add(data); }
             }
@@ -134,18 +126,15 @@ public class SkillSelectionPanel : MonoBehaviour
     {
         if (data.SkillType == SkillType.Active)
         {
-            BallSkillBase skill = SkillFactory.CreateActiveSkill(data);
-            bool isNewSkill = SkillManager.Instance.EquipActiveSkill(skill);
-            // 신규 타입 선택 시에만 로스터에 볼이 1개 추가된다. 기존 타입 재선택은 레벨업만 반영되며
-            // (SkillData.CurrentLevel이 이미 갱신되어 로스터가 재발사 시 자동으로 최신 레벨을 참조),
-            // 볼 개수는 늘지 않는다.
+            bool isNewSkill = SkillManager.Instance.EquipActiveSkill(data, out SkillRuntimeState state);
+            // 신규 타입 선택 시에만 로스터에 볼이 1개 추가된다.
+            // 재선택은 로스터가 공유하는 SkillRuntimeState만 레벨업하므로 볼 개수는 늘지 않는다.
             if (isNewSkill)
-                BallLauncher.Instance.AddBallToRoster(data);
+                BallLauncher.Instance.AddBallToRoster(state);
         }
         else
         {
-            PassiveSkillBase skill = SkillFactory.CreatePassiveSkill(data);
-            SkillManager.Instance.AddPassiveSkill(skill);
+            SkillManager.Instance.AddPassiveSkill(data);
         }
     }
 
