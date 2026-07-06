@@ -1466,3 +1466,27 @@
 - 상태 틴트 활성 판정은 기존 `UpdateStatusVisual()`의 로직을 그대로 재사용 (새 판정 기준을 만들지 않음)
 - 이는 테스트/검증 목적의 값이며, 실기기 확인 후 최종 값은 추가 조정될 수 있음
 - git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)
+
+---
+
+## 2026-07-06 — 히트 플래시 방식 전면 교체: 오버브라이트 틴트 → 흰색 실루엣 오버레이 SpriteRenderer (사용자 명시 승인: "진행해보자")
+
+**작업 내용:** 신규 파일 1개 생성 + `MonsterBase.cs` 수정.
+
+1. **신규:** `Assets/_Project/Shaders/SpriteFlashOverlay.shader` — `Assets/_Project/Shaders/` 폴더가 없어 신규 생성. URP 호환 HLSL, `TEXTURE2D(_MainTex)`로 텍스처 알파만 마스크로 사용하고 색상은 항상 균일한 `_Color * vertex color`로 채우는 "실루엣 플래시" 셰이더. `Blend SrcAlpha OneMinusSrcAlpha`, `Queue=Transparent`.
+2. `Assets/_Project/Scripts/Monster/MonsterBase.cs`:
+   - `_hitFlashColor` 기본값을 `(8,8,8,1)` 오버브라이트 → `Color.white`로 되돌림 (`_hitFlashDuration=0.4f`는 그대로 유지)
+   - `_flashOverlayMaterial`(static Material) / `_flashOverlayRenderer`(SpriteRenderer) 필드 추가
+   - `Awake()`에 `CreateFlashOverlay()` 호출 추가 — 자식 GameObject("FlashOverlay") 생성, 몸체 스프라이트와 동일 sprite/sortingLayer 사용하되 `sortingOrder+1`로 위에 렌더, `Shader.Find("PurpleCow/SpriteFlashOverlay")`로 static 공유 머티리얼 1회 생성, 초기 알파 0
+   - `UpdateStatusVisual()` 수정 — `_spriteRenderer.color`는 이제 상태 틴트(statusColor)만 담당(플래시로 덮어쓰지 않음), 플래시는 `_flashOverlayRenderer.color`의 알파(0 또는 1)로 표현
+   - `OnSpawn()`에 오버레이 알파 리셋(0) 추가 — 풀 재사용 시 이전 플래시 상태 잔존 방지
+
+**배경:** 오버브라이트 (3,3,3,1)→(8,8,8,1)로 올려도 실기기에서 전혀 변화 없었던 근본 원인이 진단됨 — `SpriteRenderer.color`는 스프라이트 메쉬 정점 색상으로 저장되며 0~1 범위로 클램핑되므로, 1을 넘는 값은 전부 1로 잘려 기본 흰색과 완전히 동일해져 아무 효과가 없었음. 곱하기(tint) 방식을 포기하고, 몬스터 위에 흰색 실루엣을 그리는 별도 오버레이 SpriteRenderer를 자식으로 두어 피격 시에만 알파를 올리는 방식으로 전면 교체. 얼음/화상 지속 틴트(`_freezeTintColor`/`_burnTintColor`)는 0~1 범위 안에서만 쓰여 클램핑 문제가 없어 기존 `_spriteRenderer.color` 곱하기 방식 그대로 유지.
+
+**검증:** 수정 전 `MonsterBase.cs` 전체를 Read로 확인 → Shaders 폴더 부재 확인 → Write(셰이더 신규)/Edit(MonsterBase.cs 4곳: 필드 추가, 기본값 복원, Awake+CreateFlashOverlay, OnSpawn 리셋, UpdateStatusVisual 분리) 수행 → 수정 후 전체 파일 재확인, 스펙과 정확히 일치함을 확인.
+
+**주요 결정사항:**
+- `TakeDamage()`의 상태이상 중 플래시 생략 로직(`hasActiveStatusTint` 체크)은 이번 작업 범위 밖 — 손대지 않고 그대로 유지
+- Unity 에디터가 원격 환경에 없어 실제 셰이더 컴파일/렌더링 결과는 검증 불가 — C#/ShaderLab 문법 정확성만 최대한 꼼꼼히 검토함, 실기기/에디터에서 셰이더 컴파일 여부 및 오버레이가 정확히 몸체 위에 겹쳐 보이는지는 사용자 확인 필요
+- `Assets/_Project/Shaders/SpriteFlashOverlay.shader`와 `MonsterBase.cs` 외 다른 파일은 건드리지 않음
+- git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)
