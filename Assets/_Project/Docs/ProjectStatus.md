@@ -120,5 +120,8 @@
 - [x] 얼음/화상 지속 중 플래시를 생략하던 원래 방침을, 오버레이 분리 이후 틴트를 가리는 문제가 사라져 상태이상 지속 중에도 항상 플래시가 뜨도록 최종 변경
 - [x] `_hitFlashColor`/`_hitFlashDuration`/`_freezeTintColor`/`_burnTintColor` 4개 값을 `[SerializeField]`로 노출, `_hitFlashDuration`은 테스트 중 0.4초로 상향
 - [x] 실기기 빌드로 히트 플래시(몸체+발판), 얼음 틴트, 화상 틴트 모두 정상 동작 확인
+- [x] 실기기 재검증 중 흰색 히트 플래시만 전혀 보이지 않는 회귀 발견 — HP바는 정상 반응해 `TakeDamage()` 로직 자체는 문제없이 실행되고 있었고, 원인은 코드가 아니라 Unity 빌드 설정으로 확정 진단: 커스텀 셰이더 `Assets/_Project/Shaders/SpriteFlashOverlay.shader`가 어떤 Material 에셋에도 정적으로 연결되지 않고 `MonsterBase.cs`에서 `Shader.Find("PurpleCow/SpriteFlashOverlay")`로만 런타임에 찾는 구조라, 실기기(APK) 빌드 시 "어디서도 정적으로 참조되지 않는 미사용 셰이더"로 간주돼 최종 빌드에서 제외됨(에디터는 프로젝트의 모든 셰이더를 항상 포함하므로 Play 모드에서는 정상 작동, 실기기에서만 재현되는 증상과 정확히 일치)
+- [x] `ProjectSettings/GraphicsSettings.asset`의 Always Included Shaders 목록에 해당 셰이더(`{fileID: 4800000, guid: 07d1d10750f4bd5449e44439088e0b41, type: 3}`)를 추가해 실기기 빌드에도 항상 포함되도록 수정, 코드(.cs)는 전혀 수정하지 않음
+- [x] 사용자가 실기기 재빌드로 직접 테스트해 히트 플래시가 정상적으로 다시 보임을 최종 확인
 
 상세 조사와 구현 계획은 `_Task/2026-07-06/16-20_monster-hit-status-color-fx/`에 기록되어 있습니다.

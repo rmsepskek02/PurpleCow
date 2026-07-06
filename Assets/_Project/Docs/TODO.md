@@ -64,20 +64,6 @@
 
 ---
 
-## 7. 몬스터 피격/상태이상 스프라이트 색상 효과 — 구현 완료 / 실기기 검증 완료
-
-- **구현 내용**: 몬스터가 피격당할 때마다 본체 스프라이트가 흰색으로 짧게 반짝이는 히트 플래시, 아이스볼 냉동/슬로우가 지속되는 동안 본체가 하늘색으로 물드는 틴트, 파이어볼 화상이 지속되는 동안 본체가 붉은주황색으로 물드는 틴트를 구현했다. 얼음과 화상이 같은 몬스터에 동시에 걸리면 나중에 걸린 효과의 색을 적용한다.
-- **오버브라이트 방식 폐기 경위**: 원래 계획(`plan.md`)은 피격 히트 플래시를 `SpriteRenderer.color`에 1보다 큰 값(오버브라이트, 곱하기 틴트)을 줘서 흰색으로 번쩍이게 하는 방식이었다. 그러나 실기기 테스트 결과 오버브라이트 값을 3배→8배로 올려도 전혀 시각적 차이가 없었고, 원인은 `SpriteRenderer.color`가 스프라이트 메쉬의 정점 색상으로 저장되며 0~1 범위로 클램핑되기 때문(1을 넘는 값은 전부 1로 잘림)으로 확정 진단됐다. 즉 곱하기 방식의 오버브라이트 플래시는 애초에 구조적으로 불가능했던 접근이었다.
-- **오버레이 셰이더로 교체**: 완전히 다른 방식으로 교체하기 위해 `Assets/_Project/Shaders/SpriteFlashOverlay.shader`(신규 URP 호환 커스텀 셰이더, 스프라이트 텍스처의 알파만 마스크로 써서 항상 균일한 색을 실루엣으로 그림)를 새로 작성하고, `MonsterBase.cs`에 몬스터 본체 위에 겹치는 자식 오버레이 `SpriteRenderer`(`_flashOverlayRenderer`)를 런타임에 생성해, 피격 시 이 오버레이의 알파만 0↔1로 전환하는 방식으로 구현했다. 몸체 색(`_spriteRenderer.color`)은 이제 얼음/화상 상태 틴트만 전담하고, 플래시는 이 오버레이가 완전히 분리된 레이어로 전담한다.
-- **범위 확장 및 방향 전환**: 작업 도중 사용자 요청으로 원래 계획에 없던 두 가지가 추가/변경됐다.
-  1. 발판(`BlockVisual`, 몬스터가 밟고 있는 돌판 스프라이트)에도 동일한 흰색 플래시가 뜨도록 확장했다. 원래 plan.md는 "발판은 색상 효과 대상에서 제외"였으나, 오버레이 방식은 상태 틴트와 무관한 별도 레이어라 발판에 적용해도 문제없다고 판단해 확장 적용했다.
-  2. 원래는 얼음/화상 상태 지속 중엔 노말 볼 피격 시 흰색 플래시를 생략하도록 구현했었으나(곱하기 방식일 때는 플래시가 틴트를 가려버리는 문제가 있었음), 오버레이로 분리된 이후엔 그 문제가 없어져서 상태이상 지속 중에도 항상 플래시가 뜨도록 최종 되돌렸다.
-- **Inspector 조정**: 색상 값 4개(`_hitFlashColor`, `_hitFlashDuration`, `_freezeTintColor`, `_burnTintColor`)는 전부 `[SerializeField]`로 노출해 Inspector에서 조정 가능하다. `_hitFlashDuration`은 현재 0.4초(테스트 과정에서 상향된 값, 필요시 나중에 더 짧게 조정 가능).
-- **실기기 검증**: 사용자가 실기기 빌드로 직접 테스트해 히트 플래시(몸체+발판), 얼음 틴트(하늘색), 화상 틴트(붉은주황) 모두 정상 작동함을 확인했다.
-- **비고**: 이번 작업 대화 중 아이스볼 "같은 열 후방 몬스터 정지"(5번 항목)에서 그리드 칸 간격(`_gridCellSize: 0.85`)과 몬스터 콜라이더 폭(`ColliderSizeMap`의 0.96)이 서로 달라 인접 열까지 열 판정이 번지는 버그가 발견됐다. 이번 7번 작업 범위 밖이라 아직 손대지 않았으며, 나중에 별도로 다뤄야 한다.
-
----
-
 ## 8. 레이저볼 가로 행 대미지 텍스트 미표시
 
 - **현재 상태**: `Assets/_Project/Scripts/Skill/Active/LaserBallSkill.cs`의 `OnBallHit(MonsterBase target)`은 `WaveManager.Instance.GetMonstersInRow(target)`으로 같은 가로 행의 몬스터들을 모두 가져온 뒤, 직접 피격한 `target`을 제외한 나머지 몬스터에게 `monster.TakeDamage(LevelData.Value1)`을 직접 호출한다. 반면 대미지 텍스트는 `Assets/_Project/Scripts/UI/DamageTextManager.cs`가 `Ball.OnHitMonster` 정적 이벤트를 구독해서 `HandleHitMonster()` → `ShowDamage()`로 스폰하는 구조인데, 이 이벤트는 `Assets/_Project/Scripts/Ball/Ball.cs`의 `CalculateDamage()` 안에서 `target.TakeDamage(damage)` 직후 `OnHitMonster?.Invoke(target, damage, isCritical)`로 딱 한 번만 발행된다(`OnCollisionEnter2D`/`OnTriggerEnter2D`에서 직접 피격 대상에 대해서만 `CalculateDamage()`가 호출되고, 그 다음에 `foreach (var skill in _skills) skill.OnBallHit(monster)`가 실행됨). 즉 레이저볼의 `OnBallHit()`이 행의 나머지 몬스터에게 가하는 추가 피해는 `MonsterBase.TakeDamage()`만 호출할 뿐 `Ball.OnHitMonster` 이벤트를 전혀 발행하지 않으므로, `DamageTextManager`가 이를 감지하지 못해 직접 피격한 몬스터에게만 대미지 텍스트가 뜨고 같은 행의 나머지 몬스터에게는 텍스트가 뜨지 않는다. 코드로 원인이 명확히 특정됨.
@@ -104,4 +90,4 @@
 
 ## 다음 단계
 
-1·5·6번은 구현과 C# 빌드 검증을 완료했으며 Unity 플레이 검증을 기다리고 있습니다. 7번은 구현과 실기기 검증까지 모두 완료했습니다. 남은 미구현 항목은 2·3·4·8·9·10번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
+1·5·6번은 구현과 C# 빌드 검증을 완료했으며 Unity 플레이 검증을 기다리고 있습니다. 남은 미구현 항목은 2·3·4·8·9·10번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
