@@ -35,6 +35,19 @@ public class MonsterBase : MonoBehaviour, IPoolable
     private readonly List<DotStack> _dotStacks = new List<DotStack>();
     private float _dotTickTimer;
 
+    private SpriteRenderer _spriteRenderer;
+    private Color _baseColor;
+
+    [SerializeField] private Color _hitFlashColor = Color.white;
+    [SerializeField] private float _hitFlashDuration = 0.1f;
+    [SerializeField] private Color _freezeTintColor = new Color(0.53f, 0.81f, 0.98f);
+    [SerializeField] private Color _burnTintColor = new Color(1f, 0.35f, 0.16f);
+
+    private float _flashSecondsRemaining;
+
+    private enum StatusVisualType { None, Ice, Fire }
+    private StatusVisualType _lastStatusVisual;
+
     public float CurrentHp    => _currentHp;
     public bool  IsAlive      => !_isDead;
     public bool  IsFrozen     => _frozenSecondsRemaining > 0f;
@@ -42,6 +55,12 @@ public class MonsterBase : MonoBehaviour, IPoolable
 
     public static event Action<MonsterBase> OnMonsterDied;
     public event Action<float, float> OnHpChanged;
+
+    private void Awake()
+    {
+        _spriteRenderer = GetComponent<SpriteRenderer>();
+        _baseColor = _spriteRenderer.color;
+    }
 
     public void OnSpawn()
     {
@@ -52,6 +71,9 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _slowPercent            = 0f;
         _dotStacks.Clear();
         _dotTickTimer           = 0f;
+        _flashSecondsRemaining  = 0f;
+        _lastStatusVisual       = StatusVisualType.None;
+        _spriteRenderer.color   = _baseColor;
         ApplyBlockSize();
         OnHpChanged?.Invoke(_currentHp, _monsterData.Hp);
     }
@@ -96,6 +118,8 @@ public class MonsterBase : MonoBehaviour, IPoolable
         if (_isDead)
             return;
 
+        _flashSecondsRemaining = _hitFlashDuration;
+
         _currentHp -= damage;
         OnHpChanged?.Invoke(Mathf.Max(_currentHp, 0f), _monsterData.Hp);
 
@@ -114,12 +138,14 @@ public class MonsterBase : MonoBehaviour, IPoolable
     public void ApplyFreeze(float seconds)
     {
         _frozenSecondsRemaining = Mathf.Max(_frozenSecondsRemaining, seconds);
+        _lastStatusVisual = StatusVisualType.Ice;
     }
 
     public void ApplySlow(float seconds, float percent)
     {
         _slowSecondsRemaining = seconds;
         _slowPercent = percent;
+        _lastStatusVisual = StatusVisualType.Ice;
     }
 
     public void ApplyDot(float damagePerSec, float duration, int maxStacks)
@@ -135,6 +161,8 @@ public class MonsterBase : MonoBehaviour, IPoolable
             DamagePerSecond = damagePerSec,
             RemainingSeconds = duration,
         });
+
+        _lastStatusVisual = StatusVisualType.Fire;
     }
 
     private void UpdateDot(float deltaTime)
@@ -177,6 +205,8 @@ public class MonsterBase : MonoBehaviour, IPoolable
         float deltaTime = Time.deltaTime;
         UpdateDot(deltaTime);
 
+        UpdateStatusVisual(deltaTime);
+
         if (_slowSecondsRemaining > 0f)
             _slowSecondsRemaining -= deltaTime;
 
@@ -194,5 +224,25 @@ public class MonsterBase : MonoBehaviour, IPoolable
         }
 
         transform.position += Vector3.down * speed * deltaTime;
+    }
+
+    private void UpdateStatusVisual(float deltaTime)
+    {
+        _flashSecondsRemaining = Mathf.Max(0f, _flashSecondsRemaining - deltaTime);
+
+        bool isIceActive = _frozenSecondsRemaining > 0f || _slowSecondsRemaining > 0f;
+        bool isFireActive = _dotStacks.Count > 0;
+
+        Color statusColor;
+        if (isIceActive && isFireActive)
+            statusColor = (_lastStatusVisual == StatusVisualType.Fire) ? _burnTintColor : _freezeTintColor;
+        else if (isIceActive)
+            statusColor = _freezeTintColor;
+        else if (isFireActive)
+            statusColor = _burnTintColor;
+        else
+            statusColor = _baseColor;
+
+        _spriteRenderer.color = (_flashSecondsRemaining > 0f) ? _hitFlashColor : statusColor;
     }
 }

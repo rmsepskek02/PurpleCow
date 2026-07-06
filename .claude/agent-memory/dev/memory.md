@@ -1408,3 +1408,26 @@
 - 이 원격 환경에는 Unity 에디터가 없어 신규 에디터 메뉴 실행 결과(프리팹 실제 반영)를 직접 검증할 수 없음 — 사용자가 로컬 Unity에서 `PurpleCow/Setup/Monster HP Bar Setup` 메뉴를 실행해야 4개 프리팹에 `CanvasGroup`/`Border`/`Background`/`Fill Area`/`Fill`이 실제로 생성됨
 - Border/Fill 색상(`#5A100F`)과 Background 색상(`#2C2C2C`)은 plan.md에 확정된 RGBA 근사값을 그대로 사용(0.353/0.063/0.059/1, 0.173/0.173/0.173/1)
 - 새로 생성하는 Image 컴포넌트는 모두 `raycastTarget = false`로 설정(HP바는 클릭 대상 아님, 관례적 권장 사항 반영)
+
+---
+
+## 2026-07-06 — 몬스터 피격/상태이상 스프라이트 색상 효과 (16-20_monster-hit-status-color-fx)
+
+**참조 plan.md:** `Assets/_Project/Docs/_Task/2026-07-06/16-20_monster-hit-status-color-fx/plan.md`
+
+**작업 내용:** `Assets/_Project/Scripts/Monster/MonsterBase.cs` 단일 파일만 수정. plan.md 1~7번 단계 코드 스니펫을 그대로 적용.
+
+1. 신규 필드 추가: `_spriteRenderer`, `_baseColor`(캐싱용), `[SerializeField] _hitFlashColor`(기본 흰색)/`_hitFlashDuration`(기본 0.1f)/`_freezeTintColor`(하늘색 `0.53,0.81,0.98`)/`_burnTintColor`(붉은주황 `1,0.35,0.16`), `_flashSecondsRemaining`, `private enum StatusVisualType { None, Ice, Fire }`, `_lastStatusVisual`
+2. 신규 `Awake()` 추가 — `GetComponent<SpriteRenderer>()`(자식 검색 안 하므로 `BlockVisual` 발판 자동 제외)로 본체 스프라이트/원본색 캐싱
+3. `ApplyFreeze()`/`ApplySlow()` 기존 로직 끝에 `_lastStatusVisual = StatusVisualType.Ice;` 한 줄씩 추가
+4. `ApplyDot()` 기존 가드(`_isDead`/`damagePerSec`/`duration`/`maxStacks` 체크)와 스택 추가 로직은 그대로 두고, 가드 통과 후(스택 실제 추가된 경우만) `_lastStatusVisual = StatusVisualType.Fire;` 추가. `UpdateDot()`의 화상 중첩 데미지 계산 로직 자체는 전혀 손대지 않음
+5. `TakeDamage()`에서 `_isDead` 체크 통과 직후 `_flashSecondsRemaining = _hitFlashDuration;` 추가
+6. `Update()`에서 `UpdateDot(deltaTime)` 바로 다음, 슬로우 감소/얼음 조기 `return`보다 앞에 `UpdateStatusVisual(deltaTime);` 호출 추가(얼어있어도 색상은 매 프레임 갱신되도록). 기존 얼음 조기 `return` 순서/동작은 그대로 유지. 신규 private 메서드 `UpdateStatusVisual(float deltaTime)` 구현: 플래시 잔여시간 `Mathf.Max(0f, ...)`로 감소 → 얼음 활성(`_frozenSecondsRemaining>0 || _slowSecondsRemaining>0`)/화상 활성(`_dotStacks.Count>0`) 판정 → 둘 다 활성이면 `_lastStatusVisual`이 가리키는 색 우선, 하나만 활성이면 그 색, 둘 다 비활성이면 `_baseColor` → 플래시 잔여 있으면 그 결과 무시하고 `_hitFlashColor`로 즉시 덮어씀(트윈 없음)
+7. `OnSpawn()`에 `_flashSecondsRemaining = 0f;`, `_lastStatusVisual = StatusVisualType.None;`, `_spriteRenderer.color = _baseColor;` 리셋 3줄 추가(기존 `_dotStacks.Clear()`/`_dotTickTimer=0f`는 그대로 유지)
+
+**검증:** 수정 후 파일 전체를 재확인. `UpdateDot()` 로직 미변경, `Update()` 얼음 조기 `return` 순서 유지, plan.md 스니펫과 100% 일치 확인. Unity 에디터가 원격 환경에 없어 실제 플레이 테스트는 불가 — C# 문법/로직 검토로만 확인.
+
+**주요 결정사항:**
+- plan.md가 이미 origin/main 병합 이후 최신 구조(`_dotStacks` 리스트 + `UpdateDot()`)에 맞춰 사전 검증된 문서였으므로 별도 설계 판단 없이 스니펫을 그대로 적용
+- `MonsterBase.cs` 외 다른 파일(프리팹, 에디터 스크립트 등)은 전혀 건드리지 않음
+- git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)
