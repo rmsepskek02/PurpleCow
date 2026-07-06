@@ -57,6 +57,20 @@
 
 ---
 
+## 7. 몬스터 피격/상태이상 스프라이트 색상 효과
+
+- **현재 상태**: `Assets/_Project/Scripts/Monster/MonsterBase.cs`에는 `SpriteRenderer` 참조도, 피격 시 색상 변화 로직도 전혀 없음. 얼음 효과는 `_frozenSecondsRemaining`/`_slowSecondsRemaining` 필드로 지속시간을 추적하고 있지만(`ApplyFreeze()`/`ApplySlow()`), 화상 효과(`ApplyDot()`)는 `CoDotTick()` 코루틴 내부의 지역 변수로만 지속시간을 다루고 있어 "지금 화상 중인지"를 몬스터 상태로 조회할 방법이 현재 없음(얼음과 달리 지속시간을 필드로 추적하지 않음). 몬스터 프리팹(`Assets/_Project/Prefabs/Monster/Fluffy.prefab` 확인) 구조상 몬스터 본체 스프라이트(루트 오브젝트, 예: "Fluffy")와 몬스터가 밟고 있는 발판/돌판 스프라이트(자식 오브젝트 "BlockVisual")가 별도의 `SpriteRenderer`로 이미 분리되어 있음. `Assets/_Project/Scripts/Skill/Active/FireBallSkill.cs`(화상)와 `Assets/_Project/Scripts/Skill/Active/IceBallSkill.cs`(냉동/슬로우)가 각각 `MonsterBase.ApplyDot()`/`ApplyFreeze()`+`ApplySlow()`를 호출하는 구조.
+- **확정된 목표**:
+  1. 몬스터가 피격당할 때마다 본체 스프라이트가 흰색으로 아주 짧게 반짝인다(hit flash).
+  2. 아이스볼 효과(냉동/슬로우)가 지속되는 동안에는 본체 스프라이트가 하늘색 계열로 물든다.
+  3. 파이어볼 효과(화상 DOT)가 지속되는 동안에는 본체 스프라이트가 붉은주황색 계열로 물든다.
+  4. 얼음과 화상이 같은 몬스터에 동시에 걸리는 경우, 나중에 걸린 효과의 색을 적용한다(먼저 걸려 있던 효과의 색은 덮어쓴다).
+  5. 지속효과가 모두 끝나면 원래 색(기본 스프라이트 색)으로 돌아간다.
+  6. 몬스터가 밟고 있는 발판(돌판, `BlockVisual` 스프라이트)에는 이 색상 효과가 적용되지 않는다 — 몬스터 본체 스프라이트에만 적용한다.
+- **비고**: 화상 상태를 얼음처럼 지속시간 기준으로 조회 가능한 필드(예: `_burnSecondsRemaining`)로 새로 추적해야 할 것으로 보인다(현재는 코루틴 로컬 변수뿐이라 외부에서 "화상 중인지" 알 수 없음). 정확한 색상 값(하늘색/붉은주황 RGB)과 흰색 피격 플래시 지속시간(예: 0.1초 등)은 구현 착수 시점에 결정한다.
+
+---
+
 ## 다음 단계
 
-위 6개 항목은 아직 어느 것도 구현되지 않은 상태입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
+위 7개 항목은 아직 어느 것도 구현되지 않은 상태입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
