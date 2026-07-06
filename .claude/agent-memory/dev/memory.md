@@ -1536,3 +1536,63 @@
 **주요 결정사항:**
 - plan.md에서 이미 확정된 대로 부가/DoT 대미지 텍스트는 일반 피해와 시각적 구분 없이 표시(별도 색상/스타일 파라미터 추가하지 않음)
 - git commit/push는 실행하지 않음(사용자가 나중에 별도 결정)
+
+---
+
+## 2026-07-06 — 몬스터 이동 겹침/관통 버그 research.md 작성 (코드 수정 없음)
+
+**작업 내용:** TODO.md 5번("아이스볼 및 몬스터 이동 겹침 방지")이 구현 완료로 표시돼 있었으나 사용자가 실제 플레이에서 (1) 1×1끼리 겹침, (2) 1×1과 2칸짜리 겹침, (3) 빙결된 몬스터를 뒤 몬스터가 관통하는 현상 3가지를 재발견함에 따라, `Assets/_Project/Docs/_Task/2026-07-06/21-25_monster-overlap-freeze-fix/research.md` 작성. **이번 작업은 조사/문서 작성까지만이며 plan.md 작성과 코드 구현은 하지 않았다.**
+
+**조사 범위:** `MonsterBase.cs`, `WaveManager.cs` 전체 재확인 + 4개 몬스터 프리팹(Fluffy/Spider/StoneBug/ForestDeer)의 Transform scale·BoxCollider2D size/offset + 4개 스프라이트 PNG 픽셀 크기와 `.meta`의 `spritePixelsToUnits` + `MonsterData_*.asset`의 `_blockSize` + `SampleScene.unity`의 `WaveManager` 컴포넌트 실제 `_gridCellSize`/`_poolParent` 스케일 값 + git log(`MonsterBase.cs`/`WaveManager.cs` 최근 이력) + `TODO.md`/`ProjectHistory.md`/`MonsterRules.md` 과거 겹침 수정 이력.
+
+**핵심 결론(research.md에 상세 근거 포함):**
+1. `GetSafeDownwardDistance()`의 이동 거리 clamp 로직(부호, 기준점, 프레임 실행 순서 영향) 자체에서는 겹침을 유발하는 논리 버그를 찾지 못함. 그리드 셀 크기(0.85)와 OneByOne Collider 월드 크기(0.96 로컬 × 루트 스케일 0.8854167 ≈ 0.85)도 정확히 일치함을 확인(과거 "0.85 vs 0.96 불일치" 이력은 현재 스케일 계수로 이미 정합됨).
+2. **증상 1·2의 실제 원인(확신도 높음)**: `ColliderSizeMap`에 정의된 Collider 세로 크기가 실제 스프라이트 세로 크기보다 작음. Fluffy(스프라이트 0.99 vs Collider 0.96, 초과 약 0.027 월드 유닛), StoneBug(스프라이트 1.10 vs Collider 0.96, 초과 약 0.124 월드 유닛, 4종 중 최대), ForestDeer(스프라이트 1.98 vs Collider 1.92, 초과 약 0.053 월드 유닛)에서 세로 초과가 확인됨. Collider끼리는 정확히 접촉해도 스프라이트는 이미 겹쳐 보임. Spider는 스프라이트가 Collider보다 작아(0.94×0.92 < 0.96×0.96) 이 원인으로 설명되지 않으므로 Spider-Spider 겹침이 재현되는지는 별도 확인 필요.
+3. **증상 3의 원인(확신도 중간~높음, 하단 부근 한정)**: `WaveManager.CheckGameOver()`와 `MonsterBase.BeginBottomAttack()` 모두 `IsFrozen`을 확인하지 않아, 얼어서 멈춘 몬스터가 `_bottomBoundaryY` 부근에 있으면 얼어있는 채로 `BeginBottomAttack()`이 호출되어 Collider가 즉시 비활성화(`_bodyCollider.enabled = false`)되고 캐릭터 쪽으로 돌진 트윈이 시작됨 — 뒤 몬스터 입장에서는 장애물이 갑자기 사라져 그 자리로 밀고 들어오는 것처럼 보임. `ApplyFreeze`/`ApplySlow`/`ApplyDot`은 반대 방향("바텀어택 중엔 상태이상 금지")만 막혀 있고 "얼어있는 채로 바텀어택 시작"은 막혀있지 않은 비대칭 구조. 단, 레인 중간(하단이 아닌 곳)에서의 순수 관통은 정적 분석으로 별도 원인을 찾지 못함(2번과 같은 스프라이트 겹침 착시일 가능성 유력).
+
+**주요 결정사항:**
+- 사용자 지시대로 이번 세션은 research.md 작성까지만 진행, plan.md 작성이나 `MonsterBase.cs`/`WaveManager.cs`/프리팹/스프라이트 등 어떤 파일도 수정하지 않음
+- research.md에는 "Spider-Spider 겹침"과 "레인 중간 빙결 관통" 두 세부 케이스가 위 두 원인으로 설명되지 않는다는 점을 솔직하게 명시해, plan.md 단계에서 사용자가 우선순위를 판단할 수 있도록 함
+- git 명령은 읽기 전용(`git log`)만 사용, 커밋/수정 관련 명령은 실행하지 않음
+
+---
+
+## 2026-07-06 — 몬스터 겹침/관통 research.md 1차본 기각 및 재조사(개정판) — 코드 수정 없음
+
+**작업 내용:** 위 1차 research.md의 결론(스프라이트-Collider 세로 크기 미세 불일치, 빙결 중 BeginBottomAttack)을 사용자가 명확히 반박("Fluffy·Spider가 거의 하나처럼 겹침", "2칸짜리와도 완전히 겹침", "얼어있는 Spider를 Fluffy가 레인 중상단에서도 자주 관통" — 규모·발생 위치가 1차 가설과 전혀 안 맞음). 같은 경로(`.../21-25_monster-overlap-freeze-fix/research.md`)를 개정판으로 재작성. **여전히 조사/문서 작성까지만이며 plan.md·코드 수정은 하지 않았다.**
+
+**추가 조사 범위:** `ProjectSettings/Physics2DSettings.asset`, `ProjectSettings/TimeManager.asset`, 4개 몬스터 프리팹의 `Rigidbody2D`(BodyType/GravityScale), 코드 전역 `Application.targetFrameRate`/`Physics2D.SyncTransforms`/`OnCollisionEnter2D`/`transform.position =` 대입 지점 grep, `_activeMonsters` Add/Remove 지점과 `Singleton<T>` 구현 재확인, 4개 프리팹 루트 `SpriteRenderer.sortingOrder` 확인.
+
+**새로 찾은 핵심 원인(확신도 높음, 세 증상 통합 설명):** `ProjectSettings/Physics2DSettings.asset`의 `m_AutoSyncTransforms: 0`(비활성화) + `m_SimulationMode: 0`(FixedUpdate 기준) + `Fixed Timestep: 0.02`(50Hz) + 코드 어디에도 `Application.targetFrameRate` 제한이 없어 사실상 무제한 프레임레이트. `MonsterBase.Update()`는 `FixedUpdate`가 아닌 `Update()`에서 `transform.position`을 직접 이동시키는데(Kinematic Rigidbody2D인데도 `MovePosition()` 미사용), Unity 2D 물리 엔진은 `autoSyncTransforms`가 꺼져 있으면 `transform.position` 변경이 다음 물리 스텝 동기화 전까지 `Collider2D.bounds`에 반영되지 않는다(Unity 공식 동작). `WaveManager.GetSafeDownwardDistance()`는 매 프레임 그 `bounds`를 읽어 안전 거리를 clamp하므로, 50Hz를 넘는 프레임레이트 환경(에디터/PC/고주사율 모바일)에서는 한 물리 동기화 구간(0.02초) 안에 여러 번 실행되는 `Update()`가 매번 "이미 소진한 안전 거리"를 다시 허용해 오차가 초당 최대 50회 누적되고, 결국 완전한 겹침/관통까지 커질 수 있음을 확인. 이 메커니즘은 몬스터 타입·빙결 여부와 무관하게 작동해 3개 증상을 모두 하나의 원인으로 설명 가능.
+
+**기각/격하된 항목:**
+- "스프라이트가 Collider보다 세로로 0.03~0.14유닛 크다" 가설 — 사용자 반박대로 규모가 전혀 안 맞아 주된 원인에서 제외(참고용으로만 남김)
+- "빙결 중 BeginBottomAttack 시작" — 하단 경계(`_bottomBoundaryY=-5`) 부근 한정 메커니즘으로, 사용자가 확인한 "레인 중상단에서도 자주 발생" 사례를 설명 못 해 주된 원인에서 제외(단, 하단 부근의 별개 버그로서는 여전히 유효, plan.md에서 함께 다룰지 상의 필요)
+- `_activeMonsters` 관리, 중복 싱글톤, `_bodyCollider` null 가능성, 렌더링 Sorting Order 착시 — 전부 재점검했으나 이상 없음을 확인, 원인 아님
+
+**주요 결정사항:**
+- Unity 에디터/Play Mode를 이 환경에서 직접 실행할 수 없어, `transform.position`과 `Collider2D.bounds`의 프레임별 실측 차이를 로그로 직접 재현하지는 못함 — research.md에 "확신도 높음이나 100% 확정은 아니며 실측 검증 필요"라고 명시
+- 여전히 plan.md는 작성하지 않았고 코드/프리팹/설정 파일 어느 것도 수정하지 않음(읽기만 수행)
+- git 명령은 사용하지 않음(이번 세션은 파일 읽기 전용 조사)
+
+---
+
+## 2026-07-06 — 몬스터 겹침/관통 버그 수정 — plan.md 작성 + 구현 완료
+
+**배경:** 사용자가 개정판 research.md의 핵심 원인(`Physics2D.autoSyncTransforms` 비활성화 + Transform 직접 이동으로 인한 Collider Bounds 지연)을 확인. "빙결 중 BeginBottomAttack" 이슈는 실제로 겪은 적이 없다고 확인해 이번 작업 범위에서 완전히 제외됨. 오케스트레이터가 사용자의 명시적 진행 지시("뭐든 해야할거아니야")를 전달해 plan.md 작성 후 별도 승인 대기 없이 바로 구현까지 진행함.
+
+**plan.md:** `Assets/_Project/Docs/_Task/2026-07-06/21-25_monster-overlap-freeze-fix/plan.md` 작성. 수정 방식 후보 3가지(①`Physics2D.autoSyncTransforms=true` 전역 설정, ②`FixedUpdate`+`Rigidbody2D.MovePosition()`으로 이동 로직 전환, ③이동 직후 `Physics2D.SyncTransforms()` 매 프레임 명시적 호출) 비교 후 **①을 선택**. 근거:
+- 변경 지점이 한 곳뿐이라 DevRules.md "단순함 우선"/"외과적 변경"에 가장 부합
+- ③은 활성 몬스터 수만큼 매 프레임 전역 동기화 함수를 반복 호출하게 되어 비효율적(①은 한 번만 설정)
+- `git log -p --follow -- ProjectSettings/Physics2DSettings.asset`로 확인한 결과 `m_AutoSyncTransforms: 0`은 프로젝트 최초 커밋부터 한 번도 바뀐 적 없는 Unity 기본값이며, 의도적으로 꺼둔 흔적이 없음을 확인
+- 프로젝트의 다른 물리 질의(`Ball.cs`의 충돌/트리거 콜백, `LastMatchPassive.cs`의 `OverlapCircleAll`, `TrajectoryPreview.cs`의 `RaycastAll`)는 Unity 자체 물리 시뮬레이션(속도 기반 이동)으로 구동되어 이 설정을 켜도 영향받지 않는다고 판단, 부작용 위험 낮음
+- 설정 위치는 `WaveManager.Awake()` — 버그의 근본 원인을 소유하는 클래스와 가장 밀접한 곳
+
+**구현:** `Assets/_Project/Scripts/Wave/WaveManager.cs` 1개 파일만 수정. `protected override void Awake()` 최상단(`base.Awake();` 직후)에 `Physics2D.autoSyncTransforms = true;` 한 줄과, 왜 이 설정이 필요한지 설명하는 주석(5줄)을 추가. 그 외 로직(풀 초기화 등)은 전혀 건드리지 않음.
+
+**검증:** 수정 전/후 파일 전체를 Read로 확인. `using UnityEngine;`이 이미 상단에 있어 `Physics2D` 타입 참조에 추가 using 불필요함을 확인. 세미콜론/중괄호 등 문법 정확성 확인 완료. 이 환경에는 Unity 에디터가 없어 실제 컴파일/Play Mode 검증은 불가능 — 사용자가 에디터/실기기에서 겹침·관통 재현 여부를 직접 확인해야 함.
+
+**주요 결정사항:**
+- "빙결 중 BeginBottomAttack" 관련 코드(`CheckGameOver()`, `BeginBottomAttack()`, `ApplyFreeze()` 등)는 이번 작업 범위에서 완전히 제외 — 전혀 손대지 않음
+- 기각된 "스프라이트-Collider 세로 크기 불일치" 가설 관련 프리팹/스프라이트/`ColliderSizeMap`도 손대지 않음
+- git commit/push는 실행하지 않음(오케스트레이터가 직접 처리하기로 명시적으로 확인됨)

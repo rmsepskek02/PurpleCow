@@ -53,6 +53,13 @@ public class WaveManager : Singleton<WaveManager>
     {
         base.Awake();
 
+        // MonsterBase.Update()가 FixedUpdate가 아닌 Update에서 transform.position을 직접 이동시키므로,
+        // 이 프로젝트 기본값(꺼짐)인 상태로는 같은 프레임에 여러 번 Update가 실행될 때(50Hz 물리 스텝보다
+        // 높은 프레임레이트) GetSafeDownwardDistance()가 참조하는 Collider2D.bounds가 실제 위치보다
+        // 지연되어 몬스터끼리 겹치거나 관통하는 원인이 된다. 물리 질의 시점에 Transform 변경을 항상
+        // 즉시 반영하도록 전역으로 켜서 해결한다.
+        Physics2D.autoSyncTransforms = true;
+
         _poolByData = new Dictionary<MonsterData, ObjectPool<MonsterBase>>
         {
             { _waveTable.FluffyData, new ObjectPool<MonsterBase>(_fluffyPrefab, _poolParent, _initialPoolSize) },

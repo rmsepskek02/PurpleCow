@@ -1,5 +1,30 @@
 # QA 에이전트 메모리
 
+## 2026-07-06 - 패시브 스킬 5종 구현 점검
+
+### 작업 내용
+사용자 요청에 따라 패시브 스킬 5종(따뜻한 양철 심장, 마법 거울, 자수정 단검, 에메랄드 단검, 마지막 성냥)의 구현 상태를 PDF 공식 스펙(`PurpleCow_클라이언트_채용과제.pdf`), `ProjectHistory.md`(2026-07-06 `10-03_skill-effects-progression`), `_Task/2026-07-06/10-03_skill-effects-progression/plan.md`와 대조 검증함. 코드 범위: `Assets/_Project/Scripts/Skill/Passive/*.cs`, `Skill/Base/PassiveSkillBase.cs`, `Skill/SkillManager.cs`, `Skill/SkillFactory.cs`, `Data/SkillData.cs`, `Ball/Ball.cs`, `Monster/MonsterBase.cs`, `UI/SkillSelectionPanel.cs`, `UI/SkillCardUI.cs`, `UI/SkillSlotGroup.cs`, `UI/SkillSlotIcon.cs`, 데이터 에셋 `Data/SkillData_Passive_*.asset`.
+
+### 결과
+5종 모두 정상 구현으로 판단됨(코드 수정 없이 조사만 수행).
+- 따뜻한 양철 심장(WarmTinHeartPassive): 노멀 볼 한정 20/30/40% 데미지 배율, `Ball.CalculateDamage()`에서 `!_isSpecialBall` 조건으로 정확히 게이팅됨.
+- 마법 거울(MagicMirrorPassive): `Ball.OnWallHit` 이벤트 구독, 볼 개별 인스턴스에 `_nextHitDamageMultiplier` 저장 후 다음 타격에 20/40/60% 소비, 스폰/귀환 시 초기화됨.
+- 자수정 단검(AmethystDaggerPassive)/에메랄드 단검(EmeraldDaggerPassive): 전면(velocity.y<0)/후면 판정 시 치명타 확률 +10/20/30%, +20/30/40%를 해당 타격 즉시 계산에 반영(과거 "다음 타격 몬스터 저장" 방식에서 교체됨, ProjectHistory 기록과 일치).
+- 마지막 성냥(LastMatchPassive): `MonsterBase.OnMonsterDied` 구독, 사망 시점 위치 기준 반경(Value2=1.5, PDF 미명시 커스텀값) 내 생존 몬스터에게 10/20/30 피해.
+- 레벨업 시 `SkillManager.AddPassiveSkill()`이 Remove→TryLevelUp→Apply 순서로 재적용해 이전 레벨 보너스 제거 후 새 레벨 보너스만 남도록 정확히 처리됨(중복/누락 없음).
+- 데이터 에셋(SkillData_Passive_*.asset) 5종 모두 PDF 수치와 정확히 일치, 0으로 비어있는 값 없음.
+- 보유 최대 2개 제한(`SkillManager.CanEquipPassive`), 동일 카드 중복 노출 방지, 만렙 시 후보 제외 로직 모두 스펙과 일치.
+
+### 주요 발견/의심 사항(치명적 버그 아님, 참고용)
+1. 전면/후면 판정이 볼의 수직 속도 부호(`vel.y < 0`)에만 의존 — 원본 게임 화면 기준 정확한 전후면 정의인지 시각적으로 재검증 필요(수평 이동 중 충돌 시 항상 "후면"으로 판정되는 엣지케이스 존재).
+2. 삼택지 카드 UI(`SkillCardUI.cs`)는 액티브 스킬만 레벨별 수치(`BallDamage`)를 텍스트로 노출하고, 패시브는 정적 설명 문구만 표시해 레벨 1/2/3의 실제 수치(%) 차이를 카드에서 확인할 수 없음. 로직 자체는 정확히 레벨별로 다르게 동작하므로 기능 버그는 아니고 UX 완성도 이슈.
+3. 마지막 성냥의 폭발 반경 1.5는 PDF에 명시되지 않은 자체 설계값(합리적이나 스펙 외 임의값).
+
+### 결정사항
+파일 수정 없음(QA 역할 규칙 준수, 순수 조사·보고만 수행). 위 발견사항은 오케스트레이터에게 자연어로 보고함.
+
+---
+
 ## 2026-06-30 — PurpleCow 채용과제 전체 QA 검토
 
 ### 작업 내용
