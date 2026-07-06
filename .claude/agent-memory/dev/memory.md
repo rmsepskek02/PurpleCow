@@ -1431,3 +1431,20 @@
 - plan.md가 이미 origin/main 병합 이후 최신 구조(`_dotStacks` 리스트 + `UpdateDot()`)에 맞춰 사전 검증된 문서였으므로 별도 설계 판단 없이 스니펫을 그대로 적용
 - `MonsterBase.cs` 외 다른 파일(프리팹, 에디터 스크립트 등)은 전혀 건드리지 않음
 - git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)
+
+---
+
+## 2026-07-06 — `_hitFlashColor` 기본값 오버브라이트로 조정 (16-20_monster-hit-status-color-fx 후속)
+
+**참조 plan.md:** `Assets/_Project/Docs/_Task/2026-07-06/16-20_monster-hit-status-color-fx/plan.md` (필드 자체는 이 문서에서 이미 계획/구현됨. 이번 건은 그 기본값 한 줄만 조정하는 후속 승인 건)
+
+**작업 내용:** `Assets/_Project/Scripts/Monster/MonsterBase.cs` 41번째 줄, `[SerializeField] private Color _hitFlashColor` 기본값을 `Color.white` → `new Color(3f, 3f, 3f, 1f)`로 변경. 이 한 줄 외 파일 내 다른 부분은 전혀 수정하지 않음.
+
+**배경:** `SpriteRenderer.color`는 텍스처에 곱해지는 tint 값이라 흰색(1,1,1,1)은 곱셈 항등값이라 시각적 변화가 없어 실기기 테스트에서 히트 플래시가 안 보이는 버그가 있었음. 1보다 큰 값으로 오버브라이트를 줘서 흰색 클리핑 효과를 내기로 사용자와 합의. 몬스터 프리팹 4종(Fluffy/Spider/StoneBug/ForestDeer) 모두 이 필드를 인스펙터에 직렬화해두지 않아 코드 기본값이 그대로 적용되므로, 이 한 줄 수정만으로 4종 전부에 자동 반영됨.
+
+**검증:** 수정 전 파일을 읽어 41번째 줄 현재 상태(`Color.white`) 확인 → Edit 수행 → `git diff`로 해당 한 줄 외 다른 변경 없음을 확인.
+
+**주요 결정사항:**
+- 기존 plan.md의 "톤 조정은 인스펙터에서" 전제와는 다른 접근(코드 기본값 직접 수정)이지만, 사용자가 이번 변경을 별도로 명시 승인함
+- 이 한 줄 외 다른 코드/파일은 건드리지 않음
+- git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)
