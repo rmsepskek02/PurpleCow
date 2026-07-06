@@ -1,10 +1,10 @@
 public abstract class PassiveSkillBase
 {
-    protected SkillData _skillData;
+    protected SkillRuntimeState _state;
 
-    protected PassiveSkillBase(SkillData skillData)
+    protected PassiveSkillBase(SkillRuntimeState state)
     {
-        _skillData = skillData;
+        _state = state;
     }
 
     // SkillManager가 장착 시 호출 → 이벤트 구독
@@ -13,7 +13,8 @@ public abstract class PassiveSkillBase
     // SkillManager가 해제 시 호출 → 이벤트 해제
     public abstract void Remove();
 
-    public SkillData SkillData => _skillData;
+    public SkillData SkillData => _state.Data;
+    public SkillRuntimeState State => _state;
 
-    protected SkillLevelData LevelData => _skillData.CurrentLevelData;
+    protected SkillLevelData LevelData => _state.CurrentLevelData;
 }

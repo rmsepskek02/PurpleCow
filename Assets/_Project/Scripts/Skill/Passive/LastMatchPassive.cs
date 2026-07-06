@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class LastMatchPassive : PassiveSkillBase
 {
-    public LastMatchPassive(SkillData data) : base(data) { }
+    public LastMatchPassive(SkillRuntimeState state) : base(state) { }
 
     public override void Apply()
     {
@@ -21,7 +21,7 @@ public class LastMatchPassive : PassiveSkillBase
         foreach (var hit in hits)
         {
             MonsterBase m = hit.GetComponent<MonsterBase>();
-            if (m != null && m != monster)
+            if (m != null && m != monster && m.IsAlive)
                 m.TakeDamage(LevelData.Value1);
         }
     }

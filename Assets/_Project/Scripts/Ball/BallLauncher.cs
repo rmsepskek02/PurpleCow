@@ -23,7 +23,7 @@ public class BallLauncher : Singleton<BallLauncher>
     private readonly List<Ball> _activeBalls = new List<Ball>();
     private readonly Queue<Ball> _relaunchQueue = new Queue<Ball>();
     private readonly HashSet<Ball> _queuedBalls = new HashSet<Ball>();
-    private readonly Dictionary<Ball, SkillData> _cloneSkills = new Dictionary<Ball, SkillData>();
+    private readonly Dictionary<Ball, SkillRuntimeState> _cloneSkills = new Dictionary<Ball, SkillRuntimeState>();
 
     public static event Action OnAllBallsReturned;
 
@@ -34,7 +34,7 @@ public class BallLauncher : Singleton<BallLauncher>
     // SkillData가 null이면 노말볼, 아니면 해당 특수볼 타입(스킬)을 의미한다.
     private class BallRosterEntry
     {
-        public SkillData SkillData;
+        public SkillRuntimeState SkillState;
         public Ball       Ball;
     }
 
@@ -83,7 +83,7 @@ public class BallLauncher : Singleton<BallLauncher>
         for (int i = 0; i < _normalBallCount; i++)
         {
             Ball ball = _ballPool.Get();
-            var entry = new BallRosterEntry { SkillData = null, Ball = ball };
+            var entry = new BallRosterEntry { SkillState = null, Ball = ball };
             _roster.Add(entry);
             LaunchRosterEntry(entry, _launchDirection);
 
@@ -93,10 +93,10 @@ public class BallLauncher : Singleton<BallLauncher>
     }
 
     // 3택지에서 신규 특수볼 타입을 선택했을 때 로스터에 볼 1개를 추가하고 즉시 사이클에 합류시킨다.
-    public void AddBallToRoster(SkillData skillData)
+    public void AddBallToRoster(SkillRuntimeState skillState)
     {
         Ball ball = _ballPool.Get();
-        var entry = new BallRosterEntry { SkillData = skillData, Ball = ball };
+        var entry = new BallRosterEntry { SkillState = skillState, Ball = ball };
         _roster.Add(entry);
         LaunchRosterEntry(entry, _launchDirection);
     }
@@ -136,8 +136,9 @@ public class BallLauncher : Singleton<BallLauncher>
 
     private static void ApplyRosterSkill(BallRosterEntry entry)
     {
-        if (entry.SkillData != null)
-            entry.Ball.AddSkill(SkillFactory.CreateActiveSkill(entry.SkillData));
+        entry.Ball.ConfigureSkillBall(entry.SkillState);
+        if (entry.SkillState != null)
+            entry.Ball.AddSkill(SkillFactory.CreateActiveSkill(entry.SkillState));
     }
 
     private IEnumerator CoRelaunchQueuedBalls()
@@ -171,8 +172,11 @@ public class BallLauncher : Singleton<BallLauncher>
             return;
         }
 
-        if (_cloneSkills.TryGetValue(ball, out SkillData skillData) && skillData != null)
-            ball.AddSkill(SkillFactory.CreateActiveSkill(skillData));
+        if (_cloneSkills.TryGetValue(ball, out SkillRuntimeState skillState) && skillState != null)
+        {
+            ball.ConfigureSkillBall(skillState);
+            ball.AddSkill(SkillFactory.CreateActiveSkill(skillState));
+        }
     }
 
     public void LaunchRosterClones(int returnCount)
@@ -191,11 +195,12 @@ public class BallLauncher : Singleton<BallLauncher>
             clone.transform.position = _launchPoint.position;
             clone.ConfigureClone(returnCount);
             clone.SetSpeedMultiplier(_speedMultiplier);
-            _cloneSkills[clone] = original.SkillData;
+            _cloneSkills[clone] = original.SkillState;
+            clone.ConfigureSkillBall(original.SkillState);
             clone.Launch(_launchDirection);
 
-            if (original.SkillData != null)
-                clone.AddSkill(SkillFactory.CreateActiveSkill(original.SkillData));
+            if (original.SkillState != null)
+                clone.AddSkill(SkillFactory.CreateActiveSkill(original.SkillState));
 
             RegisterActiveBall(clone);
 
@@ -212,7 +217,7 @@ public class BallLauncher : Singleton<BallLauncher>
             _activeBalls[i].SetSpeedMultiplier(_speedMultiplier);
     }
 
-    public void LaunchSubBalls(Vector2 origin, int count, float damage = 0f)
+    public void LaunchSubBalls(Vector2 origin, int count, float damage, Sprite sprite)
     {
         for (int i = 0; i < count; i++)
         {
@@ -222,8 +227,8 @@ public class BallLauncher : Singleton<BallLauncher>
             // 아래 방향 제외 (y > 0 보정)
             if (randomDir.y < 0) randomDir.y = -randomDir.y;
             ball.SetSpeedMultiplier(_speedMultiplier);
+            ball.ConfigureSubBall(damage, sprite);
             ball.Launch(randomDir);
-            if (damage > 0f) ball.SetSubBallDamage(damage);
             RegisterActiveBall(ball);
         }
     }

@@ -1,6 +1,6 @@
 public class FireBallSkill : BallSkillBase
 {
-    public FireBallSkill(SkillData skillData) : base(skillData) { }
+    public FireBallSkill(SkillRuntimeState state) : base(state) { }
 
     public override void OnBallHit(MonsterBase target)
     {

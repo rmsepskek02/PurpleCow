@@ -15,6 +15,7 @@ MonoBehaviour:
   _skillId: 1001
   _skillName: "\uD30C\uC774\uC5B4 \uBCFC"
   _icon: {fileID: 6749790375628077161, guid: 0963d3d83ee3404489e86aefb842d808, type: 3}
+  _ballSprite: {fileID: 6749790375628077161, guid: 7ae03d287639f8149aed86f081ef5068, type: 3}
   _description: "\uCDA9\uB3CC\uD55C \uBAAC\uC2A4\uD130\uC5D0\uAC8C \uC9C0\uC18D \uD654\uC0C1
     \uD53C\uD574\uB97C \uC90D\uB2C8\uB2E4."
   _skillType: 0
@@ -31,4 +32,3 @@ MonoBehaviour:
     Value1: 5
     Value2: 5
     Value3: 12
-  _currentLevel: 0

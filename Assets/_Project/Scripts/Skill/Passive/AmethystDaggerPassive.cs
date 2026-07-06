@@ -1,19 +1,14 @@
 public class AmethystDaggerPassive : PassiveSkillBase
 {
-    public AmethystDaggerPassive(SkillData data) : base(data) { }
+    public AmethystDaggerPassive(SkillRuntimeState state) : base(state) { }
 
     public override void Apply()
     {
-        Ball.OnHitMonsterFront += HandleFrontHit;
+        SkillManager.Instance.AddFrontHitCriticalChance(LevelData.Value1);
     }
 
     public override void Remove()
     {
-        Ball.OnHitMonsterFront -= HandleFrontHit;
-    }
-
-    private void HandleFrontHit(MonsterBase target)
-    {
-        target.ApplyBonusCritChance(LevelData.Value1);
+        SkillManager.Instance.RemoveFrontHitCriticalChance(LevelData.Value1);
     }
 }

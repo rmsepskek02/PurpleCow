@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19b4c47cf00733741b9e020500b0ac4c, type: 3}
   m_Name: MonsterData_ForestDeer
   m_EditorClassIdentifier: Assembly-CSharp::MonsterData
-  _hp: 50
+  _hp: 150
   _moveSpeed: 0.2
   _damage: 1
   _reward: 18

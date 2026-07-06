@@ -44,7 +44,8 @@ public static class SkillSetupEditor
                 new SkillLevelData { BallDamage = 24f, Value1 = 4.5f, Value2 = 4f, Value3 = 10f },
                 new SkillLevelData { BallDamage = 27f, Value1 = 5f,   Value2 = 5f, Value3 = 12f },
             },
-            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Fire_ball.png"
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Fire_ball.png",
+            ballSpritePath: "Assets/_Project/Sprites/Ball/Ball_Fire_ball.png"
         );
 
         CreateSkillData(
@@ -59,7 +60,8 @@ public static class SkillSetupEditor
                 new SkillLevelData { BallDamage = 37f, Value1 = 0.35f, Value2 = 6f, Value3 = 0.15f },
                 new SkillLevelData { BallDamage = 50f, Value1 = 0.4f,  Value2 = 7f, Value3 = 0.2f  },
             },
-            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Ice_Ball.png"
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Ice_Ball.png",
+            ballSpritePath: "Assets/_Project/Sprites/Ball/Ball_Ice_Ball.png"
         );
 
         CreateSkillData(
@@ -74,7 +76,8 @@ public static class SkillSetupEditor
                 new SkillLevelData { BallDamage = 15f, Value1 = 11f, Value2 = 0f, Value3 = 0f },
                 new SkillLevelData { BallDamage = 19f, Value1 = 15f, Value2 = 0f, Value3 = 0f },
             },
-            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Laser_Ball.png"
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Laser_Ball.png",
+            ballSpritePath: "Assets/_Project/Sprites/Ball/Ball_Laser_Ball.png"
         );
 
         CreateSkillData(
@@ -89,7 +92,8 @@ public static class SkillSetupEditor
                 new SkillLevelData { BallDamage = 21f, Value1 = 0f, Value2 = 0f, Value3 = 0f },
                 new SkillLevelData { BallDamage = 28f, Value1 = 0f, Value2 = 0f, Value3 = 0f },
             },
-            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Ghost_Ball.png"
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Ghost_Ball.png",
+            ballSpritePath: "Assets/_Project/Sprites/Ball/Ball_Ghost_Ball.png"
         );
 
         CreateSkillData(
@@ -104,7 +108,8 @@ public static class SkillSetupEditor
                 new SkillLevelData { BallDamage = 30f, Value1 = 0.5f, Value2 = 15f, Value3 = 0f },
                 new SkillLevelData { BallDamage = 33f, Value1 = 0.6f, Value2 = 20f, Value3 = 0f },
             },
-            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Cluster_Ball.png"
+            iconPath: "Assets/_Project/Sprites/BallSkillIcon/Ball_Cluster_Ball.png",
+            ballSpritePath: "Assets/_Project/Sprites/Ball/Ball_Cluster_Ball.png"
         );
     }
 
@@ -241,10 +246,20 @@ public static class SkillSetupEditor
         SkillType      skillType,
         string         desc,
         SkillLevelData[] levels,
-        string         iconPath)
+        string         iconPath,
+        string         ballSpritePath = "")
     {
-        if (AssetDatabase.LoadAssetAtPath<SkillData>(path) != null)
+        SkillData existing = AssetDatabase.LoadAssetAtPath<SkillData>(path);
+        if (existing != null)
         {
+            if (!string.IsNullOrEmpty(ballSpritePath))
+            {
+                SerializedObject existingSo = new SerializedObject(existing);
+                existingSo.FindProperty("_ballSprite").objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<Sprite>(ballSpritePath);
+                existingSo.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(existing);
+            }
             Debug.Log($"[SkillSetupEditor] 이미 존재, 스킵: {path}");
             return;
         }
@@ -276,6 +291,15 @@ public static class SkillSetupEditor
                 so.FindProperty("_icon").objectReferenceValue = icon;
             else
                 Debug.LogWarning($"[SkillSetupEditor] 아이콘 없음, 스킵: {iconPath}");
+        }
+
+        if (!string.IsNullOrEmpty(ballSpritePath))
+        {
+            Sprite ballSprite = AssetDatabase.LoadAssetAtPath<Sprite>(ballSpritePath);
+            if (ballSprite != null)
+                so.FindProperty("_ballSprite").objectReferenceValue = ballSprite;
+            else
+                Debug.LogWarning($"[SkillSetupEditor] Ball sprite missing: {ballSpritePath}");
         }
 
         so.ApplyModifiedPropertiesWithoutUndo();

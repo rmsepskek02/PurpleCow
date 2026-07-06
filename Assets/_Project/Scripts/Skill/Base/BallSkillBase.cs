@@ -1,11 +1,11 @@
 public abstract class BallSkillBase
 {
-    protected SkillData _skillData;
+    protected SkillRuntimeState _state;
     protected Ball _ball;
 
-    protected BallSkillBase(SkillData skillData)
+    protected BallSkillBase(SkillRuntimeState state)
     {
-        _skillData = skillData;
+        _state = state;
     }
 
     public void Initialize(Ball ball)
@@ -22,7 +22,8 @@ public abstract class BallSkillBase
     // Ball이 풀로 돌아갈 때 (OnDespawn 시) 호출 — 상태 정리
     public virtual void OnDeactivate() { }
 
-    public SkillData SkillData => _skillData;
+    public SkillData SkillData => _state.Data;
+    public SkillRuntimeState State => _state;
 
-    protected SkillLevelData LevelData => _skillData.CurrentLevelData;
+    protected SkillLevelData LevelData => _state.CurrentLevelData;
 }

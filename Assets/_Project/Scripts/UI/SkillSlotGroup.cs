@@ -10,7 +10,7 @@ public class SkillSlotGroup : MonoBehaviour
         for (int i = 0; i < _slots.Length; i++)
         {
             if (i < skills.Count)
-                _slots[i].SetFilled(skills[i].SkillData.Icon, skills[i].SkillData.CurrentLevel + 1);
+                _slots[i].SetFilled(skills[i].SkillData.Icon, skills[i].State.DisplayLevel);
             else
                 _slots[i].SetEmpty();
         }
@@ -21,7 +21,7 @@ public class SkillSlotGroup : MonoBehaviour
         for (int i = 0; i < _slots.Length; i++)
         {
             if (i < skills.Count)
-                _slots[i].SetFilled(skills[i].SkillData.Icon, skills[i].SkillData.CurrentLevel + 1);
+                _slots[i].SetFilled(skills[i].SkillData.Icon, skills[i].State.DisplayLevel);
             else
                 _slots[i].SetEmpty();
         }

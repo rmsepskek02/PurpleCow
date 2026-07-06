@@ -1,6 +1,6 @@
 public class GhostBallSkill : BallSkillBase
 {
-    public GhostBallSkill(SkillData skillData) : base(skillData) { }
+    public GhostBallSkill(SkillRuntimeState state) : base(state) { }
 
     // Ghost 볼은 Monster 레이어와 물리 충돌하지 않음
     // Collider를 Trigger로 전환 → OnTriggerEnter2D로 데미지 처리

@@ -39,21 +39,20 @@ public class SkillData : ScriptableObject
     [SerializeField] private int       _skillId;
     [SerializeField] private string    _skillName;
     [SerializeField] private Sprite    _icon;
+    [SerializeField] private Sprite    _ballSprite;
     [SerializeField] private string    _description;
     [SerializeField] private SkillType _skillType;
 
     [SerializeField] private SkillLevelData[] _levels = new SkillLevelData[3];
-    [SerializeField] private int _currentLevel;
 
     public int       SkillId     => _skillId;
     public string    SkillName   => _skillName;
     public Sprite    Icon        => _icon;
+    public Sprite    BallSprite  => _ballSprite;
     public string    Description => _description;
     public SkillType SkillType   => _skillType;
 
-    public int CurrentLevel => _currentLevel;
     public int MaxLevel => _levels.Length;
-    public SkillLevelData CurrentLevelData => GetLevelData(_currentLevel);
 
     public SkillLevelData GetLevelData(int level)
     {
@@ -61,13 +60,30 @@ public class SkillData : ScriptableObject
         return _levels[level];
     }
 
-    public void LevelUp()
+}
+
+public sealed class SkillRuntimeState
+{
+    private int _levelIndex;
+
+    public SkillRuntimeState(SkillData data)
     {
-        if (_currentLevel < MaxLevel - 1) _currentLevel++;
+        Data = data;
+        _levelIndex = 0;
     }
 
-    public void ResetLevel()
+    public SkillData Data { get; }
+    public int LevelIndex => _levelIndex;
+    public int DisplayLevel => _levelIndex + 1;
+    public bool IsMaxLevel => _levelIndex >= Data.MaxLevel - 1;
+    public SkillLevelData CurrentLevelData => Data.GetLevelData(_levelIndex);
+
+    public bool TryLevelUp()
     {
-        _currentLevel = 0;
+        if (IsMaxLevel)
+            return false;
+
+        _levelIndex++;
+        return true;
     }
 }
