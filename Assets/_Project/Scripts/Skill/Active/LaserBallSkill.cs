@@ -11,7 +11,7 @@ public class LaserBallSkill : BallSkillBase
             if (monster != target)
             {
                 monster.TakeDamage(LevelData.Value1);
-                Ball.OnHitMonster?.Invoke(monster, LevelData.Value1, false);
+                Ball.RaiseHitMonster(monster, LevelData.Value1, false);
             }
         }
     }
