@@ -313,6 +313,37 @@ public class MonsterBase : MonoBehaviour, IPoolable
         return bounds.size.x > 0f && bounds.size.y > 0f;
     }
 
+    public bool TryGetProjectedColliderBounds(
+        MonsterData data,
+        Vector3 rootWorldPosition,
+        Vector3 parentLossyScale,
+        out Bounds bounds)
+    {
+        BoxCollider2D bodyCollider = _bodyCollider != null
+            ? _bodyCollider
+            : GetComponent<BoxCollider2D>();
+
+        if (data == null ||
+            bodyCollider == null ||
+            !ColliderSizeMap.TryGetValue(data.BlockSize, out Vector2 localColliderSize))
+        {
+            bounds = default;
+            return false;
+        }
+
+        Vector3 worldScale = Vector3.Scale(transform.localScale, parentLossyScale);
+        Vector3 scaledOffset = Vector3.Scale(
+            new Vector3(bodyCollider.offset.x, bodyCollider.offset.y, 0f),
+            worldScale);
+        Vector3 worldSize = new Vector3(
+            Mathf.Abs(localColliderSize.x * worldScale.x),
+            Mathf.Abs(localColliderSize.y * worldScale.y),
+            1f);
+
+        bounds = new Bounds(rootWorldPosition + scaledOffset, worldSize);
+        return bounds.size.x > 0f && bounds.size.y > 0f;
+    }
+
     public bool BeginBottomAttack(
         Transform target,
         float shakeDuration,

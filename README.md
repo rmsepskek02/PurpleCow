@@ -156,7 +156,8 @@ Android 빌드는 Unity의 Build Profiles에서 Android를 선택하고 `SampleS
   - `Assets/_Project/Sprites/SpeedUp.png`
   - `Assets/_Project/Sprites/Copy.png`
 
-기능 범위와 수치, UI 방향은 개발자가 직접 결정했습니다. AI가 제안하거나 작성한 결과는 코드 검토와 수정 과정을 거쳤으며, Unity 적용과 Android 실제 기기 테스트도 개발자가 직접 수행했습니다.
+기능 범위와 수치, UI 방향은 제공된 문서와 출시된 게임을 참고하여 결정했습니다. 
+AI가 작성한 결과의 Unity 적용과 Android 실제 기기 테스트를 개발자가 직접 수행했습니다.
 
 ## 검증
 
