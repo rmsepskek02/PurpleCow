@@ -9,7 +9,7 @@ public class DamageTextFx : MonoBehaviour, IPoolable
     [SerializeField] private float _duration      = 0.8f;
     [SerializeField] private float _criticalScale = 1.5f;
     [SerializeField] private Color _normalColor   = Color.white;
-    [SerializeField] private Color _criticalColor = Color.yellow;
+    [SerializeField] private Color _criticalColor = new Color32(255, 75, 62, 255);
 
     public void OnSpawn()
     {

@@ -165,8 +165,6 @@ public static class UIOverhaulSetupEditor
         Image badge = ImageUi("CharacterLevelBadge", root.transform, new(348, -211), new(82, 82), new(.16f, .13f, .12f, .98f));
         TMP_Text level = Text("CharacterLevel", badge.transform, "1", 48, Cream, Vector2.zero, new(82, 82), TextAlignmentOptions.Center);
         Button pauseButton = ButtonUi("PauseButton", root.transform, "Ⅱ", new(430, -80), new(88, 88), Ink);
-        Button successTestButton = ButtonUi("SuccessTestButton", root.transform, "S", new(-430, -80), new(88, 88), Ink);
-        Button failureTestButton = ButtonUi("FailureTestButton", root.transform, "F", new(-330, -80), new(88, 88), Ink);
 
         GameObject skills = UI("PlayerActiveSkillBar", root.transform, new(-65, 210), new(130, 286));
         RectTransform sr = skills.GetComponent<RectTransform>();
@@ -174,8 +172,8 @@ public static class UIOverhaulSetupEditor
         VerticalLayoutGroup layout = skills.AddComponent<VerticalLayoutGroup>();
         layout.spacing = 16; layout.childAlignment = TextAnchor.LowerCenter;
         layout.childControlHeight = layout.childControlWidth = false;
-        PlayerSkillButton(skills.transform, "berserk", 0,
-            "Assets/_Project/Data/PlayerActiveSkillData_Berserk.asset", new(.48f, .12f, .09f));
+        PlayerSkillButton(skills.transform, "speedUp", 0,
+            "Assets/_Project/Data/PlayerActiveSkillData_SpeedUp.asset", new(.48f, .12f, .09f));
         PlayerSkillButton(skills.transform, "illusion", 1,
             "Assets/_Project/Data/PlayerActiveSkillData_Clone.asset", new(.08f, .34f, .45f));
 
@@ -183,7 +181,6 @@ public static class UIOverhaulSetupEditor
         Ref(so, "_stageTitleText", title); Ref(so, "_stageProgressSlider", stage);
         Ref(so, "_stageProgressText", percent); Ref(so, "_xpSlider", xp);
         Ref(so, "_levelText", level); Ref(so, "_pauseButton", pauseButton);
-        Ref(so, "_successTestButton", successTestButton); Ref(so, "_failureTestButton", failureTestButton);
         Ref(so, "_pausePanel", pause); Ref(so, "_canvasGroup", cg);
         so.ApplyModifiedPropertiesWithoutUndo();
         return hud;

@@ -8,7 +8,7 @@ public class PlayerActiveSkillManager : Singleton<PlayerActiveSkillManager>
     [SerializeField] private bool _startReady = true;
 
     private float[] _remainingCooldowns;
-    private Coroutine _berserkCoroutine;
+    private Coroutine _speedUpCoroutine;
 
     public event Action<int, float, float> OnCooldownChanged;
 
@@ -77,10 +77,10 @@ public class PlayerActiveSkillManager : Singleton<PlayerActiveSkillManager>
     {
         switch (skill.SkillType)
         {
-            case PlayerActiveSkillType.Berserk:
-                if (_berserkCoroutine != null)
-                    StopCoroutine(_berserkCoroutine);
-                _berserkCoroutine = StartCoroutine(CoBerserk(skill));
+            case PlayerActiveSkillType.SpeedUp:
+                if (_speedUpCoroutine != null)
+                    StopCoroutine(_speedUpCoroutine);
+                _speedUpCoroutine = StartCoroutine(CoSpeedUp(skill));
                 break;
 
             case PlayerActiveSkillType.Clone:
@@ -89,11 +89,11 @@ public class PlayerActiveSkillManager : Singleton<PlayerActiveSkillManager>
         }
     }
 
-    private IEnumerator CoBerserk(PlayerActiveSkillData skill)
+    private IEnumerator CoSpeedUp(PlayerActiveSkillData skill)
     {
         BallLauncher.Instance.SetSpeedMultiplier(skill.SpeedMultiplier);
         yield return new WaitForSeconds(skill.Duration);
         BallLauncher.Instance.SetSpeedMultiplier(1f);
-        _berserkCoroutine = null;
+        _speedUpCoroutine = null;
     }
 }

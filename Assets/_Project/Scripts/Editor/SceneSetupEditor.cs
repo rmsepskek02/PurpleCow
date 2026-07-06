@@ -276,13 +276,22 @@ public static class SceneSetupEditor
         else
             Debug.LogWarning($"[SceneSetupEditor] {waveTablePath} 없음. Monster System Setup을 먼저 실행하세요.");
 
-        // _monsterPrefab → Fluffy
-        MonsterBase fluffyPrefab = AssetDatabase.LoadAssetAtPath<MonsterBase>(
+        ConnectMonsterPrefab(
+            so,
+            "_fluffyPrefab",
             "Assets/_Project/Prefabs/Monster/Fluffy.prefab");
-        if (fluffyPrefab != null)
-            so.FindProperty("_monsterPrefab").objectReferenceValue = fluffyPrefab;
-        else
-            Debug.LogWarning("[SceneSetupEditor] Fluffy.prefab 없음. Scene Setup을 먼저 실행하세요.");
+        ConnectMonsterPrefab(
+            so,
+            "_spiderPrefab",
+            "Assets/_Project/Prefabs/Monster/Spider.prefab");
+        ConnectMonsterPrefab(
+            so,
+            "_stoneBugPrefab",
+            "Assets/_Project/Prefabs/Monster/StoneBug.prefab");
+        ConnectMonsterPrefab(
+            so,
+            "_forestDeerPrefab",
+            "Assets/_Project/Prefabs/Monster/ForestDeer.prefab");
 
         // _poolParent, _spawnRoot → PoolRoot
         GameObject poolRoot = GameObject.Find("PoolRoot");
@@ -294,8 +303,30 @@ public static class SceneSetupEditor
         else
             Debug.LogWarning("[SceneSetupEditor] PoolRoot 없음.");
 
+        GameObject character = GameObject.Find("Character");
+        if (character != null)
+            so.FindProperty("_characterTarget").objectReferenceValue = character.transform;
+        else
+            Debug.LogWarning("[SceneSetupEditor] Character 없음. Character System Setup을 먼저 실행하세요.");
+
+        so.FindProperty("_bottomAttackShakeDuration").floatValue = 0.35f;
+        so.FindProperty("_bottomAttackShakeStrength").floatValue = 0.12f;
+        so.FindProperty("_bottomAttackDashDuration").floatValue = 0.25f;
+
         so.ApplyModifiedPropertiesWithoutUndo();
         Debug.Log("[SceneSetupEditor] WaveManager 참조 연결 완료.");
+    }
+
+    private static void ConnectMonsterPrefab(
+        SerializedObject waveManager,
+        string propertyName,
+        string prefabPath)
+    {
+        MonsterBase prefab = AssetDatabase.LoadAssetAtPath<MonsterBase>(prefabPath);
+        if (prefab != null)
+            waveManager.FindProperty(propertyName).objectReferenceValue = prefab;
+        else
+            Debug.LogWarning($"[SceneSetupEditor] {prefabPath} 없음. Monster System Setup을 먼저 실행하세요.");
     }
 
     // ──────────────────────────────────────────

@@ -198,9 +198,9 @@ public static class SkillSetupEditor
     public static void CreatePlayerActiveSkillDataAssets()
     {
         CreatePlayerActiveSkillData(
-            "Assets/_Project/Data/PlayerActiveSkillData_Berserk.asset",
-            PlayerActiveSkillType.Berserk,
-            "Berserk",
+            "Assets/_Project/Data/PlayerActiveSkillData_SpeedUp.asset",
+            PlayerActiveSkillType.SpeedUp,
+            "Speed Up",
             "Assets/_Project/Sprites/SpeedUp.png");
 
         CreatePlayerActiveSkillData(

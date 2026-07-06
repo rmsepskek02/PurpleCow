@@ -2,7 +2,7 @@ using UnityEngine;
 
 public enum PlayerActiveSkillType
 {
-    Berserk,
+    SpeedUp,
     Clone
 }
 

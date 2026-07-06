@@ -231,4 +231,4 @@ MonoBehaviour:
   _duration: 0.8
   _criticalScale: 1.5
   _normalColor: {r: 1, g: 1, b: 1, a: 1}
-  _criticalColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _criticalColor: {r: 1, g: 0.29411766, b: 0.24313726, a: 1}

@@ -41,7 +41,7 @@ UI 작업은 다음 우선순위로 판단합니다.
 
 ### 1-3. 프로젝트 추가 콘텐츠
 
-버서크와 분신은 PDF 필수 항목이나 원본 게임 복제 범위가 아니라 가산점용 추가 콘텐츠입니다.
+스피드업과 분신은 PDF 필수 항목이나 원본 게임 복제 범위가 아니라 가산점용 추가 콘텐츠입니다.
 기능 구현은 완료된 상태를 보존하며, 최종 HUD에 어울리도록 위치와 외형만 조정할 수 있습니다.
 세부 기능 규칙은 [PlayerActiveSkillDesign.md](PlayerActiveSkillDesign.md)를 따릅니다.
 
@@ -202,7 +202,7 @@ Canvas_Popup (Sort Order: 30)
 
 ### 5-5. 가산점 액티브 스킬 버튼
 
-버서크와 분신 버튼은 원본 HUD를 가리지 않는 우측 하단에 세로로 배치합니다.
+스피드업과 분신 버튼은 원본 HUD를 가리지 않는 우측 하단에 세로로 배치합니다.
 
 - Bottom Right Anchor를 사용하고 Safe Area 안쪽 여백을 둡니다.
 - 캐릭터, 캐릭터 HP바, 볼 발사 지점과 겹치지 않아야 합니다.
@@ -461,7 +461,7 @@ Unity 기본 `Button`의 Transition은 None으로 설정합니다.
 - `PausePanel`은 빈 오브젝트입니다.
 - HUD의 `WAVE n / 20`, 처치 점수, 중앙 퍼센트 텍스트는 원본 정보 구조와 다릅니다.
 - 패널 코드가 `SetActive`와 CanvasGroup을 혼용하고 있어 이 문서의 패널 규칙과 다릅니다.
-- 버서크와 분신 버튼은 `Canvas_Panel`에 직접 배치되어 있으므로 `Canvas_HUD/SafeAreaPanel` 아래로 이동해야 합니다.
+- 스피드업과 분신 버튼은 `Canvas_Panel`에 직접 배치되어 있으므로 `Canvas_HUD/SafeAreaPanel` 아래로 이동해야 합니다.
 - 몬스터 HP바의 이벤트 구독, 피격 후 표시, Background/Fill 구성은 현재 구현에 반영되어 있습니다.
 
 이 섹션은 UI 구현 완료 후 실제 상태에 맞게 갱신합니다.

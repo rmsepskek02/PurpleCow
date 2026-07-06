@@ -11,6 +11,7 @@
 |------|------|------|
 | CLAUDE.md | `/CLAUDE.md` | Claude Code 행동 지침. 작업 원칙, git 규칙, 작업 전 확인 절차 정의 |
 | AGENTS.md | `/AGENTS.md` | 프로젝트 내 모든 문서의 인덱스 (현재 문서) |
+| README.md | `/README.md` | 프로젝트 개요, 실행·조작법, 구현 범위, 기술 설계, AI 활용 및 실기기 검증 기록 |
 
 ---
 
@@ -24,7 +25,7 @@
 | ProjectHistory.md | `Assets/_Project/Docs/ProjectHistory.md` | 작업 히스토리 누적 기록 |
 | AIFailures.md | `Assets/_Project/Docs/AIFailures.md` | AI 실패 사례 및 재발 방지 기록 |
 | UIRules.md | `Assets/_Project/Docs/UIRules.md` | UI 시스템 구현 규칙. Canvas 구조, 해상도 대응, Safe Area, 패널 제어, 애니메이션, 버튼 피드백, 성능 최적화, 데미지 텍스트, 몬스터 HP바, 캐릭터 HP/XP/레벨, 궤적 프리뷰 시각 규칙 정의 |
-| PlayerActiveSkillDesign.md | `Assets/_Project/Docs/PlayerActiveSkillDesign.md` | 플레이어 액티브 스킬 시스템 기획. 버서크/분신 효과, FIFO 재발사 규칙, UI 명세 정의 |
+| PlayerActiveSkillDesign.md | `Assets/_Project/Docs/PlayerActiveSkillDesign.md` | 플레이어 액티브 스킬 시스템 기획. 스피드업/분신 효과, FIFO 재발사 규칙, UI 명세 정의 |
 | GameplayMechanics.md | `Assets/_Project/Docs/GameplayMechanics.md` | 게임 내 알고리즘/메커닉 스펙 문서. 볼 발사/궤도 시스템(조준, 프리뷰, 귀환, 재발사), 캐릭터 조준 연동 시각 표현(좌우 반전, 무기/머리 회전) 등 확정된 게임플레이 메커닉을 계속 추가 기록. 현재 구현과의 차이(TODO) 포함 |
 | MonsterRules.md | `Assets/_Project/Docs/MonsterRules.md` | 몬스터 시스템 통합 규칙 문서. 스폰/전진 메커닉, 몬스터 종류/스탯, HP/상태이상 처리, 웨이브 시스템 정의 |
 | TODO.md | `Assets/_Project/Docs/TODO.md` | 게임 다듬기(Polish) 작업 백로그. 논의를 마쳤으나 아직 구현하지 않은 항목들의 현재 상태/확정된 목표/비고 기록 |

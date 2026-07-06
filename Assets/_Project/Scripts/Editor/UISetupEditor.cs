@@ -706,8 +706,8 @@ public static class UISetupEditor
             managerObj.AddComponent<PlayerActiveSkillManager>();
         }
 
-        PlayerActiveSkillData berserk = AssetDatabase.LoadAssetAtPath<PlayerActiveSkillData>(
-            "Assets/_Project/Data/PlayerActiveSkillData_Berserk.asset");
+        PlayerActiveSkillData speedUp = AssetDatabase.LoadAssetAtPath<PlayerActiveSkillData>(
+            "Assets/_Project/Data/PlayerActiveSkillData_SpeedUp.asset");
         PlayerActiveSkillData clone = AssetDatabase.LoadAssetAtPath<PlayerActiveSkillData>(
             "Assets/_Project/Data/PlayerActiveSkillData_Clone.asset");
 
@@ -715,17 +715,17 @@ public static class UISetupEditor
         SerializedObject managerSo = new SerializedObject(manager);
         SerializedProperty skills = managerSo.FindProperty("_skills");
         skills.arraySize = 2;
-        skills.GetArrayElementAtIndex(0).objectReferenceValue = berserk;
+        skills.GetArrayElementAtIndex(0).objectReferenceValue = speedUp;
         skills.GetArrayElementAtIndex(1).objectReferenceValue = clone;
         managerSo.ApplyModifiedPropertiesWithoutUndo();
 
-        Button berserkButton = FindSceneButton("berserk");
+        Button speedUpButton = FindSceneButton("speedUp");
         Button illusionButton = FindSceneButton("illusion");
-        if (berserkButton != null && illusionButton != null)
+        if (speedUpButton != null && illusionButton != null)
         {
-            SetupExistingPlayerActiveSkillButton(berserkButton, 0);
+            SetupExistingPlayerActiveSkillButton(speedUpButton, 0);
             SetupExistingPlayerActiveSkillButton(illusionButton, 1);
-            Debug.Log("[UISetupEditor] Existing berserk/illusion buttons connected.");
+            Debug.Log("[UISetupEditor] Existing speedUp/illusion buttons connected.");
             return;
         }
 
@@ -753,7 +753,7 @@ public static class UISetupEditor
         layout.childForceExpandHeight = false;
 
         SetupPlayerActiveSkillButton(
-            barObj.transform, "BerserkButton", 0, new Color(0.78f, 0.18f, 0.14f));
+            barObj.transform, "SpeedUpButton", 0, new Color(0.78f, 0.18f, 0.14f));
         SetupPlayerActiveSkillButton(
             barObj.transform, "CloneButton", 1, new Color(0.12f, 0.55f, 0.68f));
     }

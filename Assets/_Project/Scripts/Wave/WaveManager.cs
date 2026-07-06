@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class WaveManager : Singleton<WaveManager>
 {
+    private const float HorizontalOverlapEpsilon = 0.001f;
+    private const float BoundsOverlapEpsilon = 0.001f;
+
     [SerializeField] private WaveTableData _waveTable;
     [SerializeField] private MonsterBase _fluffyPrefab;
     [SerializeField] private MonsterBase _spiderPrefab;
@@ -12,6 +15,7 @@ public class WaveManager : Singleton<WaveManager>
     [SerializeField] private Transform _poolParent;
     [SerializeField] private int _initialPoolSize = 20;
     [SerializeField] private Transform _spawnRoot;
+    [SerializeField] private Transform _characterTarget;
     [SerializeField] private float _gridCellSize = 1.0f;
     [SerializeField] private int _gridColumns = 9;
     [SerializeField] private int _gridRows = 5;
@@ -19,6 +23,9 @@ public class WaveManager : Singleton<WaveManager>
     [SerializeField] private int _killCountForSkill = 5;
     [SerializeField] private int _minSpawnPerTick = 3;
     [SerializeField] private int _maxSpawnPerTick = 7;
+    [SerializeField, Min(0f)] private float _bottomAttackShakeDuration = 0.35f;
+    [SerializeField, Min(0f)] private float _bottomAttackShakeStrength = 0.12f;
+    [SerializeField, Min(0f)] private float _bottomAttackDashDuration = 0.25f;
 
     private Dictionary<MonsterData, ObjectPool<MonsterBase>> _poolByData;
     private List<MonsterBase> _activeMonsters = new List<MonsterBase>();
@@ -296,15 +303,30 @@ public class WaveManager : Singleton<WaveManager>
     private bool IsCellFree(int col, int row)
     {
         Vector3 cellWorldPos = GridToWorldPosition(col, row);
-        float checkRadius = _gridCellSize * 0.55f;
+        Bounds cellBounds = new Bounds(
+            cellWorldPos,
+            new Vector3(_gridCellSize, _gridCellSize, 1f));
 
         foreach (MonsterBase monster in _activeMonsters)
         {
-            Vector3 pos = monster.transform.position;
-            if (Mathf.Abs(pos.x - cellWorldPos.x) < checkRadius && Mathf.Abs(pos.y - cellWorldPos.y) < checkRadius)
+            if (monster == null ||
+                !monster.IsAlive ||
+                !monster.TryGetColliderBounds(out Bounds monsterBounds))
+            {
+                continue;
+            }
+
+            if (HasPositiveBoundsOverlap(cellBounds, monsterBounds))
                 return false;
         }
         return true;
+    }
+
+    private static bool HasPositiveBoundsOverlap(Bounds a, Bounds b)
+    {
+        float overlapX = Mathf.Min(a.max.x, b.max.x) - Mathf.Max(a.min.x, b.min.x);
+        float overlapY = Mathf.Min(a.max.y, b.max.y) - Mathf.Max(a.min.y, b.min.y);
+        return overlapX > BoundsOverlapEpsilon && overlapY > BoundsOverlapEpsilon;
     }
 
     private Vector3 GridToWorldPosition(int col, int row)
@@ -347,16 +369,28 @@ public class WaveManager : Singleton<WaveManager>
         for (int i = _activeMonsters.Count - 1; i >= 0; i--)
         {
             MonsterBase monster = _activeMonsters[i];
-            if (monster.transform.position.y <= _bottomBoundaryY)
+            if (monster.transform.position.y <= _bottomBoundaryY && !monster.IsBottomAttacking)
             {
-                _activeMonsters.RemoveAt(i);
-                _poolByData[monster.Data].Return(monster);
-                OnMonsterReachedBottom?.Invoke(monster);
-                OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
-
-                CheckWaveCleared();
+                monster.BeginBottomAttack(
+                    _characterTarget,
+                    _bottomAttackShakeDuration,
+                    _bottomAttackShakeStrength,
+                    _bottomAttackDashDuration,
+                    HandleBottomAttackImpact);
             }
         }
+    }
+
+    private void HandleBottomAttackImpact(MonsterBase monster)
+    {
+        if (monster == null || !_activeMonsters.Contains(monster))
+            return;
+
+        OnMonsterReachedBottom?.Invoke(monster);
+        _activeMonsters.Remove(monster);
+        _poolByData[monster.Data].Return(monster);
+        OnMonsterCountChanged?.Invoke(_activeMonsters.Count, _currentWaveTotalCount);
+        CheckWaveCleared();
     }
 
     private void HandleMonsterDied(MonsterBase monster)
@@ -433,5 +467,71 @@ public class WaveManager : Singleton<WaveManager>
                 result.Add(m);
         }
         return result;
+    }
+
+    public List<MonsterBase> GetMonstersBehindInColumn(MonsterBase reference)
+    {
+        var result = new List<MonsterBase>();
+        if (reference == null ||
+            !reference.TryGetHorizontalBounds(out float referenceMinX, out float referenceMaxX))
+        {
+            return result;
+        }
+
+        float referenceY = reference.transform.position.y;
+        foreach (MonsterBase monster in _activeMonsters)
+        {
+            if (monster == null ||
+                monster == reference ||
+                !monster.IsAlive ||
+                monster.IsBottomAttacking ||
+                monster.transform.position.y <= referenceY ||
+                !monster.TryGetHorizontalBounds(out float candidateMinX, out float candidateMaxX))
+            {
+                continue;
+            }
+
+            float overlapWidth =
+                Mathf.Min(referenceMaxX, candidateMaxX) -
+                Mathf.Max(referenceMinX, candidateMinX);
+            if (overlapWidth > HorizontalOverlapEpsilon)
+                result.Add(monster);
+        }
+
+        return result;
+    }
+
+    public bool HasFrozenMonsterAhead(MonsterBase reference)
+    {
+        if (reference == null ||
+            !reference.IsAlive ||
+            reference.IsBottomAttacking ||
+            !reference.TryGetHorizontalBounds(out float referenceMinX, out float referenceMaxX))
+        {
+            return false;
+        }
+
+        float referenceY = reference.transform.position.y;
+        foreach (MonsterBase monster in _activeMonsters)
+        {
+            if (monster == null ||
+                monster == reference ||
+                !monster.IsAlive ||
+                !monster.IsFrozen ||
+                monster.IsBottomAttacking ||
+                monster.transform.position.y >= referenceY ||
+                !monster.TryGetHorizontalBounds(out float candidateMinX, out float candidateMaxX))
+            {
+                continue;
+            }
+
+            float overlapWidth =
+                Mathf.Min(referenceMaxX, candidateMaxX) -
+                Mathf.Max(referenceMinX, candidateMinX);
+            if (overlapWidth > HorizontalOverlapEpsilon)
+                return true;
+        }
+
+        return false;
     }
 }

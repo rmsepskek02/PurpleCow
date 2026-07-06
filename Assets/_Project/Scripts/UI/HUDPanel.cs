@@ -11,8 +11,6 @@ public class HUDPanel : MonoBehaviour
     [SerializeField] private Slider _xpSlider;
     [SerializeField] private TMP_Text _levelText;
     [SerializeField] private Button _pauseButton;
-    [SerializeField] private Button _successTestButton;
-    [SerializeField] private Button _failureTestButton;
     [SerializeField] private PausePanel _pausePanel;
 
     [SerializeField] private CanvasGroup _canvasGroup;
@@ -44,27 +42,13 @@ public class HUDPanel : MonoBehaviour
     {
         _stageTitleText.text = "1. 깊은 숲";
         _pauseButton.onClick.AddListener(_pausePanel.Show);
-        if (_successTestButton != null)
-            _successTestButton.onClick.AddListener(HandleSuccessTestClicked);
-        if (_failureTestButton != null)
-            _failureTestButton.onClick.AddListener(HandleFailureTestClicked);
         RefreshAll();
     }
 
     private void OnDestroy()
     {
         _pauseButton.onClick.RemoveListener(_pausePanel.Show);
-        if (_successTestButton != null)
-            _successTestButton.onClick.RemoveListener(HandleSuccessTestClicked);
-        if (_failureTestButton != null)
-            _failureTestButton.onClick.RemoveListener(HandleFailureTestClicked);
     }
-
-    private static void HandleSuccessTestClicked()
-        => GameManager.Instance.EndGame(true);
-
-    private static void HandleFailureTestClicked()
-        => GameManager.Instance.EndGame(false);
 
     private void RefreshAll()
     {
