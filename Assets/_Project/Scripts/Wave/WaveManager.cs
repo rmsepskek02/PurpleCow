@@ -502,12 +502,12 @@ public class WaveManager : Singleton<WaveManager>
                 continue;
 
             float verticalGap = referenceBounds.min.y - candidateBounds.max.y;
-            if (Mathf.Abs(verticalGap) <= BoundsOverlapEpsilon)
+            if (verticalGap <= BoundsOverlapEpsilon)
                 verticalGap = 0f;
 
             safeDistance = Mathf.Min(safeDistance, verticalGap);
         }
 
-        return safeDistance;
+        return Mathf.Clamp(safeDistance, 0f, desiredDistance);
     }
 }
