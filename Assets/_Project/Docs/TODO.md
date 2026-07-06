@@ -93,6 +93,14 @@
 
 ---
 
+## 10. 지속 대미지(DoT) 발생 시 대미지 텍스트 미표시
+
+- **현재 상태**: 파이어볼의 화상 효과는 `Assets/_Project/Scripts/Skill/Active/FireBallSkill.cs`의 `OnBallHit(MonsterBase target)`에서 `target.ApplyDot(LevelData.Value3, LevelData.Value1, (int)LevelData.Value2)`를 호출해 `Assets/_Project/Scripts/Monster/MonsterBase.cs`의 `ApplyDot()`에 DoT 스택(`DotStack{ DamagePerSecond, RemainingSeconds }`)을 등록하는 것으로 끝나며, 이 시점에는 실제 피해가 전혀 적용되지 않는다. 실제 틱 피해는 `MonsterBase.Update()`에서 매 프레임 호출되는 `UpdateDot(float deltaTime)`이 담당하는데, `_dotTickTimer`가 1초 이상 누적될 때마다 `while (_dotTickTimer >= 1f && !_isDead)` 루프 안에서 살아있는 스택들의 `DamagePerSecond` 합을 구해 `TakeDamage(tickDamage)`를 몬스터 자신에게 직접 호출한다. 이 경로는 `Assets/_Project/Scripts/Ball/Ball.cs`의 `CalculateDamage()`를 전혀 거치지 않으며, `OnHitMonster?.Invoke(target, damage, isCritical)` 이벤트도 발행하지 않는다. `Assets/_Project/Scripts/UI/DamageTextManager.cs`는 `OnEnable()`에서 `Ball.OnHitMonster += HandleHitMonster`로 이 이벤트만 구독해 `ShowDamage()`로 대미지 텍스트를 스폰하므로, DoT 틱 피해는 이벤트가 아예 발행되지 않아 대미지 텍스트로 이어질 방법이 코드상 없다. (참고: 기존 7번 항목 조사 당시 언급되었던 코루틴 기반 `CoDotTick()`은 현재 코드에는 존재하지 않으며, 이후 7번 항목(몬스터 피격/상태이상 스프라이트 색상 효과) 구현 과정에서 `Update()` 기반의 `UpdateDot()`으로 대체된 것으로 보인다.) 원인이 코드로 명확히 특정됨.
+- **확정된 목표**: 지속 대미지(DoT) 틱마다 대미지 텍스트가 표시되도록 수정한다.
+- **비고**: 구현 착수 시 `MonsterBase.UpdateDot()`의 틱 피해 적용 지점에서 `Ball.OnHitMonster` 이벤트를 재사용/재발행할지, 아니면 `DamageTextManager.Instance.ShowDamage(...)`를 직접 호출할지 방식을 결정해야 한다(8번 레이저볼 항목과 유사한 종류의 결정 필요). DoT 틱은 특정 `Ball` 인스턴스와 무관하게 몬스터 쪽에서 발생하므로, `Ball.OnHitMonster`의 시그니처(`Action<MonsterBase, float, bool>`)를 그대로 재사용할 경우 `isCritical` 값을 항상 `false`로 둘지도 함께 정해야 한다. 또한 DoT 피해 텍스트를 일반 피해와 시각적으로 구분할지(예: 색상/크기 차별화) 여부도 구현 착수 시 결정이 필요하다.
+
+---
+
 ## 다음 단계
 
-1·5·6번은 구현과 C# 빌드 검증을 완료했으며 Unity 플레이 검증을 기다리고 있습니다. 7번은 구현과 실기기 검증까지 모두 완료했습니다. 남은 미구현 항목은 2·3·4·8·9번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
+1·5·6번은 구현과 C# 빌드 검증을 완료했으며 Unity 플레이 검증을 기다리고 있습니다. 7번은 구현과 실기기 검증까지 모두 완료했습니다. 남은 미구현 항목은 2·3·4·8·9·10번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
