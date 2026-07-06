@@ -16,8 +16,8 @@ MonoBehaviour:
   _skillName: "\uC544\uC774\uC2A4 \uBCFC"
   _icon: {fileID: 498749362002363885, guid: 76563e567bacdfa418353f355624acea, type: 3}
   _ballSprite: {fileID: 498749362002363885, guid: 35bb1dc2a2d0e0c4a8f1dfd2787ab501, type: 3}
-  _description: "\uD655\uB960\uC801\uC73C\uB85C \uCDA9\uB3CC\uD55C \uBAAC\uC2A4\uD130\uB97C
-    \uBE59\uACB0/\uB454\uD654\uC2DC\uD0B5\uB2C8\uB2E4."
+  _description: "\uD655\uB960\uC801\uC73C\uB85C \uCDA9\uB3CC\uD55C \uBAAC\uC2A4\uD130\uC758
+    \uC774\uB3D9\uC18D\uB3C4\uB97C \uAC10\uC18C\uC2DC\uD0B5\uB2C8\uB2E4."
   _skillType: 0
   _levels:
   - BallDamage: 25

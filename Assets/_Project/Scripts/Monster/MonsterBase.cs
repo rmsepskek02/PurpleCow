@@ -30,7 +30,6 @@ public class MonsterBase : MonoBehaviour, IPoolable
 
     private float _currentHp;
     private bool  _isDead;
-    private float _frozenSecondsRemaining;
     private float _slowSecondsRemaining;
     private float _slowPercent;
     private readonly List<DotStack> _dotStacks = new List<DotStack>();
@@ -60,7 +59,6 @@ public class MonsterBase : MonoBehaviour, IPoolable
 
     public float CurrentHp    => _currentHp;
     public bool  IsAlive      => !_isDead;
-    public bool  IsFrozen     => _frozenSecondsRemaining > 0f;
     public bool  IsBottomAttacking => _isBottomAttacking;
     public MonsterData Data   => _monsterData;
 
@@ -121,7 +119,6 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _currentHp              = _monsterData.Hp;
         _isDead                 = false;
         _isBottomAttacking      = false;
-        _frozenSecondsRemaining = 0f;
         _slowSecondsRemaining   = 0f;
         _slowPercent            = 0f;
         _dotStacks.Clear();
@@ -200,15 +197,6 @@ public class MonsterBase : MonoBehaviour, IPoolable
         OnMonsterDied?.Invoke(this);
     }
 
-    public void ApplyFreeze(float seconds)
-    {
-        if (_isDead || _isBottomAttacking)
-            return;
-
-        _frozenSecondsRemaining = Mathf.Max(_frozenSecondsRemaining, seconds);
-        _lastStatusVisual = StatusVisualType.Ice;
-    }
-
     public void ApplySlow(float seconds, float percent)
     {
         if (_isDead || _isBottomAttacking)
@@ -283,12 +271,6 @@ public class MonsterBase : MonoBehaviour, IPoolable
 
         if (_slowSecondsRemaining > 0f)
             _slowSecondsRemaining -= deltaTime;
-
-        if (_frozenSecondsRemaining > 0f)
-        {
-            _frozenSecondsRemaining -= deltaTime;
-            return;
-        }
 
         float speed = _monsterData.MoveSpeed;
 
@@ -397,7 +379,7 @@ public class MonsterBase : MonoBehaviour, IPoolable
     {
         _flashSecondsRemaining = Mathf.Max(0f, _flashSecondsRemaining - deltaTime);
 
-        bool isIceActive = _frozenSecondsRemaining > 0f || _slowSecondsRemaining > 0f;
+        bool isIceActive = _slowSecondsRemaining > 0f;
         bool isFireActive = _dotStacks.Count > 0;
 
         Color statusColor;
