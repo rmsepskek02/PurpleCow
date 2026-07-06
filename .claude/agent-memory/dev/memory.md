@@ -1490,3 +1490,28 @@
 - Unity 에디터가 원격 환경에 없어 실제 셰이더 컴파일/렌더링 결과는 검증 불가 — C#/ShaderLab 문법 정확성만 최대한 꼼꼼히 검토함, 실기기/에디터에서 셰이더 컴파일 여부 및 오버레이가 정확히 몸체 위에 겹쳐 보이는지는 사용자 확인 필요
 - `Assets/_Project/Shaders/SpriteFlashOverlay.shader`와 `MonsterBase.cs` 외 다른 파일은 건드리지 않음
 - git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)
+
+---
+
+## 2026-07-06
+
+### 작업: 피격 히트 플래시 개선 (상태이상 중 플래시 생략 제거 + 발판 BlockVisual 플래시 추가)
+
+**작업 내용:**
+- 사용자 명시 승인(“좋아 진행해줘”) 기반, 지시받은 내용 그대로 구현
+- `Assets/_Project/Scripts/Monster/MonsterBase.cs` 1개 파일만 수정
+
+**수정 내용:**
+- `TakeDamage()` — `hasActiveStatusTint` 조건 분기 제거, 상태이상(빙결/슬로우/도트) 여부와 무관하게 항상 `_flashSecondsRemaining = _hitFlashDuration` 적용 (오버레이 셰이더 방식이 몸체 색과 분리된 레이어라 가릴 우려 없어짐)
+- 신규 필드 `_blockSpriteRenderer`, `_blockFlashOverlayRenderer` 추가, 클래스 상단에 `private const int FlashOverlaySortingOffset = 100` 추가
+- `Awake()` — `transform.Find("BlockVisual")`로 발판 자식 오브젝트의 SpriteRenderer 참조를 찾아 `_blockSpriteRenderer`에 저장(null 체크 포함, BlockVisual 없는 몬스터는 안전하게 스킵)
+- `CreateFlashOverlay()`를 `CreateOverlayFor(SpriteRenderer source, Transform parent)` 공통 헬퍼로 리팩토링 — 몸체용/발판용 오버레이를 동일 로직으로 각각 생성. sortingOrder는 원본 + 100(`FlashOverlaySortingOffset`)으로 계산해 몸체(order=1)와 발판(order=0) 오버레이가 겹치지 않도록 처리
+- `UpdateStatusVisual()` — 플래시 알파 계산 후 `_flashOverlayRenderer`와 `_blockFlashOverlayRenderer`에 동일한 `flashColor`를 동시에 적용
+- `OnSpawn()` — `_blockFlashOverlayRenderer`도 알파 0으로 리셋하는 라인 추가
+
+**주요 결정사항:**
+- 얼음/화상 지속 틴트 로직(`_freezeTintColor`/`_burnTintColor`, `_lastStatusVisual` 우선순위 판정)은 전혀 손대지 않음 — 지시사항 그대로 준수
+- 프리팹은 수정하지 않음 — `BlockVisual` 자식이 없는 몬스터 프리팹에서도 null 체크로 안전하게 동작
+- 셰이더 파일(`SpriteFlashOverlay.shader`)은 그대로 재사용, 수정 없음
+- 완료 후 파일 전체를 다시 읽어 지시받은 코드와 정확히 일치하는지 확인 완료
+- git 관련 명령은 실행하지 않음(사용자가 명시적으로 요청하지 않음)

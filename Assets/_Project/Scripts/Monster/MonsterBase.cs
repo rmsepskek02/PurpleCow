@@ -47,9 +47,13 @@ public class MonsterBase : MonoBehaviour, IPoolable
     [SerializeField] private Color _freezeTintColor = new Color(0.53f, 0.81f, 0.98f);
     [SerializeField] private Color _burnTintColor = new Color(1f, 0.35f, 0.16f);
 
+    private const int FlashOverlaySortingOffset = 100;
+
     private float _flashSecondsRemaining;
     private static Material _flashOverlayMaterial;
     private SpriteRenderer _flashOverlayRenderer;
+    private SpriteRenderer _blockSpriteRenderer;
+    private SpriteRenderer _blockFlashOverlayRenderer;
 
     private enum StatusVisualType { None, Ice, Fire }
     private StatusVisualType _lastStatusVisual;
@@ -69,21 +73,33 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _spriteRenderer = GetComponent<SpriteRenderer>();
         _baseColor = _spriteRenderer.color;
 
+        Transform blockVisual = transform.Find("BlockVisual");
+        if (blockVisual != null)
+            _blockSpriteRenderer = blockVisual.GetComponent<SpriteRenderer>();
+
         CreateFlashOverlay();
     }
 
     private void CreateFlashOverlay()
     {
-        var overlayObject = new GameObject("FlashOverlay");
-        overlayObject.transform.SetParent(transform, false);
+        _flashOverlayRenderer = CreateOverlayFor(_spriteRenderer, transform);
+
+        if (_blockSpriteRenderer != null)
+            _blockFlashOverlayRenderer = CreateOverlayFor(_blockSpriteRenderer, _blockSpriteRenderer.transform);
+    }
+
+    private SpriteRenderer CreateOverlayFor(SpriteRenderer source, Transform parent)
+    {
+        var overlayObject = new GameObject(source.gameObject.name + "_FlashOverlay");
+        overlayObject.transform.SetParent(parent, false);
         overlayObject.transform.localPosition = Vector3.zero;
         overlayObject.transform.localRotation = Quaternion.identity;
         overlayObject.transform.localScale = Vector3.one;
 
-        _flashOverlayRenderer = overlayObject.AddComponent<SpriteRenderer>();
-        _flashOverlayRenderer.sprite = _spriteRenderer.sprite;
-        _flashOverlayRenderer.sortingLayerID = _spriteRenderer.sortingLayerID;
-        _flashOverlayRenderer.sortingOrder = _spriteRenderer.sortingOrder + 1;
+        SpriteRenderer overlayRenderer = overlayObject.AddComponent<SpriteRenderer>();
+        overlayRenderer.sprite = source.sprite;
+        overlayRenderer.sortingLayerID = source.sortingLayerID;
+        overlayRenderer.sortingOrder = source.sortingOrder + FlashOverlaySortingOffset;
 
         if (_flashOverlayMaterial == null)
         {
@@ -93,9 +109,10 @@ public class MonsterBase : MonoBehaviour, IPoolable
         }
 
         if (_flashOverlayMaterial != null)
-            _flashOverlayRenderer.sharedMaterial = _flashOverlayMaterial;
+            overlayRenderer.sharedMaterial = _flashOverlayMaterial;
 
-        _flashOverlayRenderer.color = new Color(_hitFlashColor.r, _hitFlashColor.g, _hitFlashColor.b, 0f);
+        overlayRenderer.color = new Color(_hitFlashColor.r, _hitFlashColor.g, _hitFlashColor.b, 0f);
+        return overlayRenderer;
     }
 
     public void OnSpawn()
@@ -116,6 +133,8 @@ public class MonsterBase : MonoBehaviour, IPoolable
         _spriteRenderer.color   = _baseColor;
         if (_flashOverlayRenderer != null)
             _flashOverlayRenderer.color = new Color(_hitFlashColor.r, _hitFlashColor.g, _hitFlashColor.b, 0f);
+        if (_blockFlashOverlayRenderer != null)
+            _blockFlashOverlayRenderer.color = new Color(_hitFlashColor.r, _hitFlashColor.g, _hitFlashColor.b, 0f);
         ApplyBlockSize();
         OnHpChanged?.Invoke(_currentHp, _monsterData.Hp);
     }
@@ -164,9 +183,7 @@ public class MonsterBase : MonoBehaviour, IPoolable
         if (_isDead || _isBottomAttacking)
             return;
 
-        bool hasActiveStatusTint = _frozenSecondsRemaining > 0f || _slowSecondsRemaining > 0f || _dotStacks.Count > 0;
-        if (!hasActiveStatusTint)
-            _flashSecondsRemaining = _hitFlashDuration;
+        _flashSecondsRemaining = _hitFlashDuration;
 
         _currentHp -= damage;
         OnHpChanged?.Invoke(Mathf.Max(_currentHp, 0f), _monsterData.Hp);
@@ -376,7 +393,11 @@ public class MonsterBase : MonoBehaviour, IPoolable
         if (_flashOverlayRenderer != null)
         {
             float flashAlpha = _flashSecondsRemaining > 0f ? 1f : 0f;
-            _flashOverlayRenderer.color = new Color(_hitFlashColor.r, _hitFlashColor.g, _hitFlashColor.b, flashAlpha);
+            Color flashColor = new Color(_hitFlashColor.r, _hitFlashColor.g, _hitFlashColor.b, flashAlpha);
+            _flashOverlayRenderer.color = flashColor;
+
+            if (_blockFlashOverlayRenderer != null)
+                _blockFlashOverlayRenderer.color = flashColor;
         }
     }
 
