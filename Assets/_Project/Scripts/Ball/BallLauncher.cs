@@ -26,7 +26,6 @@ public class BallLauncher : Singleton<BallLauncher>
     private readonly Dictionary<Ball, SkillRuntimeState> _cloneSkills = new Dictionary<Ball, SkillRuntimeState>();
 
     public static event Action OnAllBallsReturned;
-    public static event Action OnBallLaunched;
 
     public Transform LaunchPoint     => _launchPoint;
     public Vector2   LaunchDirection => _launchDirection;
@@ -107,7 +106,6 @@ public class BallLauncher : Singleton<BallLauncher>
         entry.Ball.transform.position = _launchPoint.position;
         entry.Ball.SetSpeedMultiplier(_speedMultiplier);
         entry.Ball.Launch(direction);
-        OnBallLaunched?.Invoke();
         ApplyRosterSkill(entry);
         RegisterActiveBall(entry.Ball);
     }
@@ -166,7 +164,6 @@ public class BallLauncher : Singleton<BallLauncher>
         ball.PrepareForRelaunch();
         ball.SetSpeedMultiplier(_speedMultiplier);
         ball.Launch(_launchDirection);
-        OnBallLaunched?.Invoke();
 
         BallRosterEntry entry = _roster.Find(e => e.Ball == ball);
         if (entry != null)
@@ -201,7 +198,6 @@ public class BallLauncher : Singleton<BallLauncher>
             _cloneSkills[clone] = original.SkillState;
             clone.ConfigureSkillBall(original.SkillState);
             clone.Launch(_launchDirection);
-            OnBallLaunched?.Invoke();
 
             if (original.SkillState != null)
                 clone.AddSkill(SkillFactory.CreateActiveSkill(original.SkillState));
@@ -233,7 +229,6 @@ public class BallLauncher : Singleton<BallLauncher>
             ball.SetSpeedMultiplier(_speedMultiplier);
             ball.ConfigureSubBall(damage, sprite);
             ball.Launch(randomDir);
-            OnBallLaunched?.Invoke();
             RegisterActiveBall(ball);
         }
     }
