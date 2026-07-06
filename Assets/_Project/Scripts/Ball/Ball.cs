@@ -120,31 +120,41 @@ public class Ball : MonoBehaviour, IPoolable
         }
         else if (collision.gameObject.CompareTag("Wall"))
         {
-            OnWallHit?.Invoke(this);
-
-            // 이미 귀환 중인 볼은 반사 카운트를 건드리지 않고 LaunchPoint 방향으로 재조준만 한다.
-            if (_isReturning)
-            {
-                ReturnToLaunchPoint();
-                return;
-            }
-
-            // 원본 로스터 볼과 분신은 벽 반사 횟수를 소모하지 않고 Ground에서만 귀환한다.
-            if (BallLauncher.Instance.IsRosterMember(this) || _isClone)
-                return;
-
-            _remainingBounces--;
-            if (_remainingBounces <= 0)
-                ReturnToPool();
+            HandleWallHit();
         }
         else if (collision.gameObject.CompareTag("Ground"))
         {
-            // 원본 로스터 볼과 분신은 캐릭터 위치로 귀환하고, 서브볼은 즉시 풀로 반환한다.
-            if (BallLauncher.Instance.IsRosterMember(this) || _isClone)
-                ReturnToLaunchPoint();
-            else
-                ReturnToPool();
+            HandleGroundHit();
         }
+    }
+
+    private void HandleWallHit()
+    {
+        OnWallHit?.Invoke(this);
+
+        // 이미 귀환 중인 볼은 반사 카운트를 건드리지 않고 LaunchPoint 방향으로 재조준만 한다.
+        if (_isReturning)
+        {
+            ReturnToLaunchPoint();
+            return;
+        }
+
+        // 원본 로스터 볼과 분신은 벽 반사 횟수를 소모하지 않고 Ground에서만 귀환한다.
+        if (BallLauncher.Instance.IsRosterMember(this) || _isClone)
+            return;
+
+        _remainingBounces--;
+        if (_remainingBounces <= 0)
+            ReturnToPool();
+    }
+
+    private void HandleGroundHit()
+    {
+        // 원본 로스터 볼과 분신은 캐릭터 위치로 귀환하고, 서브볼은 즉시 풀로 반환한다.
+        if (BallLauncher.Instance.IsRosterMember(this) || _isClone)
+            ReturnToLaunchPoint();
+        else
+            ReturnToPool();
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -165,6 +175,14 @@ public class Ball : MonoBehaviour, IPoolable
                 foreach (var skill in _skills)
                     skill.OnBallHit(monster);
             }
+        }
+        else if (other.CompareTag("Wall"))
+        {
+            HandleWallHit();
+        }
+        else if (other.CompareTag("Ground"))
+        {
+            HandleGroundHit();
         }
     }
 
