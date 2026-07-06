@@ -1,9 +1,11 @@
 using UnityEngine;
+using DG.Tweening;
 
 // 조준 방향(BallLauncher.Instance.LaunchDirection)에 맞춰 캐릭터 루트를 좌우 반전하고
 // 무기를 회전시키는 뷰 전용 컴포넌트. TrajectoryPreview.cs와 동일하게
 // 이벤트 구독이 아니라 매 프레임 폴링 방식을 사용한다(InputHandler.OnDrag는 터치가 없을 때
 // 발행되지 않아 회전이 멈추는 문제가 있기 때문).
+// 발사 순간의 반동 연출만은 예외적으로 BallLauncher.OnBallLaunched 이벤트를 구독해 1회성으로 재생한다.
 public class CharacterAimView : MonoBehaviour
 {
     [SerializeField] private SpriteRenderer _bodySpriteRenderer;
@@ -12,10 +14,37 @@ public class CharacterAimView : MonoBehaviour
     [SerializeField] private Transform _weaponPivot;
     [SerializeField] private float _headRotationRatio = 0.25f;
     [SerializeField] private float _horizontalBiasDegrees = 15f;
+    [SerializeField] private float _recoilPunchStrength = 0.15f;
+    [SerializeField] private float _recoilDuration = 0.2f;
+
+    private void OnEnable()
+    {
+        BallLauncher.OnBallLaunched += HandleBallLaunched;
+    }
+
+    private void OnDisable()
+    {
+        BallLauncher.OnBallLaunched -= HandleBallLaunched;
+    }
 
     private void Update()
     {
         UpdateAim(BallLauncher.Instance.LaunchDirection);
+    }
+
+    // 발사 순간(총기 반동처럼) 캐릭터 루트를 발사 방향의 반대쪽으로 짧게 밀었다가 복귀시킨다.
+    // localPosition은 부모(LaunchPoint)의 좌표계 기준이므로, 부모의 회전을 반영해 월드 반동 방향을
+    // 부모 로컬 방향으로 변환한다(자기 자신의 좌우 반전 scale은 자신의 localPosition 해석에
+    // 영향을 주지 않으므로 mirrored 보정은 필요 없다).
+    private void HandleBallLaunched()
+    {
+        Vector3 worldRecoilDir = -(Vector3)BallLauncher.Instance.LaunchDirection;
+        Vector3 localRecoilDir = transform.parent != null
+            ? transform.parent.InverseTransformDirection(worldRecoilDir)
+            : worldRecoilDir;
+
+        DOTween.Kill(transform);
+        transform.DOPunchPosition(localRecoilDir.normalized * _recoilPunchStrength, _recoilDuration);
     }
 
     private void UpdateAim(Vector2 direction)
