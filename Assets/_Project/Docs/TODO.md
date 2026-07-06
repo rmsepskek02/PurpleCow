@@ -77,6 +77,22 @@
 
 ---
 
+## 8. 레이저볼 가로 행 대미지 텍스트 미표시
+
+- **현재 상태**: `Assets/_Project/Scripts/Skill/Active/LaserBallSkill.cs`의 `OnBallHit(MonsterBase target)`은 `WaveManager.Instance.GetMonstersInRow(target)`으로 같은 가로 행의 몬스터들을 모두 가져온 뒤, 직접 피격한 `target`을 제외한 나머지 몬스터에게 `monster.TakeDamage(LevelData.Value1)`을 직접 호출한다. 반면 대미지 텍스트는 `Assets/_Project/Scripts/UI/DamageTextManager.cs`가 `Ball.OnHitMonster` 정적 이벤트를 구독해서 `HandleHitMonster()` → `ShowDamage()`로 스폰하는 구조인데, 이 이벤트는 `Assets/_Project/Scripts/Ball/Ball.cs`의 `CalculateDamage()` 안에서 `target.TakeDamage(damage)` 직후 `OnHitMonster?.Invoke(target, damage, isCritical)`로 딱 한 번만 발행된다(`OnCollisionEnter2D`/`OnTriggerEnter2D`에서 직접 피격 대상에 대해서만 `CalculateDamage()`가 호출되고, 그 다음에 `foreach (var skill in _skills) skill.OnBallHit(monster)`가 실행됨). 즉 레이저볼의 `OnBallHit()`이 행의 나머지 몬스터에게 가하는 추가 피해는 `MonsterBase.TakeDamage()`만 호출할 뿐 `Ball.OnHitMonster` 이벤트를 전혀 발행하지 않으므로, `DamageTextManager`가 이를 감지하지 못해 직접 피격한 몬스터에게만 대미지 텍스트가 뜨고 같은 행의 나머지 몬스터에게는 텍스트가 뜨지 않는다. 코드로 원인이 명확히 특정됨.
+- **확정된 목표**: 레이저볼이 가로 행 전체에 피해를 입힐 때, 직접 피격 대상뿐 아니라 행의 나머지 몬스터에게도 대미지 텍스트가 표시되도록 수정한다.
+- **비고**: 구현 착수 시 `LaserBallSkill.OnBallHit()`에서 나머지 몬스터에게 피해를 적용할 때 `DamageTextManager.Instance.ShowDamage(...)`를 직접 호출할지, 아니면 `Ball.OnHitMonster` 이벤트를 재사용/재발행할지 방식을 결정해야 한다. 또한 이 추가 피해에도 치명타(`isCritical`) 개념을 적용할지, 아니면 항상 일반 피해로 표시할지도 결정이 필요하다.
+
+---
+
+## 9. 고스트볼 미작동 버그
+
+- **현재 상태**: `Assets/_Project/Scripts/Skill/Active/GhostBallSkill.cs`는 `OnActivate()`/`OnDeactivate()`에서 `_ball.SetGhostMode(true/false)`를 호출하고, `Assets/_Project/Scripts/Ball/Ball.cs`의 `SetGhostMode(bool isGhost)`는 `_collider.isTrigger = isGhost`로 볼 자신의 Collider2D를 트리거로 전환한다. `Ball.cs`의 `OnTriggerEnter2D(Collider2D other)`는 `_skills`에 `GhostBallSkill`이 있고 `other.CompareTag("Monster")`인 경우에만 `CalculateDamage()` + 각 스킬의 `OnBallHit()`을 호출하며, "Wall"/"Ground" 태그에 대한 처리는 전혀 없다. 반면 일반(고스트 아님) 상태에서 벽 반사·바닥 귀환 로직은 전부 `OnCollisionEnter2D(Collision2D collision)`에 있다(`collision.gameObject.CompareTag("Wall")` → `OnWallHit` 발행 및 `_remainingBounces` 차감, `CompareTag("Ground")` → `ReturnToLaunchPoint()`/`ReturnToPool()`). `Assets/_Project/Scripts/Editor/SceneSetupEditor.cs`의 `PlaceColliderObject()`로 생성되는 Wall/Ground 오브젝트는 기본 `BoxCollider2D`(`isTrigger` 미설정, 기본값 `false`)이므로 평상시에는 볼과 물리적 충돌(`OnCollisionEnter2D`)로 처리된다. 그런데 Unity 2D 물리 규칙상 두 Collider 중 하나라도 `isTrigger = true`이면 그 쌍의 상호작용은 무조건 트리거 이벤트(`OnTriggerEnter2D`)로만 처리되고 충돌 이벤트(`OnCollisionEnter2D`)는 발생하지 않는다. 따라서 고스트볼이 활성화되어 볼의 Collider가 트리거로 전환되면, 몬스터뿐 아니라 Wall/Ground와의 상호작용도 전부 트리거 이벤트로 바뀌는데 `Ball.cs`의 `OnTriggerEnter2D`는 Monster 태그만 처리하므로 Wall/Ground 접촉 시 아무 로직도 실행되지 않는다 — 벽에서 반사되지도, 바닥에 닿아 `ReturnToLaunchPoint()`/`ReturnToPool()`이 호출되지도 않는다. 즉 고스트볼은 몬스터를 관통하며 피해를 주는 부분(피어싱)은 코드상 정상 동작하는 것으로 보이나, 벽/바닥과 부딪혀도 반응이 없어 그대로 화면 밖으로 날아가 다시 발사 지점으로 돌아오지 않을 가능성이 높다. 이는 사용자가 보고한 "볼이 적용되지 않는 것으로 보임" 증상과 부합할 수 있는 유력한 원인 후보다. 다만 실제 플레이 모드에서 재현하여 런타임으로 확인하지는 않았다.
+- **확정된 목표**: 버그 원인 파악 필요(위 유력 후보를 실제 플레이로 재현·검증한 뒤 목표를 확정한다). 유력 후보가 맞다면 목표는 "고스트볼이 몬스터는 관통하되 벽/바닥에서는 일반 볼과 동일하게 반사·귀환하도록 수정" 정도가 될 것으로 예상된다.
+- **비고**: `Assets/_Project/Scripts/Skill/SkillFactory.cs`의 `CreateActiveSkill()` switch에는 `ActiveSkillId.Ghost => new GhostBallSkill(state)` 케이스가 정상적으로 존재하며 누락되지 않았고, `BallLauncher.cs`에서도 다른 볼 타입과 동일한 경로(`ConfigureSkillBall()` + `AddSkill(SkillFactory.CreateActiveSkill(...))`)로 연결되므로 스킬 팩토리/연결 누락 쪽은 원인이 아닌 것으로 보인다(이 부분은 코드 확인만 했고 씬의 실제 Wall/Ground GameObject의 Collider 직렬화 값(씬 파일 자체)까지는 확인하지 못했다 — `SceneSetupEditor.cs`의 생성 스크립트 기준으로만 확인함). 구현 착수 시 `OnTriggerEnter2D`에 Wall/Ground 처리를 추가할지, 혹은 고스트 모드에서 몬스터 Collider만 트리거로 인식하도록(예: Layer 기반 물리 충돌 매트릭스 조정 등) 다른 접근으로 바꿀지 결정이 필요하다.
+
+---
+
 ## 다음 단계
 
-1·5·6번은 구현과 C# 빌드 검증을 완료했으며 Unity 플레이 검증을 기다리고 있습니다. 남은 미구현 항목은 2·3·4·7번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
+1·5·6번은 구현과 C# 빌드 검증을 완료했으며 Unity 플레이 검증을 기다리고 있습니다. 남은 미구현 항목은 2·3·4·7·8·9번입니다. 각 항목을 실제로 구현하기 전에는 [TaskRules.md](TaskRules.md)의 규칙에 따라 `Assets/_Project/Docs/_Task/YYYY-MM-DD/HH-MM_작업요약/` 경로에 `research.md`와 `plan.md`를 작성하고, 사용자의 명시적인 승인을 받은 뒤에 구현을 시작합니다.
