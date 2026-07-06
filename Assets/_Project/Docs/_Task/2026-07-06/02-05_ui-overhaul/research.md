@@ -13,7 +13,7 @@
 - 보스 제외에 따라 스테이지 진행바 끝의 보스 얼굴 아이콘도 제거합니다.
 - 전용 리소스가 없는 프레임, 게이지, 버튼은 Unity 기본 UI로 유사하게 제작합니다.
 - 프로젝트 내 모든 텍스트는 `Assets/_Project/Fonts/Maplestory Bold SDF.asset`을 사용합니다.
-- 버서크와 분신은 가산점 추가 콘텐츠이므로 기존 기능을 보존하고 최종 HUD에 통합합니다.
+- 스피드업과 분신은 가산점 추가 콘텐츠이므로 기존 기능을 보존하고 최종 HUD에 통합합니다.
 
 ### 원본 화면에서 확인한 정보 구조
 
@@ -36,14 +36,14 @@
 - `HUDPanel`, `ResultPanel`, `SkillSelectionPanel`
 - `CharacterHP`, `CharacterXP`
 - 빈 `LevelUpPanel`, `PausePanel`, `BallLevelUpPanel`
-- 버서크/분신 버튼
+- 스피드업/분신 버튼
 
 하지만 현재 구조는 기능 연결용 초기 스캐폴딩에 가깝고 원본 UI 레이아웃은 구현되지 않았습니다.
 
 - `SafeAreaPanel`이 비어 있어 HUD가 Safe Area의 적용을 받지 않습니다.
 - `ResultPanel`과 `SkillSelectionPanel`이 `Canvas_HUD` 아래에 있습니다.
 - `Canvas_Popup`은 비어 있습니다.
-- 버서크/분신 버튼은 `Canvas_Panel`에 직접 배치되어 있습니다.
+- 스피드업/분신 버튼은 `Canvas_Panel`에 직접 배치되어 있습니다.
 - CharacterHP/XP Slider에는 시각적인 Fill 그래픽이 없습니다.
 - CharacterHP는 화면 하단 전체 폭, CharacterXP는 화면 하단에 배치되어 원본과 다릅니다.
 - SkillCard 프리팹과 인스턴스는 기본 100 x 100 크기이며 세 카드가 중앙에 겹칩니다.
@@ -71,7 +71,7 @@
 | `PurpleCow_클라이언트_채용과제.pdf` | 필수·제외 기능 기준 |
 | `Assets/_Project/Docs/targetUI/*.jpg` | 원본 UI 시각 기준 |
 | `Assets/_Project/Docs/UIRules.md` | 확정된 UI 구현 규칙 |
-| `Assets/_Project/Docs/PlayerActiveSkillDesign.md` | 버서크·분신 기능 규칙 |
+| `Assets/_Project/Docs/PlayerActiveSkillDesign.md` | 스피드업·분신 기능 규칙 |
 
 ### UI 스크립트
 
@@ -86,7 +86,7 @@
 | `Scripts/UI/ResultPanel.cs` | 결과 제목·점수·재시작 | 성공/실패 스타일과 결과 정보 확장 |
 | `Scripts/UI/CharacterHpBar.cs` | 캐릭터 HP Slider | World Space 캐릭터 하단 표시 |
 | `Scripts/UI/CharacterXpBar.cs` | XP Slider·레벨 | 상단 HUD 게이지와 레벨 배지 표시 |
-| `Scripts/UI/PlayerActiveSkillButton.cs` | 버서크·분신 버튼 | 기능 보존, HUD 위치·폰트·외형 변경 |
+| `Scripts/UI/PlayerActiveSkillButton.cs` | 스피드업·분신 버튼 | 기능 보존, HUD 위치·폰트·외형 변경 |
 | `Scripts/UI/SafeAreaFitter.cs` | Safe Area 적용 | 화면 영역 변경 재적용 |
 | `Scripts/UI/UIButton.cs` | 버튼 축척 피드백 | PointerExit/취소 및 Tween 중복 방지 |
 
@@ -138,7 +138,7 @@
 - 노란 XP바와 캐릭터 레벨 배지를 그 아래에 배치합니다.
 - Auto, 배속, 보스 아이콘은 제외합니다.
 - 일시정지 버튼만 우측 상단에 둡니다.
-- 버서크/분신은 우측 하단 Safe Area 안에 세로로 배치하는 안을 적용합니다.
+- 스피드업/분신은 우측 하단 Safe Area 안에 세로로 배치하는 안을 적용합니다.
 
 ### 3. 캐릭터 상태 UI
 

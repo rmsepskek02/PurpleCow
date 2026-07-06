@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1491ba7762754ad4af72403c31186103, type: 3}
-  m_Name: PlayerActiveSkillData_Berserk
+  m_Name: PlayerActiveSkillData_SpeedUp
   m_EditorClassIdentifier: Assembly-CSharp::PlayerActiveSkillData
   _skillType: 0
-  _displayName: Berserk
+  _displayName: Speed Up
   _icon: {fileID: -4115439610729684787, guid: f468223af6ad73447bdc24953db95740, type: 3}
   _cooldown: 30
   _duration: 6

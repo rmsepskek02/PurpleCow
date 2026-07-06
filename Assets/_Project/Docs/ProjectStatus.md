@@ -4,9 +4,9 @@
 
 ---
 
-## 현재 상태 (2026-07-05 기준)
+## 현재 상태 (2026-07-06 기준)
 
-**단계**: 실제 플레이 테스트 진행 중 — 볼-볼 물리 충돌 방지, 볼 조준 방향 Y좌표 하한 제한, 캐릭터 스프라이트 프리팹+조준 방향 연동 회전까지 사용자 실기기/로컬 검증 완료(단, 볼-볼 물리 충돌 방지/볼 조준 방향 Y좌표 하한 제한은 아직 main 미병합 브랜치 상태, 병합 대기 중), 볼 궤적 프리뷰 고리(Ring) 점선화+회전 효과는 구현 완료했으나 최종 시각 확인은 사용자 로컬 Unity 테스트 대기 중
+**단계**: 핵심 구현과 Android 실제 기기 20웨이브 검증 완료. 선택 Polish 1·5·6번 구현 및 빌드 완료, Unity 플레이 검증 대기.
 
 **완료된 작업**
 - [x] 프로젝트 생성 (Unity 6000.3.10f1, Universal 2D URP, Android)
@@ -29,20 +29,16 @@
 - [x] 볼 궤적 프리뷰 고리(Ring) 점선화 + 회전 효과 (`_Task/2026-07-05/11-20_trajectory-ring-dash-rotate`): 2차 충돌 지점 레드닷을 감싸는 고리(`_hitRing`)가 완전한 실선이던 것을, 원본 게임 레퍼런스처럼 끊어진 점선 + 조준 여부와 무관하게 항상 시계방향으로 회전하는 효과로 재구현. 궤적선 색상 등 Inspector 조절 가능화는 기존 코드(`_lineColor` 등 6개 `[SerializeField]` 필드)로 이미 완료돼 있음을 확인해 별도 구현은 불필요했음. 구현 과정에서 시행착오를 거쳤음 — (1) 텍스처 반복(타일링) 방식으로 10개 점선을 목표했으나 실제로는 2개로 보이는 문제(원인 미확인, 원격 환경에 Unity가 없어 검증 불가) → (2) `LineRenderer.colorGradient`(alphaKeys 8개) 방식으로 교체해 정확히 4개를 보장했으나, 사용자가 보내준 실제 레퍼런스 이미지(`targetUI/circle.jpg`) 대조 결과 경계가 과도하게 흐려지는 근본적 한계 확인 → (3) 텍스처 타일링 방식으로 재전환하되 목표를 4개로 조정하고, `loop = true` 대신 원을 명시적으로 닫는 정점(`CIRCLE_SEGMENTS + 1`개, explicit close)을 추가하는 방식으로 재구현. 회전 속도는 `[SerializeField] private float _ringRotationSpeed = 90f;`(deg/sec)로 Inspector 노출. **이 최종(3번) 버전이 실제로 정확히 4개의 호로 보이는지는 사용자가 아직 로컬 Unity에서 재확인하지 않은 상태 — "구현 완료, 최종 시각 확인은 사용자 로컬 테스트 대기 중"으로 구분**. PR #12로 main 머지 완료(구현 코드 기준, 시각 확인은 별개)
 - [x] 볼-볼 물리 충돌 방지 (`_Task/2026-07-05/16-40_ball-ball-collision-fix`): `Ball`/`Wall`/`Ground`/`Monster`가 전부 Default 레이어(0)에 있고 `Physics2DSettings.asset`의 레이어 충돌 매트릭스가 Default-Default 충돌을 허용해, 여러 볼이 동시에 존재할 때 물리적으로 서로 튕겨나가던 버그를 발견(`Ball.OnCollisionEnter2D`의 태그 분기는 물리 반응 이후 호출되는 콜백이라 코드로는 막을 수 없었음). 전용 "Ball" Physics2D 레이어를 신설(`BallSetupEditor.cs`에 `AddBallLayer()`/`AssignBallPrefabLayer()` 신규 메서드 추가, `PurpleCow/Setup/Ball System Setup` 메뉴 실행 시 자동 처리)하고 `BallLauncher.Awake()`에서 `Physics2D.IgnoreLayerCollision(ballLayer, ballLayer, true)` 1회 호출로 볼-볼 충돌만 전역 비활성화, Wall/Ground/Monster는 Default 레이어 그대로 유지. **사용자가 로컬에서 `PurpleCow/Setup/Ball System Setup` 메뉴를 재실행한 뒤 실제 플레이 테스트로 "볼 발사 정상 동작"과 "볼-볼 물리 충돌 방지(서로 안 튕김)" 둘 다 검증 완료 확인함.** 다만 **아직 main에 병합되지 않고 현재 브랜치(`claude/project-review-bugs-qq65d1`)에만 커밋된 상태 — main 병합 대기 중**
 - [x] 볼 조준 방향 Y좌표 하한 제한 (`_Task/2026-07-05/18-30_aim-direction-y-clamp`): 실제 플레이 테스트 중 사용자가 "볼 궤도를 설정할 때 일정 y좌표 밑으로는 설정하지 못하게 하자"고 요청. 처음엔 기준점을 "격자타일 밑변"(`WallFitter`가 기기별로 동적 재계산하는 `Ground` Transform 위치)으로 논의해 research.md까지 작성했으나, `WallFitter._ground`가 private이라 `InputHandler`에서 접근하려면 씬 참조 연결이 추가로 필요하다는 복잡성이 확인됨. 이후 사용자가 방향을 단순화 — 이미 존재하는 몬스터 바닥 도달 게임오버 판정 기준선(`WaveManager._bottomBoundaryY`)을 재사용하기로 확정, `WaveManager`가 이미 싱글톤이라 씬 참조 연결/에디터 스크립트 수정이 전혀 필요 없어짐. `WaveManager.cs`에 `public float BottomBoundaryY => _bottomBoundaryY;` 프로퍼티를 추가하고, `InputHandler.ComputeAimDirection()`에서 터치 위치를 월드 좌표로 변환한 직후 `worldPos.y = Mathf.Max(worldPos.y, WaveManager.Instance.BottomBoundaryY);`로 clamp한 뒤 발사 지점 기준 방향을 계산하도록 수정(이 clamp는 조준 가능한 목표 지점 범위만 제한하며, 발사된 볼이 물리 반사로 기준선 아래까지 내려가는 것 자체를 막는 장치는 아님). `TrajectoryPreview.cs`는 이미 clamp된 `BallLauncher.Instance.LaunchDirection`을 그대로 받아 그리므로 별도 수정 불필요. `GameplayMechanics.md` 섹션 1에도 이 규칙을 문서화. **사용자가 로컬 Unity에서 직접 플레이 테스트하여 정상 동작 확인 완료.** 다만 **아직 main에 병합되지 않고 현재 브랜치에만 커밋된 상태 — main 병합 대기 중**
-<<<<<<< Updated upstream
-- [x] 플레이어 액티브 스킬 2종 코드 구현 (`_Task/2026-07-05/21-30_player-active-skill-system`): 회수 볼 FIFO 순차 재발사, 버서크(30초 쿨타임, 6초간 모든 볼 속도 1.5배), 분신(원본 로스터만 복제, 순차 발사, 두 번째 회수 시 발사 지점에서 소멸), 전용 ScriptableObject/매니저/HUD 버튼/Setup Editor를 구현. 런타임 및 에디터 C# 어셈블리 빌드 오류 0개 확인. **Unity Setup 메뉴 재실행 및 실제 플레이 검증 대기 중**
 - [x] 캐릭터 스프라이트 프리팹 + 조준 방향 연동 회전 (`_Task/2026-07-05/17-27_character-sprite-prefab`): plan.md의 초기 설계(`WeaponPivot` 빈 부모 오브젝트 + `flipX` 기반 좌우 반전)는 로컬 실플레이 테스트에서 여러 버그가 발견되어 최종적으로 다른 구조로 귀결되었다. 신규 `Assets/_Project/Scripts/Character/CharacterAimView.cs`, `Assets/_Project/Scripts/Editor/CharacterSetupEditor.cs`(메뉴 `PurpleCow/Setup/Character System Setup`)를 작성했고, 사용자가 로컬 Unity에서 해당 메뉴 실행 + 직접 다회 수정을 거쳐 `Assets/_Project/Prefabs/Character/Character.prefab`을 완성했다. 최종 구조는 `Character`(루트, `CharacterAimView`) → `Body`/`Head`(SpriteRenderer) + `Weapon`(SpriteRenderer, Sprite Editor에서 스프라이트 자체 피벗을 손잡이 위치로 재설정, 이에 따라 별도 회전축이던 `WeaponPivot`은 제거하고 코드 필드명(`_weaponPivot`)만 유지한 채 실제로는 `Weapon`을 연결). `Character.prefab`은 `BallLauncher`의 `LaunchPoint` 자식으로 배치해 `WallFitter`의 화면비 리프레임을 자동 상속받는다. 좌우 반전은 캐릭터 기본 아트가 왼쪽을 보는 점에 착안해 조준 방향(`BallLauncher.Instance.LaunchDirection`) x가 양수일 때만 루트 `transform.localScale.x`를 -1로 반전하는 방식으로 확정(개별 스프라이트 `flipX` 방식은 반전 조건이 반대로 되는 버그로 폐기). 무기/머리 회전은 `Mathf.Atan2` 각도 계산 방식을 여러 차례 시도했으나 Unity Z축 회전 방향(CW/CCW) 규약을 매번 잘못 추측해 반복적으로 반대 방향을 가리키는 문제가 발생, 최종적으로 `Quaternion.FromToRotation(Vector3.up, 목표방향)`으로 교체해 근본 해결(루트가 반전된 상태에서는 목표 방향 x부호를 미리 뒤집어 계산해야 반전과 상쇄되어 결과가 맞음을 확인). 머리는 무기 회전의 일부 비율(`_headRotationRatio`, 기본 0.25)만 `Quaternion.Slerp`로 보조 추종한다. 실플레이 미세조정 피드백("조준이 수평에 가까울수록 무기가 덜 눕는 것 같다")을 반영해 `_horizontalBiasDegrees`(기본 15도, `[SerializeField]`)를 각도와 무관하게 항상 고정값으로 더하는 보정을 추가했다(처음엔 각도 비례로 시도했다가 사용자 요청으로 고정값으로 변경). `_bodySpriteRenderer`/`_headSpriteRenderer` 필드는 과거 `flipX` 방식의 잔재로 코드 로직상 더 이상 쓰이지 않지만, `CharacterSetupEditor.cs`의 기존 참조 연결 코드를 건드리지 않기 위해 의도적으로 남겨두었다. `CharacterManager.cs`(HP/XP 로직, `Scripts/Core/`)는 이번 작업과 분리되어 전혀 수정하지 않았다. **사용자가 로컬 Unity 실제 플레이 테스트로 최종 확인 완료.**
-=======
-- [x] 플레이어 액티브 스킬 2종 구현 및 검증 (`_Task/2026-07-05/21-30_player-active-skill-system`): 회수 볼 FIFO 순차 재발사, 버서크(30초 쿨타임, 6초간 모든 볼 속도 1.5배), 분신(원본 로스터만 복제, 순차 발사, 두 번째 회수 시 발사 지점에서 소멸), 전용 ScriptableObject/매니저/HUD 버튼을 구현. `berserk`/`illusion` 버튼과 EventSystem/InputSystem UI 입력을 연결하고, UI 터치는 조준 입력에서 제외. 런타임 및 에디터 C# 어셈블리 빌드 오류 0개와 사용자 Unity 플레이 테스트 정상 동작을 확인함
->>>>>>> Stashed changes
+- [x] 플레이어 액티브 스킬 2종 구현 및 검증 (`_Task/2026-07-05/21-30_player-active-skill-system`): 회수 볼 FIFO 순차 재발사, 스피드업(30초 쿨타임, 6초간 모든 볼 속도 1.5배), 분신(원본 로스터만 복제, 순차 발사, 두 번째 회수 시 발사 지점에서 소멸), 전용 ScriptableObject/매니저/HUD 버튼을 구현. `speedUp`/`illusion` 버튼과 EventSystem/InputSystem UI 입력을 연결하고, UI 터치는 조준 입력에서 제외. 런타임 및 에디터 C# 어셈블리 빌드 오류 0개와 사용자 Unity 플레이 테스트 정상 동작을 확인함
 
 **진행 중**
-없음
+- [ ] 치명타 텍스트, 아이스볼 후방 정지, 몬스터 바닥 공격 연출 Unity 플레이 검증
 
 **다음 작업 순서**
-1. 볼-볼 물리 충돌 방지 + 볼 조준 방향 Y좌표 하한 제한 브랜치(`claude/project-review-bugs-qq65d1`)를 main에 병합
-2. 볼 궤적 프리뷰 고리(Ring) 점선 호 개수(목표 4개)가 실제로 의도대로 보이는지 사용자 로컬 Unity 최종 시각 확인
-3. 몬스터 시스템 개편(4종 랜덤 웨이브, 종류별 고정 블록 크기 기반 정사각형 그리드 점유 체크) research.md 작성 착수
+1. 이번 Polish 3종 Unity 플레이 검증
+2. 남은 `TODO.md` 2·3·4·7번 검토
+3. 제출 전 최종 Android 빌드 생성
 
 ## 주요 기술 결정
 
@@ -70,7 +66,7 @@
 - [x] Ground `-7.5`, LaunchPoint `-6.7`, Character 로컬 Y `-0.4` 최종 배치 및 공 발사·반사 실기기 검증
 - [x] 액티브 공격력/스킬 레벨 배지 분리와 패시브 아이콘 비율 보존
 - [x] 성공·실패 결과, 게임 정지, 다시 시작 및 `Time.timeScale` 복구 실기기 검증
-- [x] 결과 테스트용 좌측 상단 `S`/`F` 버튼 추가
+- [x] 결과 팝업 검증 완료 후 제출 정리 단계에서 좌측 상단 `S`/`F` 테스트 버튼 제거
 
 현재 UI 오버홀 task(`2026-07-06/02-05_ui-overhaul`)는 구현 및 실기기 검증 완료 상태입니다.
 
@@ -83,6 +79,31 @@
 - [x] 따뜻한 양철 심장의 노멀 볼 한정 배율, 마법 거울의 볼별 다음 타격 배율, 전·후면 단검의 현재 타격 치명타, 마지막 성냥 폭발 적용
 - [x] 삼택지 `New!`, 다음 레벨, 다음 레벨 공격력 및 장착 슬롯 현재 레벨 표시 수정
 - [x] 런타임/에디터 C# 빌드 오류 0개 확인(기존 `Rigidbody2D.isKinematic` 경고 1개 제외)
-- [ ] Unity 플레이 모드에서 전용 볼 외형, 10종 효과, XP 진행 및 Lv.19 도달 최종 검증
+- [x] Unity 플레이 모드에서 전용 볼 외형, 스킬 효과, XP 진행 및 성장 구조 정상 동작 확인
 
 상세 조사와 구현 계획은 `_Task/2026-07-06/10-03_skill-effects-progression/`에 기록되어 있습니다.
+
+## 2026-07-06 제출 정리 및 README
+
+- [x] Android 실제 기기에서 20웨이브 전체 플레이 완료
+- [x] 결과 확인용 `S`/`F` 테스트 버튼을 HUD 코드, UI 생성기, 씬에서 완전히 제거
+- [x] 플레이어 액티브 스킬 명칭을 코드·데이터·씬·문서 전체에서 `SpeedUp/스피드업`으로 통일
+- [x] `PlayerActiveSkillData_SpeedUp.asset`으로 이름을 변경하면서 기존 GUID와 씬 참조 유지
+- [x] 프로젝트 개요, 실행법, 구현 범위, 기술 설계, 제외 항목, 검증 내역을 담은 루트 `README.md` 작성
+- [x] README에 Codex·Claude/Claude Code 활용 내역과 GPT 제작 버튼 에셋 `SpeedUp.png`·`Copy.png`를 명시
+
+## 2026-07-06 선택 Polish 1·5·6번
+
+- [x] 치명타 데미지 텍스트를 노란색에서 `#FF4B3E`로 변경
+- [x] 아이스볼 적중 시 Collider 가로 범위가 겹치는 후방 몬스터에 Freeze/Slow 전파
+- [x] 후방 몬스터에는 아이스볼 추가 피해가 적용되지 않도록 직접 피해와 상태이상 전파 분리
+- [x] 빙결 이후 새로 합류한 같은 열 몬스터의 동적 이동 차단 및 빙결 종료 시 자동 재개
+- [x] 중심점 반경 기반 스폰 점유 검사를 실제 Collider Bounds 기반 검사로 교체해 부분 겹침 스폰 방지
+- [x] 바닥 도달 몬스터의 0.35초 진동 → 0.25초 캐릭터 돌진 → 도착 순간 피해·소멸 구현
+- [x] 바닥 공격 중 이동·피격·Collider 차단과 풀 재사용 상태 초기화
+- [x] 진동 시간·강도·돌진 시간을 `WaveManager` Inspector에서 조정 가능하도록 노출
+- [x] `WaveManager`에 실제 캐릭터 Transform 참조 연결 및 Setup Editor 갱신
+- [x] 런타임/Editor C# 빌드 오류 0개 확인(기존 `Rigidbody2D.isKinematic` 경고 1개 제외)
+- [ ] Unity 플레이 모드 시각·동작 검증
+
+상세 조사와 구현 계획은 `_Task/2026-07-06/14-45_critical-bottom-ice-polish/`에 기록되어 있습니다.
