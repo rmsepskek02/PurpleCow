@@ -53,7 +53,7 @@ public static class SkillSetupEditor
             skillId:   (int)ActiveSkillId.Ice,
             skillName: "Ice Ball",
             skillType: SkillType.Active,
-            desc:      "확률적으로 충돌한 몬스터를 빙결/둔화시킵니다.",
+            desc:      "확률적으로 충돌한 몬스터의 이동속도를 감소시킵니다.",
             levels: new SkillLevelData[]
             {
                 new SkillLevelData { BallDamage = 25f, Value1 = 0.3f,  Value2 = 5f, Value3 = 0.1f  },
